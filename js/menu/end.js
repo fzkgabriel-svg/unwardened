@@ -2,7 +2,7 @@ import { G, ctx, W, H, TAU, saveStats, finalWave } from '../state.js';
 import { roundRect, drawMatIcon, drawItemIcon, itemTier } from '../utils.js';
 import { regenerateDecor } from '../graphics.js';
 import { ACHIEVEMENTS, unlocked, achievementCount, checkAchievements, achInfo, isClaimed, claimReward, achTabList, unclaimedInTab, adminUnlockAll } from '../achievements.js';
-import { ITEMS, MATS, canCraft, craft, toggleEquip, equipBonuses, getDur, canRepair, repairItem, repairCost, loadInv, addMaterial, modeInfo, addWmodeXp, modeMult, MODE_MAX_LVL, setInvNoSave } from '../inventory.js';
+import { ITEMS, MATS, canCraft, craft, toggleEquip, equipBonuses, getDur, canRepair, repairItem, repairCost, loadInv, addMaterial, modeInfo, addWmodeXp, modeMult, MODE_MAX_LVL, setInvNoSave, DUR_MAX } from '../inventory.js';
 import { spawnEnemy, spawnFinalBoss } from '../enemies.js';
 import { gainXp } from '../player.js';
 import { curWorld, syncCamera, regenerateWorld, reloadWorlds, campaignStart } from '../world.js';
@@ -73,12 +73,13 @@ export function drawPauseMenu() {
 function runLootRows() {
   let mats = 0;
   for (const m in G.runMats) mats += G.runMats[m];
-  let wear = 0;
+  let wear = 0, wearPctSum = 0, wornCount = 0;
   const worn = [];
   for (const id in G.runWear) {
     wear += G.runWear[id];
-    if (G.runWear[id] > 0.5) worn.push(id);
+    if (G.runWear[id] > 0.5) { worn.push(id); wearPctSum += G.runWear[id] / DUR_MAX * 100; wornCount++; }
   }
+  const wearPct = wornCount ? wearPctSum / wornCount : 0; // % moyen de durabilité perdue par pièce
   worn.sort((a, b) => G.runWear[b] - G.runWear[a]);
   const names = worn.slice(0, 2).map(id => (ITEMS[id] ? ITEMS[id].name : id)).join(', ');
   // niveaux épée / lance (progression des types d'armes)
@@ -87,13 +88,14 @@ function runLootRows() {
   return {
     mats,
     wear,
+    wearPct,
     wmodeLabel: `⚔ Épée niv.${eL} · 🔱 Lance niv.${lL}`,
     wmodeXp,
     wearLabel: names ? `🛡 Usure : ${names}${worn.length > 2 ? '…' : ''}` : '🛡 Usure équipement'
   };
 }
 function goButtons() {
-  const bh = 54, by = H / 2 + 140, gap = 20, bw = 270;
+  const bh = 54, by = H / 2 + 185, gap = 20, bw = 270; // descendu pour l'écran de mort 2.0
   const total = bw * 2 + gap;
   const x0 = W / 2 - total / 2;
   return {
@@ -340,8 +342,8 @@ export function drawGameOver() {
   ctx.fillText(subs[G.campaign] || subs[0], W / 2, 194);
   ctx.restore();
 
-  // ---- panneau central : bilan de la mort en 6 blocs compacts ----
-  const lx = W / 2 - 315, lw = 630, ly = 208, lh = 208;
+  // ---- panneau central élargi : bilan de la mort en 8 blocs + barre XP ----
+  const lx = W / 2 - 330, lw = 660, ly = 202, lh = 272;
   ctx.save();
   ctx.globalAlpha = e3;
   // panneau parchemin sombre
@@ -364,11 +366,13 @@ export function drawGameOver() {
     { icon: '💀', label: 'MAIN DE FATE', value: di.killer || 'Inconnu', color: di.killerColor || '#ff8a80', big: true },
     { icon: '🗺️', label: 'LIEU DE PERDITION', value: `${di.world || 'Inconnu'}${di.campaign ? ' · ' + di.campaign : ''}`, color: '#d4b062' },
     { icon: '⏱', label: 'TEMPS DE SURVIE', value: fmtTime(G.runTime), color: '#c9b8a0' },
-    { icon: '⭐', label: 'NIVEAU ATTEINT', value: `Nv. ${p.level}`, color: '#81d4fa' },
+    { icon: '⭐', label: 'NIVEAU & VAGUE', value: `Nv. ${p.level} · vag. ${G.wave}`, color: '#81d4fa' },
     { icon: '⚔️', label: 'ENNEMIS VAINCUS', value: G.kills.toLocaleString('fr-FR'), color: '#69f0ae' },
-    { icon: '🛡', label: 'DÉGÂTS (INFLIGÉS / REÇUS)', value: `${Math.floor(G.dmgDealt).toLocaleString('fr-FR')} → ${Math.floor(G.dmgTaken).toLocaleString('fr-FR')}`, color: '#ffeb3b' }
+    { icon: '🛡', label: 'DÉGÂTS (INFLIGÉS / REÇUS)', value: `${Math.floor(G.dmgDealt).toLocaleString('fr-FR')} → ${Math.floor(G.dmgTaken).toLocaleString('fr-FR')}`, color: '#ffeb3b' },
+    { icon: '📦', label: 'MATÉRIAUX GAGNÉS', value: `+${loot.mats}`, color: '#ffd740' },
+    { icon: '🔧', label: 'USURE ÉQUIPEMENT', value: loot.wearPct > 0 ? `−${loot.wearPct.toFixed(0)} %` : 'aucune', color: '#ff8a65' }
   ];
-  const bw2 = (lw - 44) / 2, bh2 = 42, bgap = 8, bx0 = lx + 16, by0 = ly + 20;
+  const bw2 = (lw - 44) / 2, bh2 = 40, bgap = 8, bx0 = lx + 16, by0 = ly + 18;
   blocks.forEach((b, i) => {
     const col = i % 2, row = (i / 2) | 0;
     const bx = bx0 + col * (bw2 + 12), by = by0 + row * (bh2 + bgap);
@@ -386,15 +390,35 @@ export function drawGameOver() {
     ctx.fillText(b.label, bx + 32, by + 13);
     ctx.letterSpacing = '0px';
     ctx.fillStyle = b.color; ctx.font = `bold ${b.big ? 14 : 12.5}px ${UI}`;
-    ctx.fillText(fitText(String(b.value), bw2 - 42), bx + 32, by + bh2 - 10);
+    ctx.fillText(fitText(String(b.value), bw2 - 42), bx + 32, by + bh2 - 9);
     ctx.restore();
   });
-  // ligne butin : matériaux + niveaux d'armes (compacte)
-  const fy = ly + lh - 20;
-  ctx.save(); ctx.globalAlpha = e3 * Math.min(1, Math.max(0, (goT - 1.0) / 0.35));
-  ctx.font = `11px ${UI}`; ctx.fillStyle = '#9a8f78'; ctx.textAlign = 'center';
-  ctx.fillText(`📦 +${loot.mats} matériaux · ${loot.wmodeLabel}${loot.wmodeXp > 0 ? ` (+${loot.wmodeXp} XP)` : ''} · ${loot.wearLabel}${loot.wear > 0 ? ` (−${loot.wear.toFixed(0)} %)` : ''}`, W / 2, fy);
-  ctx.restore();
+
+  // barre XP des armes (large, dorée) : XP gagnée + niveaux actuels
+  const xpy = by0 + 4 * (bh2 + bgap) + 4;
+  const xpBi = Math.min(1, Math.max(0, (goT - 1.0) / 0.35));
+  if (xpBi > 0) {
+    ctx.save(); ctx.globalAlpha = e3 * xpBi;
+    const xbw = lw - 32, xbx = lx + 16;
+    const xg = ctx.createLinearGradient(xbx, xpy, xbx + xbw, xpy);
+    xg.addColorStop(0, 'rgba(212,176,98,0.16)'); xg.addColorStop(1, 'rgba(212,176,98,0.05)');
+    ctx.fillStyle = xg;
+    roundRect(xbx, xpy, xbw, 32, 7); ctx.fill();
+    ctx.strokeStyle = 'rgba(212,176,98,0.4)'; ctx.lineWidth = 1;
+    roundRect(xbx, xpy, xbw, 32, 7); ctx.stroke();
+    ctx.textAlign = 'left';
+    ctx.font = '13px serif';
+    ctx.fillText('⚔️', xbx + 12, xpy + 22);
+    ctx.fillStyle = '#8d8574'; ctx.font = `600 8.5px ${UI}`; ctx.letterSpacing = '1.5px';
+    ctx.fillText('XP GAGNÉE SUR LES ARMES', xbx + 34, xpy + 11);
+    ctx.letterSpacing = '0px';
+    ctx.fillStyle = '#ffd740'; ctx.font = `bold 12.5px ${UI}`;
+    const xpTxt = loot.wmodeXp > 0 ? `+${loot.wmodeXp.toLocaleString('fr-FR')} XP` : '—';
+    ctx.fillText(xpTxt, xbx + 34, xpy + 26);
+    ctx.fillStyle = '#b8a98c'; ctx.font = `11px ${UI}`; ctx.textAlign = 'right';
+    ctx.fillText(fitText(loot.wmodeLabel, xbw - 60), xbx + xbw - 12, xpy + 22);
+    ctx.restore();
+  }
   ctx.restore();
 
   // ---- bandeau record ----
@@ -409,7 +433,7 @@ export function drawGameOver() {
     if (lr.damage) labels.push('DÉGÂTS');
     ctx.shadowColor = 'rgba(255,215,64,0.7)'; ctx.shadowBlur = 12;
     ctx.fillStyle = '#ffd740'; ctx.font = 'bold 15px Inter, sans-serif';
-    ctx.fillText(`★  NOUVEAU RECORD : ${labels.join(' · ')}  ★`, W / 2, 434);
+    ctx.fillText(`★  NOUVEAU RECORD : ${labels.join(' · ')}  ★`, W / 2, 492);
     ctx.shadowBlur = 0;
   }
   ctx.restore();
