@@ -1,0 +1,12 @@
+<!DOCTYPE html><html><body><canvas id="game" width="1200" height="640"></canvas><pre id="o">RUN</pre>
+<script>
+window.addEventListener('error', e => { document.getElementById('o').textContent = 'ERR: ' + e.message + ' @' + e.filename.split('/').pop() + ':' + e.lineno; });
+</script>
+<script type="module">
+try {
+  await import('./js/main.js');
+  await new Promise(r => setTimeout(r, 800));
+  const { G } = await import('./js/state.js');
+  document.getElementById('o').textContent = 'OK state=' + G.state + ' wave=' + G.wave;
+} catch(e) { document.getElementById('o').textContent = 'CATCH: ' + e.message; }
+</script></body></html>

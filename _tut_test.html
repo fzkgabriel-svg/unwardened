@@ -1,0 +1,29 @@
+<!DOCTYPE html><html><body><canvas id="game" width="1200" height="640"></canvas><pre id="o">RUN</pre>
+<script>
+window.addEventListener('error', e => { document.getElementById('o').textContent = 'ERR: ' + e.message + ' @' + e.filename + ':' + e.lineno; });
+window.addEventListener('unhandledrejection', e => { document.getElementById('o').textContent = 'REJ: ' + e.reason; });
+</script>
+<script type="module">
+try {
+const { G } = await import('./js/state.js');
+const T = await import('./js/tutorial.js');
+const out = [];
+T.startTutorial();
+out.push('start: state=' + G.state + ' cloudT=' + G.cloudT + ' tut.i=' + G.tutorial.i);
+G.cloudT = 0; G.state = 'playing';
+T.updateTutorial(0.016);
+out.push('post-intro: step=' + G.tutorial.i);
+let guard = 0;
+while (G.tutorial && guard++ < 30) {
+  const before = G.tutorial ? G.tutorial.i : -99;
+  T.updateTutorial(9999);
+  const after = G.tutorial ? G.tutorial.i : -99;
+  if (after === -99) break;
+  out.push('adv ' + before + '->' + after);
+}
+out.push('endT=' + (G.tutorial ? G.tutorial.endT : 'null'));
+for (let i = 0; i < 600 && G.tutorial; i++) T.updateTutorial(0.1);
+out.push('final: tut=' + (G.tutorial === null) + ' state=' + G.state);
+document.getElementById('o').textContent = out.join(' | ');
+} catch(e) { document.getElementById('o').textContent = 'CATCH: ' + e.message + ' ' + e.stack; }
+</script></body></html>

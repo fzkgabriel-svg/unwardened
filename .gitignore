@@ -1,0 +1,9 @@
+# Fichiers temporaires de test
+_test_*.py
+_pwtest.py
+__pycache__/
+*.pyc
+
+# Système
+Thumbs.db
+Desktop.ini

@@ -1,0 +1,13 @@
+<!DOCTYPE html><html><body>
+<canvas id="game" width="1200" height="640"></canvas>
+<script type="module">
+try {
+  await import('./js/main.js');
+  const { G } = await import('./js/state.js');
+  document.title = 'OK';
+  document.body.textContent = `loaded state=${G.state} version=${G.version || '?'}`;
+} catch (e) {
+  document.title = 'ERR';
+  document.body.textContent = 'ERR ' + e.message + ' | ' + (e.stack || '').split('\n')[1];
+}
+</script></body></html>

@@ -1,0 +1,26 @@
+﻿<!DOCTYPE html><html><body><canvas id="game" width="1200" height="640"></canvas>
+<script type="module">
+const out = [];
+try {
+  await import('./js/main.js');
+  const { G } = await import('./js/state.js');
+  const gr = await import('./js/graphics.js');
+  const ch = await import('./js/chars.js');
+  const m = await import('./js/menu.js');
+  ch.createChar(0,'Render'); m.reloadPersistence();
+  G.state = 'playing';
+  // force un monde + caméra
+  const w = await import('./js/world.js');
+  w.initWorlds ? w.initWorlds() : null;
+  const calls = ['drawTerrain','drawBuildings','drawWorldPortals','drawObstacle','drawEnemy','drawPlayer','drawSlashArc','drawUltFlash','drawCraters','drawFireZones','drawPortals','drawDrops','drawProjectiles','drawLightnings','drawClouds','drawBomber','drawMushroom','drawEffects','drawGrain','drawBackground','dayNight','drawAdminMenu'];
+  for (const c of calls) {
+    try {
+      if (typeof gr[c] === 'function') { gr[c](); out.push(c+':ok'); }
+      else if (typeof m[c] === 'function') { m[c](); out.push(c+':ok'); }
+      else out.push(c+':MISSING');
+    } catch(e) { out.push(c+':ERR '+e.message); }
+  }
+} catch(e) { out.push('FATAL '+e.message); }
+document.title = out.some(l=>l.includes('ERR')||l.includes('MISSING')||l.includes('FATAL')) ? 'ERR' : 'OK';
+document.body.textContent = out.join(' | ');
+</script></body></html>

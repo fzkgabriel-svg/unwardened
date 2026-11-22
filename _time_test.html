@@ -1,0 +1,9 @@
+<!DOCTYPE html><html><body><canvas id="game" width="1200" height="640"></canvas><pre id="o">RUN</pre>
+<script type="module">
+await import('./js/main.js');
+const { G } = await import('./js/state.js');
+const t0 = G.time;
+await new Promise(r => setTimeout(r, 500));
+const t1 = G.time;
+document.getElementById('o').textContent = 'time ' + t0.toFixed(2) + ' -> ' + t1.toFixed(2);
+</script></body></html>
