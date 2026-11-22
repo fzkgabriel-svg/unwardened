@@ -244,7 +244,7 @@ function drawSkillCard(x, y, w, h, sd, locked) {
     ctx.fillStyle = 'rgba(0,0,0,0.4)';
     roundRect(x, y, w, h, 10); ctx.fill();
     ctx.fillStyle = '#b388ff'; ctx.font = `bold 10px ${UI}`; ctx.textAlign = 'center';
-    ctx.fillText('🔒 VAINCRE L\'ABOMINATION COSMIQUE', x + w / 2, y + h - 12);
+    ctx.fillText('🔒', x + w / 2, y + h / 2 + 4);
     ctx.globalAlpha = 1; return;
   }
   // barre d'XP
