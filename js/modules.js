@@ -1,7 +1,7 @@
 // ---------- MODULES : personnalisation du héros (débloqué après le boss du monde 4) ----------
 // 12 modules : 2 offerts (bouclier, ruée) + 10 achetables à la boutique en émeraudes.
 // Équipement : 1 actif + 2 passifs. Persisté dans inv.modules via saveInv.
-import { G, ctx, TAU } from './state.js';
+import { G, ctx, TAU, H } from './state.js';
 import { roundRect, hexA } from './utils.js';
 import { saveInv } from './inventory.js';
 import { spawnParticles, addDamageText } from './effects.js';
