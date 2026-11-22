@@ -145,7 +145,7 @@ export const BUILDING_TYPES = [
   { id: 'watch',     name: 'Tour de guet glacée', cat: 'industriel', rarity: 'rare',       w: 70,  h: 190, weight: 12, loot: 'warehouse', camp: 1, drawAs: 'tower' },
   { id: 'lab',       name: 'Labo abandonné',      cat: 'industriel', rarity: 'rare',       w: 220, h: 150, weight: 10, loot: 'factory', camp: 1, drawAs: 'warehouse' },
   { id: 'mine',      name: 'Mine gelée',          cat: 'industriel', rarity: 'epique',     w: 240, h: 160, weight: 8,  loot: 'gas',    camp: 1, drawAs: 'gas' },
-  { id: 'fort',      name: 'Forteresse gelée',    cat: 'rare',       rarity: 'legendaire', w: 280, h: 190, weight: 5,  loot: 'shrine', camp: 1, drawAs: 'warehouse' },
+  { id: 'fort',      name: 'Forteresse gelée',    cat: 'rare',       rarity: 'legendaire', w: 280, h: 190, weight: 5,  loot: 'shrine', camp: 1, drawAs: 'rampart' },
   { id: 'icearch',   name: 'Arche de glace',      cat: 'ruine',      rarity: 'rare',       w: 190, h: 120, weight: 14, loot: 'ruins',  camp: 1, drawAs: 'arch' },
   { id: 'grave',     name: 'Cimetière glacé',     cat: 'petite',     rarity: 'commun',     w: 130, h: 95,  weight: 20, loot: 'cabin',  camp: 1, drawAs: 'house' },
   { id: 'relay',     name: 'Relais abandonné',    cat: 'industriel', rarity: 'epique',     w: 95,  h: 210, weight: 7,  loot: 'factory', camp: 1, drawAs: 'tower' },
@@ -156,7 +156,7 @@ export const BUILDING_TYPES = [
   { id: 'mansion',   name: 'Manoir Maudit',       cat: 'maison',     rarity: 'rare',       w: 185, h: 130, weight: 16, loot: 'house',    camp: 2, drawAs: 'house' },
   { id: 'crypt',     name: 'Crypte Ardente',      cat: 'petite',     rarity: 'commun',     w: 125, h: 95,  weight: 20, loot: 'cabin',    camp: 2, drawAs: 'cabin' },
   { id: 'altar',     name: 'Autel de Sang',       cat: 'rare',       rarity: 'epique',     w: 110, h: 110, weight: 12, loot: 'shrine',   camp: 2, drawAs: 'shrine' },
-  { id: 'bastion',   name: 'Bastion de Cendres',  cat: 'industriel', rarity: 'epique',     w: 230, h: 150, weight: 9,  loot: 'warehouse', camp: 2, drawAs: 'warehouse' },
+  { id: 'bastion',   name: 'Bastion de Cendres',  cat: 'industriel', rarity: 'epique',     w: 230, h: 150, weight: 9,  loot: 'warehouse', camp: 2, drawAs: 'rampart' },
   { id: 'helltower', name: 'Tour du Trône',       cat: 'industriel', rarity: 'rare',       w: 75,  h: 200, weight: 10, loot: 'factory',  camp: 2, drawAs: 'tower' },
   { id: 'hellcastle',name: 'Château des Enfers',  cat: 'rare',       rarity: 'legendaire', w: 320, h: 210, weight: 3,  loot: 'shrine',   camp: 2, drawAs: 'castle' },
   // ---------- structures des ÉGOUTS (campagne 4 uniquement) ----------

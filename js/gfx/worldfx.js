@@ -672,6 +672,22 @@ export function drawAmbient() {
       ctx.fillStyle = mg;
       ctx.beginPath(); ctx.arc(mx, my, mr, 0, TAU); ctx.fill();
     }
+  } else if (sky === 'plain' || sky === 'ice') {
+    // rafales de vent : traînées horizontales rapides et fugaces
+    const windCol = sky === 'ice' ? 'rgba(240,248,255,' : 'rgba(255,250,230,';
+    for (let i = 0; i < 5; i++) {
+      const span = W + 600;
+      const wx = cx - 300 + ((i * 467 + t * (140 + i * 30)) % span);
+      const wy = cy + (i * 173 % H) + Math.sin(t * 2 + i) * 20;
+      const wl = 50 + (i % 3) * 35;
+      const a = 0.05 + 0.04 * Math.sin(t * 3 + i * 2);
+      ctx.strokeStyle = windCol + a + ')';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(wx, wy);
+      ctx.quadraticCurveTo(wx + wl * 0.5, wy - 4, wx + wl, wy);
+      ctx.stroke();
+    }
   }
 }
 

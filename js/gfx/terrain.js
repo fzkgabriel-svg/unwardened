@@ -82,7 +82,7 @@ function buildTerrainCanvas(w) {
       g.beginPath(); g.ellipse(b.x, b.y, b.rx, b.ry, b.rot, 0, TAU); g.fill();
     }
   }
-  for (const d of w.decor) drawDecorItem(d, w.def, g);
+  for (const d of w.decor) if (!d.sway) drawDecorItem(d, w.def, g);
   // lacs (eau détaillée) puis ponts en bois par-dessus
   for (const l of w.lakes || []) drawLake(g, l, w.def);
   for (const l of w.lakes || []) drawBridge(g, l);
@@ -410,6 +410,37 @@ function drawSecretItem(s, def, g) {
     const lg = ctx.createRadialGradient(0, bob, 2, 0, bob, 30);
     lg.addColorStop(0, 'rgba(140,180,255,0.3)'); lg.addColorStop(1, 'rgba(140,180,255,0)');
     ctx.fillStyle = lg; ctx.beginPath(); ctx.arc(0, bob, 30, 0, TAU); ctx.fill();
+  } else if (s.type === 'viewpoint') {
+    // point de vue : banc + rambarde + petite table d'observation
+    ctx.fillStyle = 'rgba(0,0,0,0.22)';
+    ctx.beginPath(); ctx.ellipse(0, 6, 30, 8, 0, 0, TAU); ctx.fill();
+    const wood = ice ? '#7a94a8' : hell ? '#4a2a20' : sewer ? '#4c5c3a' : space ? '#4a5570' : '#7a5c3e';
+    const woodD = ice ? '#5a7a90' : hell ? '#3a1e16' : sewer ? '#3a4a2c' : space ? '#3a4458' : '#5d4530';
+    // banc
+    ctx.fillStyle = wood;
+    ctx.fillRect(-20, 2, 40, 5);
+    ctx.fillRect(-20, -3, 40, 4);
+    ctx.fillStyle = woodD;
+    ctx.fillRect(-18, 7, 4, 6); ctx.fillRect(14, 7, 4, 6);
+    ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.lineWidth = 1;
+    ctx.strokeRect(-20, -3, 40, 10);
+    // rambarde (côté "falaise" : en haut)
+    ctx.strokeStyle = wood; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-26, -14); ctx.lineTo(26, -14); ctx.stroke();
+    for (const px of [-26, -13, 0, 13, 26]) {
+      ctx.beginPath(); ctx.moveTo(px, -14); ctx.lineTo(px, -4); ctx.stroke();
+    }
+    // petite borne/panneau
+    ctx.fillStyle = woodD;
+    ctx.fillRect(16, -22, 3, 14);
+    ctx.fillStyle = ice ? '#cfe4f5' : hell ? '#ffb74d' : sewer ? '#a4d68a' : space ? '#9fd0ff' : '#ffe082';
+    ctx.fillRect(12, -26, 11, 8);
+    ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.lineWidth = 1;
+    ctx.strokeRect(12, -26, 11, 8);
+    // marque de vue : petite touffe d'herbe au bord
+    ctx.strokeStyle = mossCol; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(-24, 8); ctx.lineTo(-26, 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-22, 8); ctx.lineTo(-21, 1); ctx.stroke();
   } else if (s.type === 'ruinmini') {
     // mini-ruine alien : arc brisé + dalle + gravures
     ctx.fillStyle = 'rgba(0,0,0,0.35)';
@@ -433,6 +464,29 @@ function drawSecretItem(s, def, g) {
     ctx.beginPath(); ctx.ellipse(0, 2, 10, 5, 0, 0, TAU); ctx.fill();
   }
   ctx.restore();
+}
+
+// végétation animée par le vent : sous-ensemble du décor rendu par frame
+const SWAY_AMP = { grass: 0.22, flower: 0.2, fern: 0.16, bush: 0.07, frozenbush: 0.07,
+  firegrass: 0.24, alienflora: 0.18, glowshroom: 0.12, mush: 0.12, shroom: 0.1,
+  tree: 0.035, bigtree: 0.03, pine: 0.04, cosmictree: 0.05, crystal: 0.03,
+  energycrystal: 0.04 };
+export function drawSwayDecor() {
+  const w = curWorld();
+  if (!w || !w.decor) return;
+  const x0 = (G.camX || 0) - 140, y0 = (G.camY || 0) - 160, x1 = x0 + W + 280, y1 = y0 + H + 240;
+  const t = G.time;
+  for (const d of w.decor) {
+    if (!d.sway) continue;
+    if (d.x < x0 || d.x > x1 || d.y < y0 || d.y > y1) continue;
+    const amp = SWAY_AMP[d.type] || 0.05;
+    const a = Math.sin(t * 1.9 + d.x * 0.013 + d.y * 0.011) * amp
+            + Math.sin(t * 3.1 + d.c * 9) * amp * 0.35;
+    ctx.save();
+    ctx.translate(d.x, d.y); ctx.rotate(a); ctx.translate(-d.x, -d.y);
+    drawDecorItem(d, w.def, ctx);
+    ctx.restore();
+  }
 }
 
 // secrets rendus par frame (leurs éléments sont animés : feu, artefact, autel)

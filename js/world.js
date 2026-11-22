@@ -57,6 +57,11 @@ const PROP_TYPES = {
 // ---------- GÉNÉRATION ----------
 const worldCache = {}; // idx -> monde généré (non sérialisé, regén déterministe)
 
+// types de décor qui ondulent sous le vent (rendus par frame, pas pré-rendus)
+const SWAY_TYPES = new Set(['grass', 'flower', 'tree', 'bigtree', 'bush', 'fern', 'pine',
+  'shroom', 'frozenbush', 'firegrass', 'cosmictree', 'alienflora', 'crystal',
+  'energycrystal', 'glowshroom', 'mush']);
+
 function genDecor(rng, def, count, x0, y0, x1, y1) {
   const out = [];
   for (let i = 0; i < count; i++) {
@@ -64,7 +69,8 @@ function genDecor(rng, def, count, x0, y0, x1, y1) {
     out.push({
       type, x: rr(rng, x0, x1), y: rr(rng, y0, y1),
       h: 4 + rng() * 7, s: 0.7 + rng() * 0.7, c: rng(),
-      rot: rng() * TAU
+      rot: rng() * TAU,
+      sway: SWAY_TYPES.has(type) && rng() < 0.16 ? 1 : 0
     });
   }
   return out;
@@ -399,13 +405,45 @@ export function genWorld(idx) {
     }
   }
 
+  // storytelling : petits sites thématiques éparpillés (camp, trophées, reliques)
+  const CLUSTERS = {
+    plain:  ['barrel', 'barrel', 'lantern', 'fence', 'path', 'shroom', 'stump'],
+    ice:    ['snowdrift', 'icicle', 'frozenbush', 'rock', 'crystal', 'snowdrift'],
+    hell:   ['skull', 'bone', 'ash', 'deadwood', 'obsid', 'basalt'],
+    sewer:  ['water', 'slime', 'grate', 'pipe', 'drip', 'bones'],
+    space:  ['debris', 'meteor', 'shard', 'holo', 'ruinpillar', 'crystal'],
+  };
+  const clrng = mulberry32(hashSeed(`cluster${idx}:${seed}`));
+  const clist = CLUSTERS[def.biome] || CLUSTERS.plain;
+  for (let ci = 0; ci < 7; ci++) {
+    for (let t = 0; t < 25; t++) {
+      const cx = rr(clrng, CONFIG.edgeMargin + 160, w - CONFIG.edgeMargin - 160);
+      const cy = rr(clrng, CONFIG.edgeMargin + 160, h - CONFIG.edgeMargin - 160);
+      if (Math.hypot(cx - spawn.x, cy - spawn.y) < 620) continue;
+      if (inLake(cx, cy)) continue;
+      if (buildings.some(b => Math.hypot(cx - b.x, cy - b.y) < Math.hypot(b.w, b.h) / 2 + 120)) continue;
+      if (obstacles.some(o => Math.hypot(cx - o.x, cy - o.y) < o.r + 70)) continue;
+      if (falls.some(f => Math.hypot(cx - f.x, cy - f.y) < 80)) continue;
+      const cn = ri(clrng, 4, 7);
+      for (let k = 0; k < cn; k++) {
+        const a = clrng() * TAU, d = 18 + Math.sqrt(clrng()) * 85;
+        const px = cx + Math.cos(a) * d, py = cy + Math.sin(a) * d * 0.7;
+        decor.push({
+          type: pick(clrng, clist),
+          x: px, y: py, h: 4 + clrng() * 7, s: 0.7 + clrng() * 0.7, c: clrng(), rot: clrng() * TAU
+        });
+      }
+      break;
+    }
+  }
+
   // secrets : petits sites cachés (cercle de pierres, puits, tombe, autel, artefact)
   const SECRET = {
-    plain:  ['stonecircle', 'well', 'stonecircle', 'campfire'],
-    ice:    ['icetomb', 'stonecircle', 'icetomb'],
-    hell:   ['sacrifice', 'sacrifice', 'bonecircle'],
-    sewer:  ['sump', 'sump', 'cisternmini'],
-    space:  ['artifact', 'artifact', 'ruinmini'],
+    plain:  ['stonecircle', 'well', 'stonecircle', 'campfire', 'viewpoint'],
+    ice:    ['icetomb', 'stonecircle', 'icetomb', 'viewpoint'],
+    hell:   ['sacrifice', 'sacrifice', 'bonecircle', 'sacrifice'],
+    sewer:  ['sump', 'sump', 'cisternmini', 'sump'],
+    space:  ['artifact', 'artifact', 'ruinmini', 'artifact', 'viewpoint'],
   };
   const srng = mulberry32(hashSeed(`secret${idx}:${seed}`));
   const secrets = [];

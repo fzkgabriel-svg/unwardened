@@ -6,7 +6,7 @@ import { drawBackground, drawEnemy, drawDrops, drawPlayer, drawSlashArc, drawUlt
 import { checkAchievements } from './achievements.js';
 import { wearEquipment, addMaterial } from './inventory.js';
 import { drawHUD, drawAchToast, drawWarnToast } from './hud.js';
-import { drawSecrets } from './gfx/terrain.js';
+import { drawSecrets, drawSwayDecor } from './gfx/terrain.js';
 import { drawMenu, drawGameOver, drawPauseMenu, drawVictory, recordRun, drawAdminMenu, drawAdminButton, drawDurWarnPopup } from './menu.js';
 import { initWorlds, updateCamera, worldW, worldH, checkWavePortal, syncCamera, resolveObstacles, curWorld } from './world.js';
 import { drawMusicButton, sfxHurt, sfxWave, sfxPickup, sfxBreak, sfxBoss, sfxWarn, sfxPhase, sfxBossAtk } from './audio.js';
@@ -25,6 +25,7 @@ export function draw() {
   ctx.translate(-(G.camX || 0), -(G.camY || 0));
   drawTerrain();
   drawAmbient();   // particules d'ambiance du biome (neige, braises, spores...)
+  drawSwayDecor(); // végétation ondulée par le vent (sous-ensemble animé)
   drawBuildings();
   drawWorldPortals();
   drawFalls();      // cascades animées (eau, glace, lave) — coords monde

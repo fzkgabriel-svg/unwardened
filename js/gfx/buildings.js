@@ -301,6 +301,75 @@ function drawBuilding(b, def) {
       ctx.beginPath(); ctx.moveTo(wx + 14, wy + wr + 6); ctx.lineTo(wx, wy + 4); ctx.stroke();
       break;
     }
+    case 'rampart': {
+      // REMPART : courtine crénelée + porte fortifiée + tourelle d'angle
+      const hell2 = def.biome === 'hell', ice2 = def.biome === 'ice';
+      const capC = hell2 ? '#3a1512' : ice2 ? '#eceff1' : '#8d6e63';
+      // corps de la courtine (légèrement battered)
+      const rg = ctx.createLinearGradient(-hw, 0, hw, 0);
+      rg.addColorStop(0, def.wallDark); rg.addColorStop(0.5, def.wall); rg.addColorStop(1, def.wallDark);
+      ctx.fillStyle = rg;
+      ctx.beginPath();
+      ctx.moveTo(-hw, H2 / 2);
+      ctx.lineTo(-hw * 0.92, -hh * 0.75);
+      ctx.lineTo(hw * 0.92, -hh * 0.75);
+      ctx.lineTo(hw, H2 / 2);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.45)'; ctx.lineWidth = 2; ctx.stroke();
+      // assises de pierre
+      ctx.strokeStyle = 'rgba(0,0,0,0.22)'; ctx.lineWidth = 1.2;
+      for (let i = 1; i < 6; i++) {
+        const yy = H2 / 2 - (H2 + hh * 0.75) * (i / 6);
+        const spread = hw * (0.55 + i * 0.09);
+        ctx.beginPath(); ctx.moveTo(-spread, yy); ctx.lineTo(spread, yy); ctx.stroke();
+      }
+      // créneaux le long du sommet
+      ctx.fillStyle = def.wallDark;
+      const crenN = Math.floor(hw * 2 / 22);
+      for (let i = 0; i <= crenN; i++) {
+        const cx = -hw * 0.92 + i * (hw * 1.84 / crenN);
+        ctx.fillRect(cx - 5, -hh * 0.75 - 12, 10, 12);
+      }
+      ctx.fillStyle = capC; // chaperons (neige / braise / pierre)
+      for (let i = 0; i <= crenN; i++) {
+        const cx = -hw * 0.92 + i * (hw * 1.84 / crenN);
+        ctx.fillRect(cx - 6, -hh * 0.75 - 14, 12, 3);
+      }
+      // porte fortifiée (double vantail + herse)
+      const dw3 = Math.min(36, W2 * 0.16);
+      ctx.fillStyle = def.door;
+      ctx.fillRect(-dw3 / 2, H2 / 2 - 52, dw3, 52);
+      ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 2;
+      ctx.strokeRect(-dw3 / 2, H2 / 2 - 52, dw3, 52);
+      ctx.beginPath(); ctx.moveTo(0, H2 / 2 - 52); ctx.lineTo(0, H2 / 2); ctx.stroke();
+      ctx.strokeStyle = 'rgba(189,195,199,0.8)'; ctx.lineWidth = 1.5;
+      for (let i = -2; i <= 2; i++) {
+        ctx.beginPath(); ctx.moveTo(i * 7, H2 / 2 - 52); ctx.lineTo(i * 7, H2 / 2 - 26); ctx.stroke();
+      }
+      ctx.beginPath(); ctx.moveTo(-dw3 / 2, H2 / 2 - 40); ctx.lineTo(dw3 / 2, H2 / 2 - 40); ctx.stroke();
+      // tourelle d'angle (droite)
+      const tx2 = hw * 0.88, tr2 = Math.min(hw * 0.32, hh * 0.4);
+      const tg2 = ctx.createLinearGradient(tx2 - tr2, 0, tx2 + tr2, 0);
+      tg2.addColorStop(0, def.wallDark); tg2.addColorStop(0.5, def.wall); tg2.addColorStop(1, def.wallDark);
+      ctx.fillStyle = tg2;
+      ctx.beginPath(); ctx.arc(tx2, H2 * 0.05, tr2, 0, TAU); ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.45)'; ctx.lineWidth = 2; ctx.stroke();
+      // créneaux de tourelle
+      ctx.fillStyle = def.wallDark;
+      for (let i = 0; i < 6; i++) {
+        const a = i * TAU / 6;
+        ctx.save(); ctx.translate(tx2 + Math.cos(a) * tr2 * 0.9, H2 * 0.05 + Math.sin(a) * tr2 * 0.9); ctx.rotate(a + Math.PI / 2);
+        ctx.fillRect(-3, -7, 6, 10); ctx.restore();
+      }
+      // toit de tourelle
+      ctx.fillStyle = '#2c3e50';
+      ctx.beginPath(); ctx.moveTo(tx2, H2 * 0.05 - tr2 * 1.9); ctx.lineTo(tx2 + tr2, H2 * 0.05 - tr2 * 0.5); ctx.lineTo(tx2 - tr2, H2 * 0.05 - tr2 * 0.5); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = capC;
+      ctx.beginPath(); ctx.moveTo(tx2, H2 * 0.05 - tr2 * 1.9); ctx.lineTo(tx2 + tr2 * 0.5, H2 * 0.05 - tr2 * 1.2); ctx.lineTo(tx2 - tr2 * 0.5, H2 * 0.05 - tr2 * 1.2); ctx.closePath(); ctx.fill();
+      // meurtrières
+      win(-hw * 0.45, -hh * 0.3, 12, 22); win(hw * 0.35, -hh * 0.3, 12, 22);
+      break;
+    }
     case 'castle': {
       // CHÂTEAU : donjon central + 4 tours d'angle à créneaux, toits coniques.
       // Biome glace : calottes de neige · Biome enfer : toits de braise
