@@ -294,7 +294,7 @@ export function spawnFinalBoss() {
   if (Math.hypot(p.x - x, p.y - y) < 250) {
     const dmg = 35 * (1 - (G.equip ? G.equip.armorReduce : 0));
     p.hp = Math.max(1, p.hp - dmg);
-    p.lastHurt = G.time; p.slowT = Math.max(p.slowT, 1.2);
+    p.lastHurt = G.time; p.slowT = Math.max(p.slowT, 0.9);
     addDamageText(p.x, p.y - 24, `-${Math.round(dmg)}`, '#ff1744');
     spawnParticles(p.x, p.y, '#ff1744', 12, 6);
   }

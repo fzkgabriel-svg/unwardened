@@ -87,7 +87,7 @@ function bossSuperAttack(e, phase) {
       const a = base + (i - 5) * 0.2;
       G.projectiles.push({ x: e.x, y: e.y, vx: Math.cos(a) * 5.2, vy: Math.sin(a) * 5.2, life: 2.6, r: 8, dmg: e.damage * 0.75 * power, color: '#aeea00', acid: true });
     }
-    G.shockwaves.push({ x: e.x, y: e.y, r: e.r, maxR: 420, speed: 13, dmg: e.damage * 1.35 * power, hit: false, color: '#aeea00', slow: 1.1 });
+    G.shockwaves.push({ x: e.x, y: e.y, r: e.r, maxR: 420, speed: 13, dmg: e.damage * 1.35 * power, hit: false, color: '#aeea00', slow: 0.8 });
     G.screenShake = Math.max(G.screenShake, 20);
     G.screenFlash = Math.max(G.screenFlash, 0.6);
     spawnParticles(e.x, e.y, '#aeea00', 50, 10);
@@ -107,7 +107,7 @@ function bossSuperAttack(e, phase) {
       const a = base + (i - 6) * 0.16;
       G.projectiles.push({ x: e.x, y: e.y, vx: Math.cos(a) * 6.4, vy: Math.sin(a) * 6.4, life: 2.6, r: 9, dmg: e.damage * 0.8 * power, color: '#b388ff', bolt: true });
     }
-    G.shockwaves.push({ x: e.x, y: e.y, r: e.r, maxR: 440, speed: 14, dmg: e.damage * 1.4 * power, hit: false, color: '#b388ff', slow: 0.9 });
+    G.shockwaves.push({ x: e.x, y: e.y, r: e.r, maxR: 440, speed: 14, dmg: e.damage * 1.4 * power, hit: false, color: '#b388ff', slow: 0.7 });
     G.rings.push({ x: e.x, y: e.y, r: e.r, maxR: 400, life: 36, maxLife: 36, color: '#b388ff' });
     G.screenShake = Math.max(G.screenShake, 20);
     G.screenFlash = Math.max(G.screenFlash, 0.65);
@@ -122,14 +122,14 @@ function bossSuperAttack(e, phase) {
       const a = (i / n) * TAU + Math.random() * 0.4;
       const d = 120 + Math.random() * 260;
       const x = clampW(p.x + Math.cos(a) * d), y = clampH(p.y + Math.sin(a) * d);
-      G.shockwaves.push({ x, y, r: 8, maxR: 100, speed: 12, dmg: e.damage * 0.6 * power, hit: false, color: '#ff7043', slow: 0.9 });
+      G.shockwaves.push({ x, y, r: 8, maxR: 100, speed: 12, dmg: e.damage * 0.6 * power, hit: false, color: '#ff7043', slow: 0.7 });
     }
     const base = Math.atan2(p.y - e.y, p.x - e.x);
     for (let i = 0; i < 12; i++) {
       const a = base + (i - 5.5) * 0.18;
       G.projectiles.push({ x: e.x, y: e.y, vx: Math.cos(a) * 6.0, vy: Math.sin(a) * 6.0, life: 2.8, r: 10, dmg: e.damage * 0.85 * power, color: '#ff7043', fire: true });
     }
-    G.shockwaves.push({ x: e.x, y: e.y, r: e.r, maxR: 460, speed: 13, dmg: e.damage * 1.4 * power, hit: false, color: '#ff7043', slow: 1.2 });
+    G.shockwaves.push({ x: e.x, y: e.y, r: e.r, maxR: 460, speed: 13, dmg: e.damage * 1.4 * power, hit: false, color: '#ff7043', slow: 0.9 });
     G.screenShake = Math.max(G.screenShake, 22);
     G.screenFlash = Math.max(G.screenFlash, 0.7);
     spawnParticles(e.x, e.y, '#ffab00', 55, 11);
@@ -153,11 +153,11 @@ function bossSuperAttack(e, phase) {
       const a = base + (i - 6) * 0.16;
       G.projectiles.push({ x: e.x, y: e.y, vx: Math.cos(a) * 6.2, vy: Math.sin(a) * 6.2, life: 2.8, r: 9, dmg: e.damage * 0.8 * power, color: '#81d4fa' });
     }
-    G.shockwaves.push({ x: e.x, y: e.y, r: e.r, maxR: 420, speed: 11, dmg: e.damage * 1.3 * power, hit: false, color: '#b3e5fc', slow: 2.2 });
+    G.shockwaves.push({ x: e.x, y: e.y, r: e.r, maxR: 420, speed: 11, dmg: e.damage * 1.3 * power, hit: false, color: '#b3e5fc', slow: 1.6 });
     if (!G.iceStorm) G.iceStorm = { t: 4, x: e.x, y: e.y, r: 420, spawnT: 0 }; // micro-tempête glacée autour du boss
   } else {
     // super éruption : onde sismique géante + ombres en spirale
-    G.shockwaves.push({ x: p.x, y: p.y, r: 10, maxR: 520, speed: 15, dmg: e.damage * 1.6 * power, hit: false, color: '#ff7043', slow: 1.2 });
+    G.shockwaves.push({ x: p.x, y: p.y, r: 10, maxR: 520, speed: 15, dmg: e.damage * 1.6 * power, hit: false, color: '#ff7043', slow: 0.9 });
     for (let i = 0; i < 10; i++) {
       const a = (i / 10) * TAU + G.time;
       G.projectiles.push({ x: e.x, y: e.y, vx: Math.cos(a) * 5.6, vy: Math.sin(a) * 5.6, life: 2.8, r: 9, dmg: e.damage * 0.75 * power, color: '#ce93d8' });
@@ -304,7 +304,7 @@ function execBossMove(e, m, p) {
       for (let i = 0; i < 10; i++) {
         const a = Math.random() * TAU, d = Math.sqrt(Math.random()) * 300;
         const x = clampW(m.tx + Math.cos(a) * d), y = clampH(m.ty + Math.sin(a) * d);
-        G.shockwaves.push({ x, y, r: 8, maxR: 90 + Math.random() * 50, speed: 11, dmg: e.damage * 0.55, hit: false, color: '#ff7043', slow: 0.8 });
+        G.shockwaves.push({ x, y, r: 8, maxR: 90 + Math.random() * 50, speed: 11, dmg: e.damage * 0.55, hit: false, color: '#ff7043', slow: 0.6 });
         spawnParticles(x, y, '#ff7043', 10, 7);
       }
       G.screenShake = Math.max(G.screenShake, 14);
@@ -313,12 +313,12 @@ function execBossMove(e, m, p) {
     case 'ringfire': {
       // anneau de flammes autour du boss : tout ce qui touche brûle
       G.rings.push({ x: e.x, y: e.y, r: e.r, maxR: 340, life: 30, maxLife: 30, color: '#ff7043' });
-      G.shockwaves.push({ x: e.x, y: e.y, r: e.r, maxR: 340, speed: 16, dmg: e.damage * 1.1, hit: false, color: '#ffab00', slow: 0.9 });
+      G.shockwaves.push({ x: e.x, y: e.y, r: e.r, maxR: 340, speed: 16, dmg: e.damage * 1.1, hit: false, color: '#ffab00', slow: 0.7 });
       // flammes persistantes : la zone reste brûlante quelques secondes
       for (let i = 0; i < 5; i++) {
         const a = Math.random() * TAU, d = 120 + Math.random() * 160;
         const x = clampW(e.x + Math.cos(a) * d), y = clampH(e.y + Math.sin(a) * d);
-        G.shockwaves.push({ x, y, r: 6, maxR: 70, speed: 9, dmg: e.damage * 0.4, hit: false, color: '#ff5252', slow: 0.7 });
+        G.shockwaves.push({ x, y, r: 6, maxR: 70, speed: 9, dmg: e.damage * 0.4, hit: false, color: '#ff5252', slow: 0.5 });
       }
       G.screenShake = Math.max(G.screenShake, 13);
       spawnParticles(e.x, e.y, '#ffab00', 40, 10);
@@ -332,7 +332,7 @@ function execBossMove(e, m, p) {
       G.shockwaves.push({
         x: m.tx, y: m.ty, r: 12, maxR: 400, speed: hell ? 15 : frozen ? 10 : 12,
         dmg: e.damage * (hell ? 1.7 : 1.5), hit: false,
-        color: hell ? '#ff7043' : frozen ? '#b3e5fc' : '#ff7043', slow: frozen ? 1.6 : 1.0
+        color: hell ? '#ff7043' : frozen ? '#b3e5fc' : '#ff7043', slow: frozen ? 1.2 : 0.8
       });
       G.screenShake = Math.max(G.screenShake, 9);
       spawnParticles(m.tx, m.ty, hell ? '#ffab40' : frozen ? '#e1f5fe' : '#a1887f', 26, 8);
@@ -433,7 +433,7 @@ export function updateBurrow(e, dt, p) {
       spawnParticles(e.x, e.y, '#ff7043', 26, 8);
       G.screenShake = Math.max(G.screenShake, 15);
       if (Math.hypot(p.x - e.x, p.y - e.y) < e.r + p.r + 75) {
-        damagePlayer(e.damage * 1.7, 1.2, e);
+        damagePlayer(e.damage * 1.7, 0.9, e);
       }
     }
   }

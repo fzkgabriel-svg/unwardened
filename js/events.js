@@ -117,8 +117,8 @@ export function updateFrozenEvents(dt) {
       spawnParticles(av.x, av.y, '#90caf9', 25, 8);
       G.screenShake = 14;
       if (Math.hypot(p.x - av.x, p.y - av.y) < 200) {
-        damagePlayer(30 * (1 - (G.equip ? G.equip.armorReduce : 0)), 1.4, { name: 'Avalanche', type: 'event' });
-        p.slowT = Math.max(p.slowT, 2.5); // enseveli : très ralenti
+        damagePlayer(30 * (1 - (G.equip ? G.equip.armorReduce : 0)), 1.0, { name: 'Avalanche', type: 'event' });
+        p.slowT = Math.max(p.slowT, 1.8); // enseveli : très ralenti
       }
     }
   }

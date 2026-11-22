@@ -152,7 +152,7 @@ function update(dt) {
   if (keys['q'] || keys['arrowleft']) dx -= 1;
   if (keys['d'] || keys['arrowright']) dx += 1;
   if (p.slowT > 0) p.slowT = Math.max(0, p.slowT - dt);
-  const pSpeed = p.speed * (p.slowT > 0 ? 0.55 : 1) * (p.attackMode === 3 ? 0.7 : p.attackMode === 5 ? 0.97 : 0.93); // lance tank / arc léger / épée
+  const pSpeed = p.speed * (p.slowT > 0 ? 0.68 : 1) * (p.attackMode === 3 ? 0.7 : p.attackMode === 5 ? 0.97 : 0.93); // lance tank / arc léger / épée
   if (dx || dy) {
     const len = Math.hypot(dx, dy);
     p.x = Math.max(p.r, Math.min(worldW() - p.r, p.x + dx / len * pSpeed));
@@ -384,7 +384,7 @@ function update(dt) {
         e.x = Math.max(e.r, Math.min(worldW() - e.r, e.x));
         e.y = Math.max(e.r, Math.min(worldH() - e.r, e.y));
         if (Math.hypot(p.x - e.x, p.y - e.y) < e.r + p.r + 6) {
-          damagePlayer(e.damage * 1.4, 1.0, e); // le bond frappe plus fort
+          damagePlayer(e.damage * 1.4, 0.7, e); // le bond frappe plus fort
           e.lunging = 0;
           e.lungeCd = 3.5 + Math.random() * 1.5;
         } else if (e.lunging <= 0) {
@@ -409,7 +409,7 @@ function update(dt) {
       collideIceWalls(e);  // ni les murs de glace
       if (dist < e.r + p.r + (e.range || 0) && e.attackCooldown <= 0) {
         e.attackCooldown = 1;
-        damagePlayer(e.damage, 1.0, e);
+        damagePlayer(e.damage, 0.7, e);
       }
 
       // Attaques à distance : boss (foudre/glace) et sorcière (sort violet)
@@ -586,7 +586,7 @@ function update(dt) {
     if (!l.struck && l.t <= 0) {
       l.struck = true;
       l.t = -0.18; // le bolt reste visible un instant
-      if (Math.hypot(p.x - l.x, p.y - l.y) < 62) damagePlayer(l.dmg, 0.6);
+      if (Math.hypot(p.x - l.x, p.y - l.y) < 62) damagePlayer(l.dmg, 0.4);
       spawnParticles(l.x, l.y, '#fff176', 14, 6);
       G.screenShake = Math.max(G.screenShake, 6);
     }
@@ -621,7 +621,7 @@ function update(dt) {
       G.projectiles.splice(i, 1); continue;
     }
     if (Math.hypot(p.x - pr.x, p.y - pr.y) < p.r + pr.r) {
-      damagePlayer(pr.dmg, 1.5); // la glace ralentit bien le joueur
+      damagePlayer(pr.dmg, 1.0); // la glace ralentit le joueur
       if (pr.hex || pr.acid) { // sort de la sorcière / bille de vase : poison (3s, plancher 15%)
         p.poisonT = 3;
         p.poisonDps = Math.max(p.poisonDps, pr.dmg * 0.5);
@@ -647,8 +647,8 @@ function update(dt) {
   }
 
   // Régénération hors combat (3s sans dégâts) : le montant dépend de la
-  // campagne — 15 PV/3s (Terres), 30 PV/3s (Terre Gelée), 50 PV/3s (Enfers)
-  const REGEN_PS = [15 / 3, 30 / 3, 50 / 3, 65 / 3, 80 / 3]; // PV par seconde
+  // campagne — ~8 PV/s (Terres) à ~43 PV/s (Espace)
+  const REGEN_PS = [8, 16, 27, 35, 43]; // PV par seconde
   if (G.time - p.lastHurt > 3 && p.hp < p.maxHp) {
     p.hp = Math.min(p.maxHp, p.hp + REGEN_PS[G.campaign || 0] * dt);
   }
