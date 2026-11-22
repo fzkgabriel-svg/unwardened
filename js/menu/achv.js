@@ -13,15 +13,15 @@ import { inR, fitText, wrapLines, hexA, fmtTime, overline, panel, overlineCenter
 // grille des succès (partagée dessin / clic) — avec scroll et fiche détail
 let achScroll = 0;
 let achDetail = null;
-let achTab = 0; // 0 = Terres Oubliées, 1 = Terre Gelée, 2 = Enfers, 3 = Égouts, 4 = Espace // id du succès ouvert en grand format
+let achTab = 0; // 0 = Terres Oubliées, 1 = Terre Gelée, 2 = Enfers, 3 = Égouts, 4 = Espace, 5 = Tempêtes // id du succès ouvert en grand format
 const ACH_COLS = 3, ACH_CELL_H = 44, ACH_GAP = 5;
-const ACH_TAB_NAMES = ['🗺️ TERRES', '❄️ GLACÉE', '🔥 ENFERS', '🗑️ ÉGOUTS', '🛸 ESPACE'];
+const ACH_TAB_NAMES = ['🗺️ TERRES', '❄️ GLACÉE', '🔥 ENFERS', '🗑️ ÉGOUTS', '🛸 ESPACE', '🌪️ TEMPÊTES'];
 
 function achTabBtns() {
   const cw = 880, ch = 590, cx = W / 2 - cw / 2, cy = H / 2 - ch / 2;
-  const bw = 160, gap = 12, y = cy + 80;
-  const x0 = cx + (cw - (bw * 5 + gap * 4)) / 2;
-  return [0, 1, 2, 3, 4].map(i => ({ i, x: x0 + i * (bw + gap), y, w: bw, h: 34 }));
+  const bw = 132, gap = 10, y = cy + 80;
+  const x0 = cx + (cw - (bw * 6 + gap * 5)) / 2;
+  return [0, 1, 2, 3, 4, 5].map(i => ({ i, x: x0 + i * (bw + gap), y, w: bw, h: 34 }));
 }
 
 function achCells() {

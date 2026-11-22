@@ -143,6 +143,7 @@ export function initInput() {
     // bouton 💰 boutique : uniquement depuis le menu principal
     if (G.state === 'menu' && shopButtonAt(G.mouse.x, G.mouse.y)) {
       G.shopOpen = true; G.shopQty = {}; G.shopConfirm = null; G.shopFlash = null;
+      G.shopSel = null; G.shopModSel = null; G.shopTab = 'mats'; G.shopTabT = G.time;
       if (G.inv) shopDay(G.inv); // réinitialise le stock si nouveau jour
       sfxClick();
       return;

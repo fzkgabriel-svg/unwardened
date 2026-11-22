@@ -89,6 +89,17 @@ export const ACHIEVEMENTS = [
   { id: 'spa_tentacule_15',icon:'🦑',name:'Lutte tentaculaire',  desc: 'Tuer 15 tentacules stellaires au total',           t: (G, s) => ((s.typeKills || {}).tentacule || 0) >= 15, tab: 4 },
   { id: 'spa_flawless',icon: '🛡️', name: 'Combinaison intacte',   desc: 'Atteindre la vague 35 en Espace en subissant < 1500 dégâts', t: (G) => G.campaign === 4 && G.wave >= 35 && G.dmgTaken < 1500, tab: 4 },
   { id: 'spa_marathon',icon: '⌛', name: 'Cosmonaute',            desc: 'Survivre 12 minutes en Espace',                    t: (G) => G.campaign === 4 && G.runTime >= 720, tab: 4 },
+  // ---------- MONDE 6 : LE ROYAUME DES TEMPÊTES (onglet 5) ----------
+  { id: 'sto_wave_30', icon: '🌬️', name: 'Marcheur des cimes',    desc: 'Atteindre la vague 30 en Royaume des Tempêtes',    t: (G) => G.campaign === 5 && G.wave >= 30, tab: 5 },
+  { id: 'sto_wave_45', icon: '👑', name: 'L\'ultime rafale',      desc: 'Atteindre la vague 45 en Royaume des Tempêtes (finale)', t: (G) => G.campaign === 5 && G.wave >= 45, tab: 5 },
+  { id: 'sto_boss',    icon: '🌪️', name: 'Dompteur du Souverain', desc: 'Vaincre le Souverain des Ouragans',                t: (G, s) => !!(s.campaignDone || {})[5], tab: 5 },
+  { id: 'sto_courant_40',icon:'💨',name: 'Sillage du vent',       desc: 'Tuer 40 enfants du vent au total',                 t: (G, s) => ((s.typeKills || {}).courant || 0) >= 40, tab: 5 },
+  { id: 'sto_esprit_25',icon:'👻', name: 'Apaisement',            desc: 'Tuer 25 esprits de la brise au total',             t: (G, s) => ((s.typeKills || {}).esprit || 0) >= 25, tab: 5 },
+  { id: 'sto_gardien_15',icon:'🛡️',name: 'Briseur de tempêtes',   desc: 'Tuer 15 gardiens de la tempête au total',          t: (G, s) => ((s.typeKills || {}).gardien || 0) >= 15, tab: 5 },
+  { id: 'sto_colosse_10',icon:'☁️',name: 'Perce-nuages',          desc: 'Tuer 10 colosses des nuages au total',             t: (G, s) => ((s.typeKills || {}).colosse || 0) >= 10, tab: 5 },
+  { id: 'sto_pass2',   icon: '⚡', name: 'Second souffle',        desc: 'Débloquer le 2ᵉ emplacement de module passif',      t: (G) => !!((G.inv && G.inv.modules && G.inv.modules.pass2Unlocked) || (G.stats && G.stats.campaignDone && G.stats.campaignDone[5])), tab: 5 },
+  { id: 'sto_flawless',icon: '🛡️', name: 'Ancrage céleste',       desc: 'Atteindre la vague 40 en Tempêtes en subissant < 1800 dégâts', t: (G) => G.campaign === 5 && G.wave >= 40 && G.dmgTaken < 1800, tab: 5 },
+  { id: 'sto_marathon',icon: '⌛', name: 'Sentinelle des cimes',  desc: 'Survivre 12 minutes en Royaume des Tempêtes',      t: (G) => G.campaign === 5 && G.runTime >= 720, tab: 5 },
 ];
 
 // rareté des succès : plus c'est rare, plus la récompense est précieuse
@@ -184,6 +195,17 @@ const REWARDS = {
   spa_ult_3:    ['epique',    { cristal: 6, essence: 6, or: 5 }],
   spa_flawless: ['legendaire',{ cristal: 9, essence: 8, or: 8 }],
   spa_marathon: ['epique',    { cristal: 5, essence: 5, or: 5 }],
+  // monde 6 — Le Royaume des Tempêtes
+  sto_wave_30:  ['rare',      { cristal: 5, essence: 4, fer: 5 }],
+  sto_wave_45:  ['epique',    { cristal: 8, essence: 7, or: 7 }],
+  sto_boss:     ['epique',    { cristal: 8, essence: 7, or: 8 }],
+  sto_courant_40:['rare',     { cristal: 4, essence: 4, fer: 4 }],
+  sto_esprit_25:['rare',      { cristal: 4, essence: 5, or: 3 }],
+  sto_gardien_15:['rare',     { cristal: 5, essence: 4, fer: 5 }],
+  sto_colosse_10:['rare',     { cristal: 6, essence: 5, or: 4 }],
+  sto_pass2:    ['legendaire',{ cristal: 10, essence: 10, or: 10 }],
+  sto_flawless: ['legendaire',{ cristal: 9, essence: 9, or: 9 }],
+  sto_marathon: ['epique',    { cristal: 6, essence: 6, or: 6 }],
 };
 
 // infos d'affichage (rareté + récompense) d'un succès
@@ -263,7 +285,7 @@ export function unclaimedInTab(tab = -1) {
 export function adminUnlockAll() {
   // campagnes + ultimes + arc : sauvegardés même si une récompense échoue
   G.stats = G.stats || {};
-  G.stats.campaignDone = { 0: true, 1: true, 2: true, 3: true, 4: true };
+  G.stats.campaignDone = { 0: true, 1: true, 2: true, 3: true, 4: true, 5: true };
   G.stats.iceUlt = true;
   G.stats.hellUlt = true;
   G.stats.bowUnlocked = true; // arc cinétique cosmique
@@ -285,6 +307,9 @@ export function adminUnlockAll() {
         const w = G.inv.wmode[k] = G.inv.wmode[k] || { xp: 0 };
         w.xp = Math.max(w.xp || 0, 1e9); // -> niveau 100 (MAX)
       }
+      // 2ᵉ emplacement passif (récompense du Souverain des Ouragans)
+      G.inv.modules = G.inv.modules || {};
+      G.inv.modules.pass2Unlocked = true;
       saveInv(G.inv);
     } catch (e) {}
   }

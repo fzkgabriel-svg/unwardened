@@ -9,7 +9,8 @@ const BOSSES = {
   finalBossGlace: { name: 'SOUVERAIN DE GLACE',     short: 'Le Souverain de Glace',    col: '#4fc3f7', hi: '#e1f5fe', c1: '#01579b', c2: '#0288d1', gemC: '#4fc3f7', phase: ['', 'GLACIATION', 'FUREUR GLACIALE'] },
   finalBossEnfer: { name: 'BARON DE L\'ENFER',      short: 'Le Baron de l\'Enfer',     col: '#ff7043', hi: '#ffccbc', c1: '#4a0d0d', c2: '#c62828', gemC: '#ff7043', phase: ['', 'FUREUR DU BARON', 'RAGE DE L\'ENFER'] },
   finalBossEgout: { name: 'TYRAN DES PROFONDEURS',  short: 'Le Tyran des Profondeurs', col: '#dce775', hi: '#f9fbe7', c1: '#1b3a00', c2: '#558b2f', gemC: '#aeea00', phase: ['', 'FURIE TOXIQUE', 'FUREUR DU TYRAN'] },
-  finalBossSpace: { name: 'ABOMINATION COSMIQUE',   short: 'L\'Abomination Cosmique',  col: '#b388ff', hi: '#ede7f6', c1: '#1a0033', c2: '#6a1b9a', gemC: '#b388ff', phase: ['', 'FUREUR COSMIQUE', 'ABOMINATION'] }
+  finalBossSpace: { name: 'ABOMINATION COSMIQUE',   short: 'L\'Abomination Cosmique',  col: '#b388ff', hi: '#ede7f6', c1: '#1a0033', c2: '#6a1b9a', gemC: '#b388ff', phase: ['', 'FUREUR COSMIQUE', 'ABOMINATION'] },
+  finalBossTempete:{ name: 'SOUVERAIN DES OURAGANS', short: 'Le Souverain des Ouragans', col: '#4fc3f7', hi: '#e1f5fe', c1: '#0d3a5c', c2: '#0277bd', gemC: '#4fc3f7', phase: ['', 'COLÈRE DU VENT', 'FUREUR DES OURAGANS'] }
 };
 
 // petit emblème du boss (silhouette stylisée par univers)
@@ -65,6 +66,23 @@ function bossEmblem(kind, x, y, r, t) {
     ctx.fillStyle = '#b388ff';
     ctx.beginPath(); ctx.arc(Math.cos(t) * r * 1.15, Math.sin(t * 1.3) * r * 0.6, 1.8, 0, TAU); ctx.fill();
     ctx.beginPath(); ctx.arc(-Math.cos(t * 0.7) * r * 1.2, -Math.sin(t) * r * 0.7, 1.4, 0, TAU); ctx.fill();
+  } else if (kind === 'finalBossTempete') {
+    // œil du ouragan : spirale de vent + pupille électrique
+    ctx.strokeStyle = '#4fc3f7'; ctx.lineWidth = 1.8;
+    for (let i = 0; i < 3; i++) {
+      const rr = r * (0.95 - i * 0.28);
+      ctx.beginPath();
+      for (let a = 0; a <= TAU * 1.6; a += 0.35) {
+        const rad = rr * (1 - a / (TAU * 2.2));
+        const px = Math.cos(a + t * 2 + i) * rad, py = Math.sin(a + t * 2 + i) * rad * 0.8;
+        a === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+    }
+    ctx.fillStyle = '#e1f5fe';
+    ctx.beginPath(); ctx.arc(0, 0, r * 0.2 + Math.sin(t * 4) * 1, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#0d3a5c';
+    ctx.beginPath(); ctx.arc(0, 0, r * 0.09, 0, TAU); ctx.fill();
   } else {
     // seigneur oublié : couronne dorée
     ctx.fillStyle = '#ffd740';

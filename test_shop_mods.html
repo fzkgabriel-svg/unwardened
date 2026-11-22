@@ -1,0 +1,75 @@
+<!doctype html>
+<html><head><meta charset="utf-8"></head><body>
+<canvas id="game" width="1200" height="640"></canvas>
+<pre id="out">RUNNING</pre>
+<script type="module">
+import { G, ctx } from './js/state.js';
+import { shopLayout, shopClickAt, drawShop, buyModule, modStockLeft, MOD_RAR_STOCK, MODSHOP, shopDay, buyMaterial } from './js/shop.js';
+import { MODULES, modState } from './js/modules.js';
+import { drawBossBar } from './js/hud/boss.js';
+const out = [];
+const T = (name, fn) => { try { const r = fn(); out.push(name + '=' + (r === undefined ? 'ok' : r)); } catch (e) { out.push(name + '=FAIL:' + e.message); } };
+try {
+  G.state = 'menu'; G.menuView = 'main'; G.time = 1;
+  G.mouse = { x: 600, y: 320 };
+  G.inv = { mats: { emeraude: 2000 }, items: {}, equip: {}, modules: { owned: [], eq: { act: null, pass: null, pass2: null }, pass2Unlocked: false }, shop: { day: '', bought: {} } };
+  G.enemies = []; G.drops = []; G.portals = []; G.particles = []; G.damageTexts = []; G.rings = [];
+  G.shopOpen = true; G.shopQty = {}; G.shopConfirm = null; G.shopFlash = null; G.shopSel = null; G.shopModSel = null; G.shopTab = 'mats'; G.shopTabT = 0;
+
+  const L = shopLayout();
+  T('tabs', () => !!(L.tabs.mats && L.tabs.mods));
+  T('cards', () => L.modCards.length);
+  T('detail', () => !!L.modDetail && !!L.modBuy);
+  T('modshop', () => MODSHOP.length);
+
+  // rendu des deux onglets
+  T('drawMats', () => { G.shopTab = 'mats'; drawShop(); return 'ok'; });
+  T('drawMods', () => { G.shopTab = 'mods'; drawShop(); return 'ok'; });
+
+  // clic onglet MODULES
+  T('clickTab', () => { G.shopTab = 'mats'; const r = shopClickAt(L.tabs.mods.x + 10, L.tabs.mods.y + 10); return r + ':' + G.shopTab; });
+  // clic carte -> sélection
+  T('clickCard', () => { const c = L.modCards[0]; const r = shopClickAt(c.x + 10, c.y + 10); return r + ':' + G.shopModSel; });
+  T('drawModDetail', () => { drawShop(); return 'ok'; });
+
+  // stock par rareté
+  T('stockLeg', () => modStockLeft(G.inv, 'Légendaire'));
+  T('stockCom', () => modStockLeft(G.inv, 'Commun'));
+
+  // achat via confirmation : surcharge (Rare, 160◆)
+  G.inv.mats.emeraude = 2000;
+  const idRare = MODSHOP.find(i => MODULES[i].rar === 'Rare');
+  T('buyRare', () => { const r = buyModule(G.inv, idRare); return r.ok + ':' + (G.inv.mats.emeraude) + ':' + modState(G.inv).owned.includes(idRare) + ':pool=' + (shopDay(G.inv).bought['pool:Rare'] || 0); });
+  T('stockRareAfter', () => modStockLeft(G.inv, 'Rare'));
+  // double achat -> refusé
+  T('rebuy', () => buyModule(G.inv, idRare).ok);
+  // fonds insuffisants
+  T('poor', () => { G.inv.mats.emeraude = 5; const r = buyModule(G.inv, MODSHOP.find(i => MODULES[i].rar === 'Commun')); return r.ok + ':' + r.msg.slice(0, 20); });
+  // quota rare : Rare stock=3, acheter 2 de plus
+  G.inv.mats.emeraude = 5000;
+  const rares = MODSHOP.filter(i => MODULES[i].rar === 'Rare' && !modState(G.inv).owned.includes(i));
+  for (const id of rares.slice(0, 2)) buyModule(G.inv, id);
+  T('poolRareUsed', () => shopDay(G.inv).bought['pool:Rare']);
+  // légendaire : stock 1 -> une seule vente par jour
+  const leg = MODSHOP.find(i => MODULES[i].rar === 'Légendaire');
+  T('buyLeg1', () => { const r = buyModule(G.inv, leg); return r.ok + ':' + r.msg + ':em=' + G.inv.mats.emeraude + ':left=' + modStockLeft(G.inv, 'Légendaire'); });
+  const leg2 = MODSHOP.find(i => MODULES[i].rar === 'Légendaire' && i !== leg);
+  T('leg2Blocked', () => leg2 ? buyModule(G.inv, leg2).ok : 'only1');
+
+  // matériaux : l'onglet MATÉRIAUX reste fonctionnel
+  T('buyMat', () => { const r = buyMaterial(G.inv, 'cuir', 2); return r.ok + ':' + (G.inv.mats.cuir || 0); });
+  T('drawMatsAgain', () => { G.shopTab = 'mats'; drawShop(); return 'ok'; });
+
+  // barre de vie du boss tempête
+  G.state = 'playing'; G.campaign = 5; G.wave = 45;
+  G.player = { x: 600, y: 400, r: 15, hp: 100, maxHp: 600, level: 5, xp: 0, xpNext: 50, potions: 0, maxPotions: 3, alive: true, lastHurt: -99, slowT: 0, hitSlowT: 0, potionCooldown: 0, poisonT: 0, poisonDps: 0, attackMode: 1, speed: 2.1, ultCharge: 0, shieldT: 0, shieldCd: 0, handCd: 0, handUsed: false, switchLock: 0 };
+  G.enemies = [{ type: 'finalBossTempete', x: 700, y: 300, r: 60, hp: 5000, maxHp: 21000, phase: 1, shieldT: 0, color: '#0d2b45', glow: '#80d8ff' }];
+  T('bossBar', () => { drawBossBar(); return 'ok'; });
+  G.enemies = [];
+
+  document.getElementById('out').textContent = 'SHOP ' + out.join(' | ');
+} catch (err) {
+  document.getElementById('out').textContent = 'FAIL ' + err.message + ' @' + (err.stack||'').split('\n')[1];
+}
+</script>
+</body></html>

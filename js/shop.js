@@ -4,7 +4,7 @@
 import { G, ctx, W, H, TAU } from './state.js';
 import { roundRect, drawMatIcon, hexA } from './utils.js';
 import { MATS, addMaterial, loadInv, saveInv } from './inventory.js';
-import { MODULES, MOD_IDS, ownModule, modState, drawModuleIcon } from './modules.js';
+import { MODULES, MOD_IDS, ownModule, modState } from './modules.js';
 import { sfxClick, sfxPickup } from './audio.js';
 
 // catalogue : clef = matériau vendu (JAMAIS 'emeraude' — on n'achète pas la monnaie)
@@ -67,14 +67,29 @@ export function shopCountdown() {
 
 // ---------- MODULES À VENTE (émeraudes, une seule fois chacun) ----------
 export const MODSHOP = MOD_IDS.filter(id => MODULES[id].price > 0);
+// stock quotidien par rareté : quota de modules achetables par jour.
+// Persisté dans inv.shop.bought['pool:<rareté>'] -> réinitialisé à minuit,
+// impossible à contourner en relançant le jeu (sauvegarde locale).
+export const MOD_RAR_STOCK = { 'Commun': 4, 'Rare': 3, 'Épique': 2, 'Légendaire': 1, 'Mythique': 1 };
+export const RAR_COL = { 'Commun': '#b0bec5', 'Rare': '#4fc3f7', 'Épique': '#ce93d8', 'Légendaire': '#ffd740', 'Mythique': '#ff5252' };
+export function modStockLeft(inv, rar) {
+  const max = MOD_RAR_STOCK[rar] ?? 1;
+  const bought = (shopDay(inv).bought['pool:' + rar]) || 0;
+  return Math.max(0, max - bought);
+}
 export function buyModule(inv, id) {
   const m = MODULES[id];
   if (!m || m.price <= 0) return { ok: false, msg: 'Module indisponible' };
   const ms = modState(inv);
   if (ms.owned.includes(id)) return { ok: false, msg: 'Déjà possédé' };
+  const left = modStockLeft(inv, m.rar);
+  if (left <= 0) return { ok: false, msg: `Stock ${m.rar} épuisé aujourd'hui` };
   if ((inv.mats.emeraude || 0) < m.price) return { ok: false, msg: `Il faut ${m.price} émeraudes` };
   inv.mats.emeraude -= m.price;
   ownModule(inv, id);
+  const sd = shopDay(inv);
+  sd.bought['pool:' + m.rar] = (sd.bought['pool:' + m.rar] || 0) + 1;
+  saveInv(inv);
   return { ok: true, msg: `MODULE ${m.name.toUpperCase()} DÉBLOQUÉ !` };
 }
 
@@ -124,21 +139,33 @@ export function shopClickAt(x, y) {
     if (inR(L.confirmNo, x, y)) { G.shopConfirm = null; sfxClick(); return 'deny'; }
     return 'inside';
   }
-  // puces de modules en bas de boutique
-  for (const ch of L.modChips) {
-    if (inR(ch, x, y)) {
-      const id = ch.id, m = MODULES[id];
-      if (modState(inv).owned.includes(id)) {
-        G.shopFlash = { msg: `${m.name} : déjà possédé`, t: G.time, bad: true };
-        sfxClick(); return 'deny';
-      }
-      if (emeralds(inv) < m.price) {
-        G.shopFlash = { msg: `Il faut ${m.price} émeraudes pour ${m.name}`, t: G.time, bad: true };
-        G.shopMood = 'sad'; G.shopMoodT = G.time; sfxClick(); return 'deny';
-      }
-      G.shopConfirm = { mod: id, cost: m.price };
-      sfxClick(); return 'buy';
+  // onglets MATÉRIAUX / MODULES
+  if (inR(L.tabs.mats, x, y)) { setShopTab('mats'); return 'tab'; }
+  if (inR(L.tabs.mods, x, y)) { setShopTab('mods'); return 'tab'; }
+  // ===== onglet MODULES : hologrammes =====
+  if ((G.shopTab || 'mats') === 'mods') {
+    // clic sur une carte -> panneau de détail
+    for (const cd of L.modCards) {
+      if (inR(cd, x, y)) {
+        G.shopModSel = G.shopModSel === cd.id ? null : cd.id;
+        sfxClick(); return 'sel';
     }
+    }
+    // panneau de détail : bouton ACHETER
+    const mid = G.shopModSel;
+    if (mid && MODULES[mid] && MODSHOP.includes(mid)) {
+      if (inR(L.modBuy, x, y)) {
+        const m = MODULES[mid];
+        const owned = modState(inv).owned.includes(mid);
+        const left = modStockLeft(inv, m.rar);
+        if (owned) { G.shopFlash = { msg: `${m.name} : déjà possédé`, t: G.time, bad: true }; sfxClick(); return 'deny'; }
+        if (left <= 0) { G.shopFlash = { msg: `Stock ${m.rar} épuisé aujourd'hui`, t: G.time, bad: true }; sfxClick(); return 'deny'; }
+        if (emeralds(inv) < m.price) { G.shopFlash = { msg: `Il faut ${m.price} émeraudes pour ${m.name}`, t: G.time, bad: true }; G.shopMood = 'sad'; G.shopMoodT = G.time; sfxClick(); return 'deny'; }
+        G.shopConfirm = { mod: mid, cost: m.price };
+        sfxClick(); return 'buy';
+      }
+    }
+    return inR(L.scene, x, y) ? 'inside' : 'close';
   }
   // clic sur un piédestal -> sélection pour le panneau de détail
   for (const ped of L.peds) {
@@ -187,6 +214,12 @@ function setQty(key, d) {
   const cur = G.shopQty[key] || 1;
   G.shopQty[key] = Math.max(1, Math.min(max, cur + d));
 }
+function setShopTab(tab) {
+  if ((G.shopTab || 'mats') === tab) return;
+  G.shopTab = tab; G.shopTabT = G.time || 0;
+  G.shopSel = null; G.shopModSel = null; G.shopConfirm = null;
+  sfxClick();
+}
 function inR(r, x, y) { return r && x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h; }
 
 // ---------- LAYOUT (partagé dessin / clic) ----------
@@ -219,14 +252,22 @@ export function shopLayout() {
     confirmBtn: { x: W / 2 - 130, y: H / 2 + 90, w: 120, h: 36 },
     confirmNo:  { x: W / 2 + 10,  y: H / 2 + 90, w: 120, h: 36 },
     confirmPanel: { x: W / 2 - 230, y: H / 2 - 110, w: 460, h: 220 },
-    // rangée de modules en bas de l'écran
-    modChips: (() => {
-      const n = MODSHOP.length, cw = 106, gap = 8;
-      const total = n * cw + (n - 1) * gap;
-      const x0 = W / 2 - total / 2, y = 626, h = 74;
-      return MODSHOP.map((id, i) => ({ id, x: x0 + i * (cw + gap), y, w: cw, h }));
+    // onglets MATÉRIAUX / MODULES
+    tabs: {
+      mats: { x: W / 2 - 212, y: 80, w: 200, h: 32 },
+      mods: { x: W / 2 + 12,  y: 80, w: 200, h: 32 },
+    },
+    // grille des modules (onglet MODULES) : 5 colonnes × 2 lignes
+    modCards: (() => {
+      const cols = 5, cw = 172, ch = 140, gap = 14;
+      const x0 = W / 2 - (cols * cw + (cols - 1) * gap) / 2, y0 = 128;
+      return MODSHOP.map((id, i) => ({
+        id, x: x0 + (i % cols) * (cw + gap), y: y0 + Math.floor(i / cols) * (ch + gap), w: cw, h: ch,
+      }));
     })(),
-    modLabel: { x: W / 2, y: 614 },
+    // panneau de détail module (bas d'écran, sous la grille)
+    modDetail: { x: W / 2 - 430, y: H - 200, w: 860, h: 172 },
+    modBuy: { x: W / 2 + 430 - 250, y: H - 200 + 62, w: 220, h: 44 },
   };
 }
 
@@ -267,18 +308,31 @@ export function drawShop() {
   }
   ctx.globalAlpha = 1;
 
-  // ===== ÉTAGÈRES décoratives en arrière-plan =====
-  drawShelves(t);
+  const tab = G.shopTab || 'mats';
+  // transition d'onglet : fondu + léger glissement du contenu
+  const tabK = Math.min(1, (t - (G.shopTabT ?? t)) / 0.28);
+  const tabEase = 1 - Math.pow(1 - tabK, 3);
 
-  // ===== MARCHAND =====
-  drawMerchant(L.merchant, t);
+  // ===== décor d'arrière-plan selon l'onglet =====
+  if (tab === 'mods') {
+    drawModBackdrop(t);
+  } else {
+    drawShelves(t);
+    drawMerchant(L.merchant, t);
+  }
 
   // ===== EN-TÊTE : titre + solde + compte à rebours + fermer =====
   ctx.textAlign = 'center';
-  ctx.fillStyle = C_GOLD; ctx.font = 'bold 24px Cinzel, serif';
-  ctx.fillText('💰 BOUTIQUE DU MAÎTRE MARCHAND', W / 2, 44);
+  ctx.fillStyle = tab === 'mods' ? '#4fc3f7' : C_GOLD;
+  ctx.font = 'bold 24px Cinzel, serif';
+  ctx.fillText(tab === 'mods' ? '⚡ SANCTUAIRE DES MODULES' : '💰 BOUTIQUE DU MAÎTRE MARCHAND', W / 2, 44);
   ctx.fillStyle = C_MUT; ctx.font = 'italic 11.5px Inter, sans-serif';
-  ctx.fillText('Matériaux contre émeraudes — les stocks rares se renouvellent chaque jour', W / 2, 66);
+  ctx.fillText(tab === 'mods'
+    ? 'Modules anciens en vente — stock par rareté renouvelé chaque jour'
+    : 'Matériaux contre émeraudes — les stocks rares se renouvellent chaque jour', W / 2, 66);
+
+  // ===== ONGLETS =====
+  drawShopTabs(L, t, tab);
   // solde d'émeraudes
   const bal = L.balance;
   const eg = ctx.createLinearGradient(bal.x, bal.y, bal.x + bal.w, bal.y);
@@ -326,16 +380,20 @@ export function drawShop() {
   ctx.fillStyle = '#fff'; ctx.font = 'bold 15px Inter, sans-serif'; ctx.textAlign = 'center';
   ctx.fillText('✕', cl.x + cl.w / 2, cl.y + cl.h / 2 + 5);
 
-  // ===== COMPToir + pedestals =====
-  drawCounter(t);
-  for (const ped of L.peds) drawPedestal(ped, t, inv);
-
-  // ===== PANNEAU DE DÉTAIL =====
-  if (G.shopSel && SHOP[G.shopSel]) drawDetail(L, inv, t);
-  else drawHint(L);
-
-  // ===== rangée MODULES (achat unique en émeraudes) =====
-  drawModStrip(L, inv, t);
+  // ===== CONTENU DE L'ONGLET (transition fondu + glissement) =====
+  ctx.save();
+  ctx.globalAlpha = tabEase;
+  ctx.translate(0, (1 - tabEase) * 16);
+  if (tab === 'mods') {
+    for (const cd of L.modCards) drawModCard(cd, t, inv);
+    drawModDetail(L, inv, t);
+  } else {
+    drawCounter(t);
+    for (const ped of L.peds) drawPedestal(ped, t, inv);
+    if (G.shopSel && SHOP[G.shopSel]) drawDetail(L, inv, t);
+    else drawHint(L);
+  }
+  ctx.restore();
 
   // ===== flash message =====
   const fl = G.shopFlash;
@@ -353,17 +411,19 @@ export function drawShop() {
     const cf = G.shopConfirm;
     const P = L.confirmPanel;
     ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, 0, W, H);
+    const isMod = !!cf.mod;
+    const cEdge = isMod ? '#4fc3f7' : C_GOLD;
     const cg = ctx.createLinearGradient(0, P.y, 0, P.y + P.h);
-    cg.addColorStop(0, '#33271a'); cg.addColorStop(1, '#1c140c');
+    cg.addColorStop(0, isMod ? '#0d2b45' : '#33271a'); cg.addColorStop(1, isMod ? '#06121f' : '#1c140c');
     ctx.fillStyle = cg; roundRect(P.x, P.y, P.w, P.h, 14); ctx.fill();
-    ctx.strokeStyle = C_GOLD; ctx.lineWidth = 2; roundRect(P.x, P.y, P.w, P.h, 14); ctx.stroke();
+    ctx.strokeStyle = cEdge; ctx.lineWidth = 2; roundRect(P.x, P.y, P.w, P.h, 14); ctx.stroke();
     // coin ornements
     ctx.fillStyle = C_GOLD;
     for (const [ox, oy] of [[P.x + 12, P.y + 12], [P.x + P.w - 12, P.y + 12], [P.x + 12, P.y + P.h - 12], [P.x + P.w - 12, P.y + P.h - 12]]) {
       ctx.save(); ctx.translate(ox, oy); ctx.rotate(Math.PI / 4); ctx.fillRect(-3, -3, 6, 6); ctx.restore();
     }
     ctx.textAlign = 'center';
-    ctx.fillStyle = C_GOLD; ctx.font = 'bold 19px Cinzel, serif';
+    ctx.fillStyle = cEdge; ctx.font = 'bold 19px Cinzel, serif';
     ctx.fillText(cf.mod ? 'Confirmer l\'achat du module' : 'Confirmer l\'achat', W / 2, P.y + 42);
     if (cf.mod) {
       const m = MODULES[cf.mod];
@@ -687,40 +747,244 @@ function drawDetail(L, inv, t) {
   ctx.fillText(left <= 0 ? 'ÉPUISÉ' : `🛒 ACHETER · ${cost} ◆`, b.x + b.w / 2, b.y + b.h / 2 + 5);
 }
 
-// ---------- RANGÉE MODULES (bas de boutique) ----------
-function drawModStrip(L, inv, t) {
-  const owned = modState(inv).owned;
-  // titre
+// ---------- ONGLETS MATÉRIAUX / MODULES ----------
+function drawShopTabs(L, t, tab) {
+  for (const [key, label, icon, col] of [
+    ['mats', 'MATÉRIAUX', '💰', '#d4b062'],
+    ['mods', 'MODULES', '⚡', '#4fc3f7'],
+  ]) {
+    const r = L.tabs[key], act = tab === key;
+    const hov = inR(r, G.mouse.x, G.mouse.y);
+    ctx.save();
+    // fond : verre sombre, actif = lueur de sa couleur
+    const g = ctx.createLinearGradient(r.x, r.y, r.x, r.y + r.h);
+    g.addColorStop(0, act ? hexA(col, 0.30) : hov ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.045)');
+    g.addColorStop(1, act ? hexA(col, 0.12) : 'rgba(255,255,255,0.02)');
+    ctx.fillStyle = g; roundRect(r.x, r.y, r.w, r.h, 10); ctx.fill();
+    ctx.strokeStyle = act ? hexA(col, 0.9) : hov ? hexA(col, 0.5) : 'rgba(255,255,255,0.14)';
+    ctx.lineWidth = act ? 2 : 1.2;
+    roundRect(r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1, 10); ctx.stroke();
+    // soulignement animé sous l'onglet actif
+    if (act) {
+      ctx.fillStyle = hexA(col, 0.55 + 0.3 * Math.sin(t * 5));
+      roundRect(r.x + r.w / 2 - 34, r.y + r.h - 4, 68, 3, 2); ctx.fill();
+    }
+    ctx.fillStyle = act ? '#fff' : hov ? '#cfd8dc' : '#8d99ae';
+    ctx.font = '700 12.5px Inter, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(`${icon}  ${label}`, r.x + r.w / 2, r.y + r.h / 2 + 4.5);
+    ctx.restore();
+  }
+}
+
+// ---------- FOND « SANCTUAIRE » : grille holo + particules ----------
+function drawModBackdrop(t) {
+  // voile bleu-violet profond par-dessus le mur
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, 'rgba(6,10,26,0.72)'); bg.addColorStop(0.55, 'rgba(10,16,40,0.66)'); bg.addColorStop(1, 'rgba(4,6,16,0.8)');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  // halo central cyan
+  const cg = ctx.createRadialGradient(W / 2, 300, 60, W / 2, 340, 620);
+  cg.addColorStop(0, 'rgba(79,195,247,0.10)'); cg.addColorStop(0.6, 'rgba(120,80,220,0.06)'); cg.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = cg; ctx.fillRect(0, 0, W, H);
+  // grille perspective qui défile vers le bas
+  ctx.save();
+  ctx.strokeStyle = 'rgba(79,195,247,0.10)'; ctx.lineWidth = 1;
+  const hz = 470, vx = W / 2;
+  for (let i = -8; i <= 8; i++) {
+    const bx = vx + i * 110;
+    const k = ((i * 37 + t * 22) % 110 + 110) % 110 / 110; // défilement
+    const ex = vx + i * 520;
+    ctx.globalAlpha = 0.10 + k * 0.22;
+    ctx.beginPath(); ctx.moveTo(vx + i * 60, hz); ctx.lineTo(ex, H); ctx.stroke();
+  }
+  for (let j = 0; j < 7; j++) {
+    const yy = hz + (H - hz) * Math.pow((j + ((t * 0.35) % 1)) / 7, 1.7);
+    ctx.globalAlpha = 0.12 + (j / 7) * 0.2;
+    ctx.beginPath(); ctx.moveTo(0, yy); ctx.lineTo(W, yy); ctx.stroke();
+  }
+  ctx.restore(); ctx.globalAlpha = 1;
+  // particules holographiques dérivantes
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 30; i++) {
+    const px = (i * 173 + t * (12 + (i % 5) * 7)) % (W + 60) - 30;
+    const py = (i * 211 + Math.sin(t * 0.8 + i * 1.7) * 46 + H * 3) % (H * 0.85);
+    const tw = 0.4 + 0.6 * Math.abs(Math.sin(t * 2 + i * 2.3));
+    ctx.globalAlpha = tw * 0.5;
+    ctx.fillStyle = i % 3 === 0 ? '#b388ff' : i % 3 === 1 ? '#4fc3f7' : '#e1f5fe';
+    const s = 1 + (i % 3) * 0.7;
+    ctx.fillRect(px, py, s, s);
+  }
+  ctx.restore(); ctx.globalAlpha = 1;
+}
+
+// ---------- CARTE MODULE (grille holographique) ----------
+function drawModCard(cd, t, inv) {
+  const m = MODULES[cd.id];
+  const owned = modState(inv).owned.includes(cd.id);
+  const hov = inR(cd, G.mouse.x, G.mouse.y) && !owned;
+  const sel = G.shopModSel === cd.id;
+  const afford = emeralds(inv) >= m.price;
+  const left = modStockLeft(inv, m.rar);
+  const col = RAR_COL[m.rar] || m.col;
+  const { x, y, w, h } = cd;
+  ctx.save();
+  // relief au survol : translation + ombre
+  const lift = hov ? -4 : sel ? -2 : 0;
+  ctx.translate(0, lift);
+  // halo de rareté (pulse lent, plus fort au survol/sélection)
+  const pulse = 0.5 + 0.5 * Math.sin(t * 3 + x * 0.02);
+  const hg = ctx.createRadialGradient(x + w / 2, y + h / 2, 8, x + w / 2, y + h / 2, w * 0.75);
+  hg.addColorStop(0, hexA(col, (hov || sel ? 0.30 : 0.14) + pulse * 0.08));
+  hg.addColorStop(1, hexA(col, 0));
+  ctx.fillStyle = hg; ctx.fillRect(x - 14, y - 14 + lift, w + 28, h + 28);
+  // corps de la carte : verre sombre avec dégradé
+  const cg = ctx.createLinearGradient(x, y, x, y + h);
+  cg.addColorStop(0, owned ? 'rgba(10,26,18,0.85)' : hov ? hexA(col, 0.16) : 'rgba(8,14,30,0.78)');
+  cg.addColorStop(1, 'rgba(4,8,18,0.85)');
+  ctx.fillStyle = cg;
+  roundRect(x, y, w, h, 12); ctx.fill();
+  // bordure animée selon la rareté : liseré extérieur pulsé
+  ctx.strokeStyle = owned ? 'rgba(105,240,174,0.55)' : hexA(col, hov ? 0.95 : sel ? 0.8 : 0.4 + pulse * 0.15);
+  ctx.lineWidth = hov || sel ? 2 : 1.3;
+  roundRect(x + 0.5, y + 0.5, w - 1, h - 1, 12); ctx.stroke();
+  // coins holographiques
+  ctx.fillStyle = hexA(col, 0.8);
+  for (const [cx, cy] of [[x + 8, y + 8], [x + w - 8, y + 8], [x + 8, y + h - 8], [x + w - 8, y + h - 8]]) {
+    ctx.fillRect(cx - 2.5, cy - 2.5, 5, 5);
+  }
+  // icône animée : flottement + halo + scintillement
+  const icx = x + w / 2, icy = y + 44 + Math.sin(t * 2.2 + x * 0.04) * 3;
+  const ig = ctx.createRadialGradient(icx, icy, 4, icx, icy, 34);
+  ig.addColorStop(0, hexA(col, 0.4)); ig.addColorStop(1, hexA(col, 0));
+  ctx.fillStyle = ig; ctx.beginPath(); ctx.arc(icx, icy, 34, 0, TAU); ctx.fill();
+  ctx.save();
+  ctx.translate(icx, icy);
+  const sc = (hov ? 1.18 : 1) * (1 + Math.sin(t * 4 + x) * 0.04);
+  ctx.scale(sc, sc);
+  ctx.font = '34px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.shadowColor = col; ctx.shadowBlur = hov ? 18 : 10;
+  ctx.fillStyle = owned ? '#69f0ae' : m.col;
+  ctx.fillText(m.icon, 0, 2);
+  ctx.restore();
+  // nom (tronqué proprement)
   ctx.textAlign = 'center';
-  ctx.fillStyle = '#18ffff'; ctx.font = '600 10px Inter, sans-serif'; ctx.letterSpacing = '2px';
-  ctx.fillText('MODULES DU HÉROS — ACHAT UNIQUE EN ÉMERAUDES', L.modLabel.x, L.modLabel.y);
+  ctx.fillStyle = owned ? '#69f0ae' : '#e8f0f8';
+  ctx.font = '700 11.5px Inter, sans-serif';
+  ctx.fillText(m.name.length > 20 ? m.name.slice(0, 19) + '…' : m.name, x + w / 2, y + 84, w - 14);
+  // rareté + type
+  ctx.font = '700 8.5px Inter, sans-serif'; ctx.letterSpacing = '1px';
+  ctx.fillStyle = col;
+  ctx.fillText(`${m.rar.toUpperCase()} · ${m.type === 'actif' ? 'ACTIF' : 'PASSIF'}`, x + w / 2, y + 100);
   ctx.letterSpacing = '0px';
-  for (const ch of L.modChips) {
-    const m = MODULES[ch.id];
-    const has = owned.includes(ch.id);
-    const hov = inR(ch, G.mouse.x, G.mouse.y) && !has;
-    const afford = emeralds(inv) >= m.price;
-    // puce technologique
-    ctx.fillStyle = has ? 'rgba(105,240,174,0.08)' : hov ? hexA(m.col, 0.16) : 'rgba(255,255,255,0.03)';
-    roundRect(ch.x, ch.y, ch.w, ch.h, 9); ctx.fill();
-    ctx.strokeStyle = has ? 'rgba(105,240,174,0.6)' : hov ? hexA(m.col, 0.8) : 'rgba(255,255,255,0.12)';
-    ctx.lineWidth = 1.3; roundRect(ch.x, ch.y, ch.w, ch.h, 9); ctx.stroke();
-    // icône + nom
-    drawModuleIcon(ch.id, ch.x + 22, ch.y + 26, 0.8);
-    ctx.textAlign = 'left';
-    ctx.fillStyle = has ? '#69f0ae' : C_TXT; ctx.font = '600 10.5px Inter, sans-serif';
-    ctx.fillText(m.name, ch.x + 40, ch.y + 22);
-    ctx.fillStyle = has ? '#69f0ae' : afford ? '#ffd740' : '#6f7378';
-    ctx.font = 'bold 10.5px Consolas, monospace';
-    ctx.fillText(has ? '✔ POSSÉDÉ' : `${m.price} ◆`, ch.x + 40, ch.y + 40);
-    ctx.fillStyle = m.col; ctx.font = '8.5px Inter, sans-serif';
-    ctx.fillText(`${m.rar} · ${m.type === 'actif' ? 'ACTIF' : 'PASSIF'}`, ch.x + 40, ch.y + 55);
-    if (has) {
-      ctx.fillStyle = 'rgba(105,240,174,0.85)'; ctx.font = '700 9px Inter, sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText('ÉQUIPABLE AU MENU MODULES', ch.x + ch.w / 2, ch.y + ch.h - 8);
-    } else if (!afford) {
-      ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.textAlign = 'center'; ctx.font = '8.5px Inter, sans-serif';
-      ctx.fillText('fonds insuffisants', ch.x + ch.w / 2, ch.y + ch.h - 8);
+  // prix + stock
+  ctx.font = 'bold 11.5px Consolas, monospace';
+  ctx.fillStyle = owned ? '#69f0ae' : afford ? '#ffd740' : '#6f7378';
+  ctx.fillText(owned ? '✔ POSSÉDÉ' : `${m.price} ◆`, x + w / 2, y + 118);
+  if (!owned) {
+    ctx.fillStyle = left <= 0 ? '#ff8a80' : 'rgba(160,200,230,0.65)';
+    ctx.font = '9px Inter, sans-serif';
+    ctx.fillText(left <= 0 ? 'STOCK RARE ÉPUISÉ' : `stock ${m.rar} : ${left}`, x + w / 2, y + 131);
+    if (sel) {
+      ctx.fillStyle = col; ctx.font = '8.5px Inter, sans-serif';
+      ctx.fillText('▼ détails', x + w / 2, y - 8);
     }
   }
+  ctx.restore();
+}
+
+// ---------- PANNEAU DE DÉTAIL MODULE ----------
+function drawModDetail(L, inv, t) {
+  const d = L.modDetail;
+  const mid = G.shopModSel;
+  if (!mid || !MODULES[mid] || !MODSHOP.includes(mid)) {
+    // hint
+    ctx.fillStyle = 'rgba(79,195,247,0.05)';
+    roundRect(d.x, d.y, d.w, d.h, 12); ctx.fill();
+    ctx.strokeStyle = 'rgba(79,195,247,0.18)'; ctx.lineWidth = 1;
+    roundRect(d.x, d.y, d.w, d.h, 12); ctx.stroke();
+    ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(160,200,230,0.55)';
+    ctx.font = 'italic 12.5px Inter, sans-serif';
+    ctx.fillText('👆 Sélectionnez un module pour afficher sa fiche holographique complète', W / 2, d.y + d.h / 2 + 4);
+    return;
+  }
+  const m = MODULES[mid];
+  const owned = modState(inv).owned.includes(mid);
+  const col = RAR_COL[m.rar] || m.col;
+  const left = modStockLeft(inv, m.rar);
+  const afford = emeralds(inv) >= m.price && !owned && left > 0;
+  // panneau verre
+  const dg = ctx.createLinearGradient(d.x, d.y, d.x + d.w, d.y + d.h);
+  dg.addColorStop(0, 'rgba(10,20,42,0.92)'); dg.addColorStop(1, 'rgba(6,10,24,0.92)');
+  ctx.fillStyle = dg; roundRect(d.x, d.y, d.w, d.h, 12); ctx.fill();
+  ctx.strokeStyle = hexA(col, 0.75); ctx.lineWidth = 1.6;
+  roundRect(d.x, d.y, d.w, d.h, 12); ctx.stroke();
+  // scanlines holographiques discrètes
+  ctx.save(); roundRect(d.x, d.y, d.w, d.h, 12); ctx.clip();
+  ctx.fillStyle = 'rgba(140,220,255,0.05)';
+  for (let yy = d.y + ((t * 30) % 8); yy < d.y + d.h; yy += 8) ctx.fillRect(d.x, yy, d.w, 1);
+  ctx.restore();
+  // grande icône animée à gauche
+  const ix = d.x + 74, iy = d.y + d.h / 2 + 4;
+  const bob = Math.sin(t * 2.4) * 4;
+  const ig = ctx.createRadialGradient(ix, iy + bob, 6, ix, iy + bob, 56);
+  ig.addColorStop(0, hexA(col, 0.4)); ig.addColorStop(1, hexA(col, 0));
+  ctx.fillStyle = ig; ctx.beginPath(); ctx.arc(ix, iy + bob, 56, 0, TAU); ctx.fill();
+  ctx.save(); ctx.translate(ix, iy + bob); ctx.scale(1.7, 1.7);
+  ctx.font = '34px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.shadowColor = col; ctx.shadowBlur = 20;
+  ctx.fillStyle = m.col; ctx.fillText(m.icon, 0, 2);
+  ctx.restore();
+  // nom + badges
+  const tx = d.x + 140;
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#eaf4ff'; ctx.font = 'bold 17px Inter, sans-serif';
+  ctx.fillText(m.name, tx, d.y + 32);
+  const badgeW = { 'ACTIF': '#ffab40', 'PASSIF': '#69f0ae' }[m.type.toUpperCase()] || '#90a4ae';
+  ctx.fillStyle = col; ctx.font = '700 10px Inter, sans-serif'; ctx.letterSpacing = '1.2px';
+  ctx.fillText(`${m.rar.toUpperCase()}`, tx + ctx.measureText(m.name).width + 12, d.y + 31);
+  ctx.letterSpacing = '0px';
+  // pastille type
+  ctx.fillStyle = hexA(badgeW, 0.18); roundRect(tx, d.y + 44, m.type === 'actif' ? 62 : 74, 18, 9); ctx.fill();
+  ctx.strokeStyle = badgeW; ctx.lineWidth = 1; roundRect(tx, d.y + 44, m.type === 'actif' ? 62 : 74, 18, 9); ctx.stroke();
+  ctx.fillStyle = badgeW; ctx.font = '700 9.5px Inter, sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText(m.type === 'actif' ? '⚡ ACTIF [X]' : '✚ PASSIF AUTO', tx + (m.type === 'actif' ? 31 : 37), d.y + 57);
+  ctx.textAlign = 'left';
+  // description complète (retour à la ligne si besoin)
+  ctx.fillStyle = '#a8c4dc'; ctx.font = '11px Inter, sans-serif';
+  wrapText(m.desc, tx, d.y + 76, d.w - 380, 14);
+  // stats : recharge + amélioration + stock
+  const statY = d.y + 116;
+  ctx.fillStyle = '#7d9db8'; ctx.font = '10.5px Inter, sans-serif';
+  const cdTxt = m.cd > 0 ? `recharge ${m.cd} s · s'améliore niv 1→3` : 'effet permanent · s\'améliore niv 1→3';
+  ctx.fillText(cdTxt, tx, statY);
+  ctx.fillStyle = left <= 0 ? '#ff8a80' : '#69f0ae'; ctx.font = 'bold 11px Consolas, monospace';
+  ctx.fillText(owned ? '✔ DÉJÀ POSSÉDÉ' : left <= 0 ? `stock ${m.rar} : ÉPUISÉ` : `stock ${m.rar} : ${left} aujourd'hui`, tx + 250, statY);
+  // bouton ACHETER
+  const b = L.modBuy;
+  const hov = inR(b, G.mouse.x, G.mouse.y);
+  ctx.fillStyle = owned ? 'rgba(105,240,174,0.15)' : afford ? (hov ? hexA(col, 0.95) : hexA(col, 0.6)) : 'rgba(255,255,255,0.07)';
+  roundRect(b.x, b.y, b.w, b.h, 10); ctx.fill();
+  ctx.strokeStyle = owned ? '#69f0ae' : afford ? col : 'rgba(255,255,255,0.2)';
+  ctx.lineWidth = 1.6; roundRect(b.x, b.y, b.w, b.h, 10); ctx.stroke();
+  ctx.fillStyle = owned ? '#69f0ae' : afford ? '#fff' : '#6f7378';
+  ctx.font = 'bold 13px Inter, sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText(owned ? '✔ DÉJÀ DANS VOTRE INVENTAIRE' : left <= 0 ? 'STOCK ÉPUISÉ' : afford ? `⚡ ACHETER · ${m.price} ◆` : `IL FAUT ${m.price} ◆`, b.x + b.w / 2, b.y + b.h / 2 + 5);
+  // équiper -> rappel menu modules
+  if (!owned) {
+    ctx.fillStyle = 'rgba(160,200,230,0.5)'; ctx.font = '9.5px Inter, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('Équipe-le ensuite dans le menu MODULES (1 actif + jusqu\'à 2 passifs)', b.x + b.w / 2, b.y + b.h + 14);
+  }
+}
+
+// retour à la ligne simple pour les descriptions de modules
+function wrapText(text, x, y, maxW, lh) {
+  const words = text.split(' ');
+  let line = '', yy = y;
+  for (const wd of words) {
+    const test = line ? line + ' ' + wd : wd;
+    if (ctx.measureText(test).width > maxW && line) {
+      ctx.fillText(line, x, yy); line = wd; yy += lh;
+    } else line = test;
+  }
+  if (line) ctx.fillText(line, x, yy);
 }
