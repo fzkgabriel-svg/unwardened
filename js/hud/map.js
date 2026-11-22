@@ -49,8 +49,9 @@ export function drawMinimap() {
   const frozenMap = (w.def && w.def.biome === 'ice') || G.campaign === 1;
   const sewerMap = (w.def && w.def.biome === 'sewer') || G.campaign === 3;
   const spaceMap = (w.def && w.def.biome === 'space') || G.campaign === 4;
+  const stormMap = (w.def && w.def.biome === 'storm') || G.campaign === 5;
   ctx.fillStyle = hellMap ? '#34100a' : frozenMap ? '#d6e8f4'
-    : sewerMap ? '#262a1a' : spaceMap ? '#0a081e'
+    : sewerMap ? '#262a1a' : spaceMap ? '#0a081e' : stormMap ? '#2c4256'
     : '#3c542e';
   ctx.fillRect(mx, my, MS, MS);
   // vignette intérieure (profondeur)
@@ -104,15 +105,15 @@ export function drawMinimap() {
     const bx = sx(en.x), by = sy(en.y);
     if (!inMap(bx, by)) continue;
     const pulse = 4 + Math.sin(t * 6) * 1.6;
-    const hellBoss = en.type === 'finalBossEnfer', sewerBoss = en.type === 'finalBossEgout', spaceBoss = en.type === 'finalBossSpace';
-    const c0 = hellBoss ? '255,112,67' : sewerBoss ? '174,234,0' : spaceBoss ? '179,157,219' : '224,64,251';
+    const hellBoss = en.type === 'finalBossEnfer', sewerBoss = en.type === 'finalBossEgout', spaceBoss = en.type === 'finalBossSpace', stormBoss = en.type === 'finalBossTempete';
+    const c0 = hellBoss ? '255,112,67' : sewerBoss ? '174,234,0' : spaceBoss ? '179,157,219' : stormBoss ? '79,195,247' : '224,64,251';
     const g = ctx.createRadialGradient(bx, by, 0, bx, by, pulse * 3);
     g.addColorStop(0, `rgba(${c0},0.95)`); g.addColorStop(0.5, `rgba(${c0},0.55)`); g.addColorStop(1, `rgba(${c0},0)`);
     ctx.fillStyle = g;
     ctx.beginPath(); ctx.arc(bx, by, pulse * 3, 0, TAU); ctx.fill();
-    ctx.fillStyle = hellBoss ? '#fff3e0' : sewerBoss ? '#f9fbe7' : spaceBoss ? '#ede7f6' : '#f3e5f5';
+    ctx.fillStyle = hellBoss ? '#fff3e0' : sewerBoss ? '#f9fbe7' : spaceBoss ? '#ede7f6' : stormBoss ? '#e1f5fe' : '#f3e5f5';
     ctx.beginPath(); ctx.arc(bx, by, pulse * 0.9, 0, TAU); ctx.fill();
-    ctx.strokeStyle = hellBoss ? '#ff7043' : sewerBoss ? '#aeea00' : spaceBoss ? '#b388ff' : '#e040fb';
+    ctx.strokeStyle = hellBoss ? '#ff7043' : sewerBoss ? '#aeea00' : spaceBoss ? '#b388ff' : stormBoss ? '#4fc3f7' : '#e040fb';
     ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.arc(bx, by, pulse + 2.5, 0, TAU); ctx.stroke();
   }

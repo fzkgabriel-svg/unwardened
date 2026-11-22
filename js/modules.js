@@ -44,6 +44,8 @@ export function modState(inv) {
   inv.modules = inv.modules || { owned: [], eq: { act: null, pass: null }, passUnlocked: false };
   const m = inv.modules;
   m.eq = m.eq || {};
+  if (m.eq.pass2 === undefined) m.eq.pass2 = null;
+  if (m.pass2Unlocked === undefined) m.pass2Unlocked = false;
   // migration : ancien slot unique {mod} -> actif ou passif selon le type
   if (m.eq.mod !== undefined) {
     const old = m.eq.mod;
@@ -73,7 +75,25 @@ export function modState(inv) {
   };
   sanitize('act', 'actif', 'pass');
   sanitize('pass', 'passif', 'act');
+  // pass2 : même type 'passif' ; si verrouillé, on vide le slot
+  {
+    const id = m.eq.pass2;
+    if (id) {
+      if (!pass2Unlocked(inv) || !MODULES[id]) m.eq.pass2 = null;
+      else if (MODULES[id].type !== 'passif') {
+        if (m.eq.act == null) m.eq.act = id; else if (m.eq.pass == null) m.eq.pass = id;
+        m.eq.pass2 = null;
+      }
+    }
+  }
   return m;
+}
+// le 2ᵉ emplacement passif se débloque en vainquant le Souverain des Ouragans.
+// NB : ne PAS appeler modState() ici — modState() itself appelle pass2Unlocked
+// pendant sa sanitisation (récursion infinie sinon).
+export function pass2Unlocked(inv) {
+  const raw = inv && inv.modules;
+  return !!((raw && raw.pass2Unlocked) || (G.stats && G.stats.campaignDone && G.stats.campaignDone[5]));
 }
 // débloque l'emplacement passif pour 500 émeraudes (achat unique)
 export const PASS_SLOT_PRICE = 500;
@@ -85,6 +105,16 @@ export function unlockPassSlot(inv) {
   ms.passUnlocked = true;
   saveInv(inv);
   return { ok: true, msg: 'Emplacement PASSIF débloqué !' };
+}
+// récompense du Souverain des Ouragans : 2ᵉ emplacement passif permanent
+export function grantPass2() {
+  const inv = G.inv; if (!inv) return false;
+  const ms = modState(inv);
+  if (ms.pass2Unlocked) return false;
+  ms.pass2Unlocked = true;
+  saveInv(inv);
+  G.warnToast = { name: '🌪 RÉCOMPENSE : 2ᵉ EMPLACEMENT PASSIF débloqué ! (menu Modules)', t: 9 };
+  return true;
 }
 // appelé à chaque frame/menu : débloque et offre les 2 modules après le boss du monde 4
 export function ensureModules() {
@@ -107,7 +137,7 @@ export function ownModule(inv, id) {
 export function equippedMods() {
   const inv = G.inv; if (!inv) return [];
   const eq = modState(inv).eq;
-  return [eq.act, eq.pass].filter(Boolean).map(id => MODULES[id]).filter(Boolean);
+  return [eq.act, eq.pass, eq.pass2].filter(Boolean).map(id => MODULES[id]).filter(Boolean);
 }
 export function eqActive() { const inv = G.inv; return inv ? modState(inv).eq.act : null; }
 export function hasMod(id) { const inv = G.inv; return inv ? modState(inv).owned.includes(id) : false; }

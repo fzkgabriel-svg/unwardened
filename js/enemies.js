@@ -53,11 +53,20 @@ export const enemyTypes = {
   overlord: { name: 'Dominator',           hp: 340, speed: 1.0,  damage: 38, xp: 110, r: 24, aggro: Infinity, range: 28, color: '#1a237e', glow: '#64b5f6', isMini: true },
   bossVoid: { name: 'Seigneur Stellaire',  hp: 1100,speed: 0.5,  damage: 52, xp: 400, r: 36, aggro: Infinity, range: 0,  color: '#283593', glow: '#82b1ff', isBoss: true, attack: 'bolt' },
   finalBossSpace:{ name: 'L\'Abomination Cosmique', hp: 1, speed: 0.5, damage: 95, xp: 3000, r: 58, aggro: Infinity, range: 68, color: '#0d0a1f', glow: '#b388ff', isBoss: true, attack: 'bolt' },
+  // ---------- LE ROYAUME DES TEMPÊTES : créatures du vent (campagne 6) ----------
+  courant:  { name: 'Enfant du Vent',         hp: 120, speed: 2.2,  damage: 24, xp: 36,  r: 12, aggro: Infinity, range: 17, color: '#b3e5fc', glow: '#e1f5fe' },
+  rafale:   { name: 'Rafale Vivante',        hp: 150, speed: 1.7,  damage: 27, xp: 42,  r: 14, aggro: Infinity, range: 0,  color: '#4fc3f7', glow: '#b2ebf2', attack: 'bolt' },
+  esprit:   { name: 'Esprit de la Brise',    hp: 200, speed: 1.0,  damage: 30, xp: 52,  r: 16, aggro: Infinity, range: 0,  color: '#80deea', glow: '#e0f7fa', attack: 'hex' },
+  gardien:  { name: 'Gardien de la Tempête', hp: 280, speed: 0.75, damage: 36, xp: 66,  r: 20, aggro: Infinity, range: 26, color: '#546e7a', glow: '#4fc3f7' },
+  colosse:  { name: 'Colosse des Nuages',    hp: 380, speed: 0.55, damage: 44, xp: 100, r: 24, aggro: Infinity, range: 30, color: '#37474f', glow: '#80d8ff', isMini: true },
+  bossOuragan:{ name: 'Typhon Céleste',      hp: 1400,speed: 0.5,  damage: 58, xp: 480, r: 38, aggro: Infinity, range: 0,  color: '#1565c0', glow: '#4fc3f7', isBoss: true, attack: 'bolt' },
+  finalBossTempete:{ name: 'Le Souverain des Ouragans', hp: 1, speed: 0.5, damage: 110, xp: 4000, r: 60, aggro: Infinity, range: 70, color: '#0d2b45', glow: '#80d8ff', isBoss: true, attack: 'bolt' },
 };
 
 function difficultyScale() {
   const base = 1 + (G.wave - 1) * 0.5;
-  if (G.campaign === 4) return base * 4.4;   // L'Espace : le plus dur
+  if (G.campaign === 5) return base * 5.2;   // Les Tempêtes : le plus dur
+  if (G.campaign === 4) return base * 4.4;   // L'Espace
   if (G.campaign === 3) return base * 3.6;   // Les Égouts
   if (G.campaign === 2) return base * 2.6;   // Les Enfers
   return G.campaign === 1 ? base * 1.8 : base; // The Frozen Land est plus rude
@@ -103,6 +112,15 @@ export function spawnEnemy(forceType = null, bigPortal = false, px = null, py = 
       else if (G.wave >= 3 && roll < 0.30) type = 'cristal';
       else if (G.wave >= 2 && roll < 0.52) type = 'drone';
       else type = 'alien'; // jamais de monstre d'une autre campagne dans l'espace
+    } else if (camp === 5) {
+      // faune des tempêtes : enfants du vent rapides, rafales, esprits, gardiens
+      const minisAlive = G.enemies.filter(e => e.type === 'colosse').length;
+      if (G.wave % 3 === 0 && minisAlive < 2 && roll < 0.5) type = 'colosse';
+      else if (G.wave >= 3 && roll < 0.14) type = 'esprit';
+      else if (G.wave >= 4 && roll < 0.30) type = 'rafale';
+      else if (G.wave >= 2 && roll < 0.52) type = 'gardien';
+      else if (G.wave >= 2 && roll < 0.80) type = 'courant';
+      else type = 'courant'; // jamais de monstre d'une autre campagne dans les tempêtes
     } else {
     // Mini-boss aléatoire en cours de vague (les boss n'apparaissent qu'au début des vagues ×5)
     const minisAlive = G.enemies.filter(e => e.type === 'miniboss').length;
@@ -135,9 +153,9 @@ export function spawnEnemy(forceType = null, bigPortal = false, px = null, py = 
   }
 
   const extraScale = t.isBoss ? 1 + Math.floor(G.wave / 5) * 0.5
-                   : (type === 'miniboss' || type === 'alpha' || type === 'priest' || type === 'matriarche' || type === 'overlord') ? 1 + Math.floor(G.wave / 3) * 0.3 : 1;
+                   : (type === 'miniboss' || type === 'alpha' || type === 'priest' || type === 'matriarche' || type === 'overlord' || type === 'colosse') ? 1 + Math.floor(G.wave / 3) * 0.3 : 1;
   // Les Enfers et au-delà : dégâts de base encore plus majorés
-  const dmgMult = G.campaign === 4 ? 3.4 : G.campaign === 3 ? 2.8 : G.campaign === 2 ? 2.3 : G.campaign === 1 ? 1.5 : 1;
+  const dmgMult = G.campaign === 5 ? 4.2 : G.campaign === 4 ? 3.4 : G.campaign === 3 ? 2.8 : G.campaign === 2 ? 2.3 : G.campaign === 1 ? 1.5 : 1;
 
   // portail d'apparition (surdimensionné et rougeoyant pour l'événement des brutes)
   const portalLife = portalTime !== null ? portalTime : bigPortal ? 1.3 : 0.8;
@@ -145,7 +163,7 @@ export function spawnEnemy(forceType = null, bigPortal = false, px = null, py = 
     x, y,
     r: t.r * (bigPortal ? 4.2 : 2.8),
     life: portalLife, maxLife: portalLife,
-    color: G.campaign === 4 ? '#82b1ff' : G.campaign === 3 ? '#aeea00' : G.campaign === 2 ? '#ff5722' : bigPortal ? '#ff5722' : '#a855f7'
+    color: G.campaign === 5 ? '#4fc3f7' : G.campaign === 4 ? '#82b1ff' : G.campaign === 3 ? '#aeea00' : G.campaign === 2 ? '#ff5722' : bigPortal ? '#ff5722' : '#a855f7'
   });
 
   G.enemies.push({
@@ -200,7 +218,7 @@ export function damageEnemy(e, dmg, angle) {
   if (e.hp <= 0) {
     // boss final : cinématique de mort (effondrement au ralenti) avant la victoire
     if ((e.type === 'finalBoss' || e.type === 'finalBossGlace' || e.type === 'finalBossEnfer'
-      || e.type === 'finalBossEgout' || e.type === 'finalBossSpace') && !e.bossDying) {
+      || e.type === 'finalBossEgout' || e.type === 'finalBossSpace' || e.type === 'finalBossTempete') && !e.bossDying) {
       e.bossDying = 2.4;
       e.hp = 0;
       sfxBossDie(); // long effondrement sonore pendant l'agonie
@@ -209,7 +227,8 @@ export function damageEnemy(e, dmg, angle) {
       G.rings.push({
         x: e.x, y: e.y, r: e.r, maxR: 240, life: 42, maxLife: 42,
         color: e.type === 'finalBossGlace' ? '#81d4fa' : e.type === 'finalBossEnfer' ? '#ff7043'
-          : e.type === 'finalBossEgout' ? '#aeea00' : e.type === 'finalBossSpace' ? '#b388ff' : '#e040fb'
+          : e.type === 'finalBossEgout' ? '#aeea00' : e.type === 'finalBossSpace' ? '#b388ff'
+          : e.type === 'finalBossTempete' ? '#4fc3f7' : '#e040fb'
       });
       spawnParticles(e.x, e.y, e.glow, 46, 10);
       spawnParticles(e.x, e.y, '#ffffff', 24, 8);
@@ -261,7 +280,7 @@ export function damageEnemy(e, dmg, angle) {
     // le boss final ne déclenche la victoire qu'à la vague finale :
     // en Enfer il surgit dès la vague 20 comme boss intermédiaire
     const isFinalType = e.type === 'finalBoss' || e.type === 'finalBossGlace' || e.type === 'finalBossEnfer'
-      || e.type === 'finalBossEgout' || e.type === 'finalBossSpace';
+      || e.type === 'finalBossEgout' || e.type === 'finalBossSpace' || e.type === 'finalBossTempete';
     if (isFinalType && G.wave >= finalWave()) G.pendingVictory = true;
   }
 }
@@ -279,13 +298,14 @@ export function spawnFinalBoss() {
   const hell = G.campaign === 2;
   const sewer = G.campaign === 3;
   const space = G.campaign === 4;
+  const storm = G.campaign === 5;
   const type = hell ? 'finalBossEnfer' : frozen ? 'finalBossGlace'
-    : sewer ? 'finalBossEgout' : space ? 'finalBossSpace' : 'finalBoss';
-  const hp = (hell ? 11500 : space ? 17000 : sewer ? 14000 : frozen ? 7500 : 4000)
-    + p.level * (space ? 800 : sewer ? 650 : hell ? 550 : frozen ? 450 : 300);
+    : sewer ? 'finalBossEgout' : space ? 'finalBossSpace' : storm ? 'finalBossTempete' : 'finalBoss';
+  const hp = (storm ? 21000 : hell ? 11500 : space ? 17000 : sewer ? 14000 : frozen ? 7500 : 4000)
+    + p.level * (storm ? 1000 : space ? 800 : sewer ? 650 : hell ? 550 : frozen ? 450 : 300);
   const e = {
     ...enemyTypes[type], type, hp, maxHp: hp,
-    damage: (space ? 105 : sewer ? 90 : hell ? 78 : frozen ? 60 : 38) + p.level * (space ? 6 : sewer ? 5 : hell ? 5 : frozen ? 4 : 2.5),
+    damage: (storm ? 125 : space ? 105 : sewer ? 90 : hell ? 78 : frozen ? 60 : 38) + p.level * (storm ? 7 : space ? 6 : sewer ? 5 : hell ? 5 : frozen ? 4 : 2.5),
     x, y,
     attackCooldown: 0, wobble: 0, slow: 0,
     spawnT: 0, spawnMax: 0,
@@ -299,8 +319,8 @@ export function spawnFinalBoss() {
   spawnParticles(x, y, '#b388ff', 55, 11);
   spawnParticles(x, y, '#ff7043', 35, 9);
   spawnParticles(x, y, '#5d4037', 30, 7);
-  spawnParticles(x, y, hell ? '#ffab00' : space ? '#b388ff' : sewer ? '#aeea00' : '#e040fb', 20, 13);
-  G.rings.push({ x, y, r: 10, maxR: 300, life: 45, maxLife: 45, color: space ? '#b388ff' : sewer ? '#aeea00' : '#e040fb' });
+  spawnParticles(x, y, hell ? '#ffab00' : space ? '#b388ff' : sewer ? '#aeea00' : storm ? '#4fc3f7' : '#e040fb', 20, 13);
+  G.rings.push({ x, y, r: 10, maxR: 300, life: 45, maxLife: 45, color: storm ? '#4fc3f7' : space ? '#b388ff' : sewer ? '#aeea00' : '#e040fb' });
   G.rings.push({ x, y, r: 5, maxR: 170, life: 30, maxLife: 30, color: '#ff7043' });
   G.screenShake = 20; G.screenFlash = 0.7;
   // l'explosion blesse le joueur s'il est trop proche
@@ -311,14 +331,14 @@ export function spawnFinalBoss() {
     addDamageText(p.x, p.y - 24, `-${Math.round(dmg)}`, '#ff1744');
     spawnParticles(p.x, p.y, '#ff1744', 12, 6);
   }
-  addDamageText(p.x, p.y - 90, hell ? 'LE BARON DE L\'ENFER ÉMERGE !' : space ? 'L\'ABOMINATION COSMIQUE ÉMERGE !' : sewer ? 'LE TYRAN DES PROFONDEURS ÉMERGE !' : frozen ? 'LE SOUVERAIN DE GLACE ÉMERGE !' : 'LE SEIGNEUR OUBLIÉ ÉMERGE !',
-    hell ? '#ffab00' : space ? '#b388ff' : sewer ? '#aeea00' : frozen ? '#80d8ff' : '#e040fb');
+  addDamageText(p.x, p.y - 90, hell ? 'LE BARON DE L\'ENFER ÉMERGE !' : space ? 'L\'ABOMINATION COSMIQUE ÉMERGE !' : sewer ? 'LE TYRAN DES PROFONDEURS ÉMERGE !' : storm ? 'LE SOUVERAIN DES OURAGANS ÉMERGE !' : frozen ? 'LE SOUVERAIN DE GLACE ÉMERGE !' : 'LE SEIGNEUR OUBLIÉ ÉMERGE !',
+    hell ? '#ffab00' : space ? '#b388ff' : sewer ? '#aeea00' : storm ? '#4fc3f7' : frozen ? '#80d8ff' : '#e040fb');
 }
 
 // Fait apparaître 1 à 3 mini-boss d'un coup (début des vagues ×3)
 export function spawnMinibossWave() {
   const n = 1 + Math.floor(Math.random() * 3);
-  const type = G.campaign === 4 ? 'overlord' : G.campaign === 3 ? 'matriarche' : G.campaign === 2 ? 'priest' : G.campaign === 1 ? 'alpha' : 'miniboss'; // mini-boss propre à chaque campagne
+  const type = G.campaign === 5 ? 'colosse' : G.campaign === 4 ? 'overlord' : G.campaign === 3 ? 'matriarche' : G.campaign === 2 ? 'priest' : G.campaign === 1 ? 'alpha' : 'miniboss'; // mini-boss propre à chaque campagne
   for (let i = 0; i < n; i++) spawnEnemy(type);
 }
 

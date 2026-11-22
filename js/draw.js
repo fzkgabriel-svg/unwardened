@@ -2,7 +2,7 @@ import { G, ctx, W, H, TAU, VERSION, finalWave, saveStats } from './state.js';
 import { spawnEnemy, spawnMinibossWave, spawnBossWave, spawnFinalBoss, damageEnemy, enemyTypes } from './enemies.js';
 import { doSlash, doSpin, doThrust, doUlt, doShield, doFireLaser, doFireHand, updateNuke, updateIceUlt, updateLasers, updateHands, updateVolcanoes, updateSewerUlt, updateSpaceUlt } from './attacks.js';
 import { updateEffects, addDamageText, spawnParticles } from './effects.js';
-import { drawBackground, drawEnemy, drawDrops, drawPlayer, drawSlashArc, drawUltFlash, drawMushroom, drawBomber, drawEffects, drawFireZones, drawCraters, drawPortals, drawProjectiles, drawLightnings, drawGrain, drawClouds, dayNight, drawTerrain, drawBuildings, drawWorldPortals, drawObstacle, drawIceStorm, drawLasers, drawHands, drawVolcanoes, drawAcidZones, drawBlackHoles, drawVoidHole, drawBowShots, drawSingZones, drawBowReveal, drawAmbient, drawFalls, drawBiomeGrade, drawCloudShadows } from './graphics.js';
+import { drawBackground, drawEnemy, drawDrops, drawPlayer, drawSlashArc, drawUltFlash, drawMushroom, drawBomber, drawEffects, drawFireZones, drawCraters, drawPortals, drawProjectiles, drawLightnings, drawGrain, drawClouds, dayNight, drawTerrain, drawBuildings, drawWorldPortals, drawObstacle, drawIceStorm, drawLasers, drawHands, drawVolcanoes, drawAcidZones, drawBlackHoles, drawVoidHole, drawWindZones, drawStormTornado, drawBowShots, drawSingZones, drawBowReveal, drawAmbient, drawFalls, drawBiomeGrade, drawCloudShadows } from './graphics.js';
 import { checkAchievements } from './achievements.js';
 import { wearEquipment, addMaterial } from './inventory.js';
 import { drawHUD, drawAchToast, drawWarnToast } from './hud.js';
@@ -71,6 +71,8 @@ export function draw() {
     drawAcidZones(); // flaques de la Déluge Acide
     drawBlackHoles(); // trous noirs de l'ultime spatiale + événements
     drawVoidHole();  // télégraphe du micro-trou noir
+    drawWindZones(); // courants d'air du Royaume des Tempêtes
+    drawStormTornado(); // tornade des événements/boss des Tempêtes
     drawHands();    // mains de feu en vol (coords monde, par-dessus tout)
   }
   ctx.restore();

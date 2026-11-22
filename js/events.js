@@ -283,7 +283,7 @@ export function updateSpaceEvents(dt) {
     // PLUIE DE MÉTÉORES : projectiles de void sur toute la zone
     for (let i = 0; i < 10; i++) {
       const a = Math.random() * TAU, d = Math.sqrt(Math.random()) * 320;
-      const x = clampW(p.x + Math.cos(a) * d), y = clampH(p.y + Math.sin(a) * d);
+      const x = clampWS(p.x + Math.cos(a) * d), y = clampHS(p.y + Math.sin(a) * d);
       G.projectiles.push({
         x, y, vx: (Math.random() - 0.5) * 2, vy: 5.5 + Math.random() * 2,
         life: 2.6, r: 8, dmg: 30 * waveBonusLocal(), color: '#b388ff', bolt: true, fromUlt: true
@@ -306,3 +306,99 @@ export function updateSpaceEvents(dt) {
   }
 }
 function waveBonusLocal() { return 1 + (G.wave - 1) * 0.06; }
+const clampWS = (v) => Math.max(40, Math.min(worldW() - 40, v));
+const clampHS = (v) => Math.max(40, Math.min(worldH() - 40, v));
+
+// ---------- ÉVÉNEMENTS DU ROYAUME DES TEMPÊTES ----------
+// rafales, tornades aspirantes, essaims de créatures du vent, cache royal
+export function updateStormEvents(dt) {
+  if (G.campaign !== 5 || G.state !== 'playing' || G.tutorial) return;
+  const p = G.player;
+  // ambiance permanente : débris et embruns emportés par le vent
+  if (Math.random() < dt * 14) {
+    const dir = Math.random() < 0.5 ? 1 : -1;
+    spawnParticles(p.x - dir * (500 + Math.random() * 300), p.y + (Math.random() - 0.5) * 600,
+      Math.random() < 0.6 ? '#cfe8f8' : '#9fd4f0', 1, 1.4);
+  }
+  // rafale globale : le vent souffle fort dans toute la zone visible
+  if (G.stormGale > 0) {
+    G.stormGale -= dt;
+    const k = 2.6 * (0.75 + 0.25 * Math.sin(G.time * 9));
+    p.x = Math.max(p.r, Math.min(worldW() - p.r, p.x + G.stormGaleDx * k * dt));
+    p.y = Math.max(p.r, Math.min(worldH() - p.r, p.y + G.stormGaleDy * k * 0.5 * dt));
+    if (Math.random() < dt * 20) {
+      spawnParticles(p.x - G.stormGaleDx * 40, p.y - G.stormGaleDy * 30, '#eaf6ff', 1, 1.6);
+    }
+    if (G.stormGale <= 0) addDamageText(p.x, p.y - 70, '🌬 FIN DE LA RAFALE', '#9fd4f0');
+  }
+  // tornade : aspire le joueur, le hache de débris, puis se dissipe
+  if (G.stormTornado) {
+    const tn = G.stormTornado;
+    tn.life -= dt; tn.tick -= dt;
+    const dx = tn.x - p.x, dy = tn.y - p.y;
+    const d = Math.hypot(dx, dy) || 1;
+    if (d < tn.r * 2.2) {
+      const pull = (1 - Math.min(1, d / (tn.r * 2.2))) * 3.4;
+      p.x += (dx / d) * pull * dt * 60 * 0.3;
+      p.y += (dy / d) * pull * dt * 60 * 0.3;
+      if (d < tn.r * 0.9 && tn.tick <= 0) {
+        tn.tick = 0.8;
+        damagePlayer(22 * (1 - (G.equip ? G.equip.armorReduce : 0)), 0.7, { name: 'Tornade', type: 'event' });
+        p.slowT = Math.max(p.slowT, 0.6);
+      }
+    }
+    // spirale de débris
+    if (Math.random() < dt * 40) {
+      const a = Math.random() * TAU, rr2 = tn.r * (0.5 + Math.random() * 0.9);
+      spawnParticles(tn.x + Math.cos(a + G.time * 6) * rr2, tn.y + Math.sin(a + G.time * 6) * rr2 * 0.45,
+        Math.random() < 0.5 ? '#cfe8f8' : '#8fb8cc', 1, 2.4);
+    }
+    if (tn.life <= 0) {
+      G.stormTornado = null;
+      G.rings.push({ x: tn.x, y: tn.y, r: tn.r * 0.4, maxR: tn.r * 1.6, life: 22, maxLife: 22, color: '#9fd4f0' });
+      spawnParticles(tn.x, tn.y, '#eaf6ff', 26, 8);
+      addDamageText(p.x, p.y - 70, '🌪 LA TORNAADE S\'ÉPUISE', '#9fd4f0');
+    }
+  }
+  // déclencheur périodique
+  G.stormEventT -= dt;
+  if (G.stormEventT > 0) return;
+  G.stormEventT = 32 + Math.random() * 26;
+  const roll = Math.random();
+  if (roll < 0.28) {
+    // RAFale : 7 s de vent violent dans une direction aléatoire
+    const a = Math.random() * TAU;
+    G.stormGale = 7;
+    G.stormGaleDx = Math.cos(a); G.stormGaleDy = Math.sin(a);
+    addDamageText(p.x, p.y - 60, '🌬 RAFALE VIOLENTE !', '#eaf6ff');
+    G.warnToast = { name: 'Le vent te pousse — lutte contre le courant', t: 4 };
+  } else if (roll < 0.52) {
+    // TORNade : vortex aspirant sous le joueur
+    G.stormTornado = { x: p.x + (Math.random() - 0.5) * 120, y: p.y + (Math.random() - 0.5) * 120, r: 110, life: 6.5, tick: 0 };
+    addDamageText(p.x, p.y - 60, '⚠ TORNAADE !', '#ff8a65');
+    sfxWarn();
+  } else if (roll < 0.74) {
+    // ESSAIM DES HAUTES TERRES : 3-5 créatures du vent surgissent
+    const n = 3 + Math.floor(Math.random() * 3);
+    const types = ['courant', 'courant', 'rafale', 'esprit', 'gardien'];
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * TAU, d = 80 + Math.random() * 160;
+      spawnEnemy(types[Math.floor(Math.random() * types.length)], true,
+        clampWS(p.x + Math.cos(a) * d), clampHS(p.y + Math.sin(a) * d), 1.5 + Math.random());
+    }
+    addDamageText(p.x, p.y - 60, '🌪 ESSAIM DES HAUTES TERRES !', '#4fc3f7');
+    sfxBoss();
+  } else {
+    // TRÉSOR DU ROI DES VENTS : matériaux + fiole
+    const loot = {};
+    const n = 3 + Math.floor(Math.random() * 4);
+    for (let i = 0; i < n; i++) {
+      const m = ['cristal', 'essence', 'fer', 'or', 'emeraude'][Math.floor(Math.random() * 5)];
+      loot[m] = (loot[m] || 0) + (2 + Math.floor(Math.random() * 5));
+    }
+    for (const m in loot) { addMaterial(G.inv, m, loot[m]); G.runMats[m] = (G.runMats[m] || 0) + loot[m]; }
+    if (Math.random() < 0.5) { p.potions = Math.min(p.maxPotions, p.potions + 1); }
+    addDamageText(p.x, p.y - 60, '👑 TRÉSOR DU ROI DES VENTS !', '#ffd740');
+    spawnParticles(p.x, p.y, '#4fc3f7', 20, 6);
+  }
+}

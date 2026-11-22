@@ -43,6 +43,10 @@ const MUSIC_THEMES = {
   4: { // L'Espace : planant et mystérieux (Am9 – Fmaj7 – Cmaj7 – G, ~90 BPM)
     chords: [[45, 57, 60, 64, 67], [41, 53, 57, 60, 64], [48, 60, 64, 67, 71], [43, 55, 59, 62, 67]],
     beat: 0.66, pad: 'sine'
+  },
+  5: { // Les Tempêtes : mineur tourbillonnant et violent (Dm – Bb – F – C, ~128 BPM)
+    chords: [[50, 62, 65, 69], [46, 58, 62, 65], [41, 53, 57, 60], [48, 60, 64, 67]],
+    beat: 0.47, pad: 'sawtooth'
   }
 };
 // sur la carte de campagne, le thème suit le territoire survolé/sélectionné
@@ -474,6 +478,12 @@ export function sfxBossAtk(kind) {
     osc('sine', 140, 60, t, 0.6, 0.14);
     osc('sine', 900, 1400, t + 0.12, 0.3, 0.05);
     nz(t + 0.2, 0.4, 0.1, 'highpass', 2400);
+  } else if (kind === 'storm') {
+    // vent : whoosh montant + grondement de tornade + crépitement électrique
+    nz(t, 0.7, 0.24, 'bandpass', 700, 1.1);
+    osc('sawtooth', 90, 40, t, 0.7, 0.14);
+    nz(t + 0.15, 0.5, 0.12, 'highpass', 2800);
+    osc('sine', 2200, 600, t + 0.2, 0.3, 0.04);
   } else if (kind === 'void') {
     // trou noir : sirène descendante + claquement de marée
     osc('sine', 800, 90, t, 0.7, 0.16);

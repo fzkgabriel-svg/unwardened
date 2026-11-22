@@ -12,12 +12,12 @@ import { CAMPAIGNS } from './world_data.js';
 import { drawMusicButton, sfxHurt, sfxWave, sfxPickup, sfxBreak, sfxBoss, sfxWarn, sfxPhase, sfxBossAtk } from './audio.js';
 import { updateTutorial, drawTutorial } from './tutorial.js';
 import { tickPlaytime } from './chars.js';
-import { updateHellEvents, updateFrozenEvents, updateSewerEvents, updateSpaceEvents } from './events.js';
+import { updateHellEvents, updateFrozenEvents, updateSewerEvents, updateSpaceEvents, updateStormEvents } from './events.js';
 import { updateBow, doSingularity } from './bow.js';
 import { updateFinalBoss, updateBurrow, collideIceWalls } from './bosses.js';
 import { draw } from './draw.js';
 import { initInput } from './input.js';
-import { updateModules, moduleAbsorb, modSpeedMult } from './modules.js';
+import { updateModules, moduleAbsorb, modSpeedMult, grantPass2 } from './modules.js';
 
 // polices de l'interface (canvas) : chargement explicite au démarrage
 if (document.fonts) ['600 16px Inter', '600 38px Cinzel'].forEach(f => document.fonts.load(f));
@@ -28,8 +28,9 @@ let lastTime = performance.now();
 const bossCycle = ['boss', 'bossFoudre', 'bossGivre'];
 const bossCycleEgout = ['bossEgout', 'matriarche', 'bossEgout'];
 const bossCycleEspace = ['bossVoid', 'overlord', 'bossVoid'];
+const bossCycleTempete = ['bossOuragan', 'colosse', 'bossOuragan'];
 // vagues intermédiaires des boss finaux (campagne -> vague du boss intermédiaire)
-const MID_BOSS_WAVE = { 2: 20, 3: 25, 4: 30 };
+const MID_BOSS_WAVE = { 2: 20, 3: 25, 4: 30, 5: 35 };
 
 // inflige des dégâts au joueur (contact, foudre, projectile de glace)
 export function damagePlayer(dmg, slow = 1.0, killer = null) {
@@ -164,6 +165,25 @@ function update(dt) {
     p.x = Math.max(p.r, Math.min(worldW() - p.r, p.x + dx / len * pSpeed));
     p.y = Math.max(p.r, Math.min(worldH() - p.r, p.y + dy / len * pSpeed));
   }
+  // Royaume des Tempêtes : les courants d'air poussent le joueur
+  {
+    const wz = curWorld() && curWorld().windZones;
+    if (wz && wz.length) {
+      const t = G.time || 0;
+      for (const zn of wz) {
+        const d = Math.hypot(p.x - zn.x, p.y - zn.y);
+        if (d < zn.r) {
+          // poussée radiale douce vers le centre de la zone, dans le sens du vent
+          const k = (1 - d / zn.r) * zn.str * (0.7 + 0.3 * Math.sin(t * 2.2 + zn.ph));
+          p.x += zn.dx * k * 1.6 * dt * 60 * 0.28;
+          p.y += zn.dy * k * 1.6 * dt * 60 * 0.28;
+          if (Math.random() < dt * 6) {
+            spawnParticles(p.x - zn.dx * 20, p.y - zn.dy * 20, '#cfe8f8', 1, 1.5);
+          }
+        }
+      }
+    }
+  }
   resolveObstacles(p); // rochers et montagnes bloquent le joueur
   collideIceWalls(p);  // les murs de glace du Souverain bloquent aussi le joueur
   updateModules(dt);   // modules équipés : dash, buffs, bouclier, régénération, rempart
@@ -283,7 +303,8 @@ function update(dt) {
     // vagues ×5 : un seul boss garanti, type en rotation
     if (G.wave % 5 === 0) {
       const camp = G.campaign;
-      const cycle = camp === 4 ? bossCycleEspace
+      const cycle = camp === 5 ? bossCycleTempete
+        : camp === 4 ? bossCycleEspace
         : camp === 3 ? bossCycleEgout
         : camp === 1 ? ['bossGlace', 'bossCryo', 'bossGlace']
         : camp === 2 ? ['bossEnf', 'demon', 'bossEnf']
@@ -298,7 +319,8 @@ function update(dt) {
       const n = 2 + Math.floor(Math.random() * 3); // 2 à 4
       for (let i = 0; i < n; i++) {
         const a = Math.random() * TAU, d = 30 + Math.random() * 110;
-        const et = camp === 4 ? ['alien', 'alien', 'drone', 'tentacule'][Math.floor(Math.random() * 4)]
+        const et = camp === 5 ? ['courant', 'esprit', 'esprit', 'rafale', 'gardien'][Math.floor(Math.random() * 5)]
+          : camp === 4 ? ['alien', 'alien', 'drone', 'tentacule'][Math.floor(Math.random() * 4)]
           : camp === 3 ? ['rat', 'rat', 'crapaud', 'vase'][Math.floor(Math.random() * 4)]
           : camp === 1 ? 'alpha'
           : camp === 2 ? ['imp', 'imp', 'hound', 'demon'][Math.floor(Math.random() * 4)]
@@ -306,15 +328,15 @@ function update(dt) {
         spawnEnemy(et, true, p.x + Math.cos(a) * d, p.y + Math.sin(a) * d, 2 + Math.random()); // portail visible 2-3s
       }
       addDamageText(p.x, p.y - 85,
-        camp === 4 ? 'ÉVÉNEMENT : ESSAIM ALIEN !' : camp === 3 ? 'ÉVÉNEMENT : ESSAIM D\'ÉGOUT !' : camp === 1 ? 'ÉVÉNEMENT : MEUTE DES NEIGES !' : camp === 2 ? 'ÉVÉNEMENT : ESSAIM INFERNAL !' : 'ÉVÉNEMENT : BRUTES !',
-        camp >= 1 ? (camp === 4 ? '#82b1ff' : camp === 3 ? '#aeea00' : camp === 1 ? '#4fc3f7' : '#ff7043') : '#ff7043');
+        camp === 5 ? 'ÉVÉNEMENT : ESSAIM DES TEMPÊTES !' : camp === 4 ? 'ÉVÉNEMENT : ESSAIM ALIEN !' : camp === 3 ? 'ÉVÉNEMENT : ESSAIM D\'ÉGOUT !' : camp === 1 ? 'ÉVÉNEMENT : MEUTE DES NEIGES !' : camp === 2 ? 'ÉVÉNEMENT : ESSAIM INFERNAL !' : 'ÉVÉNEMENT : BRUTES !',
+        camp >= 1 ? (camp === 5 ? '#aeea00' : camp === 4 ? '#82b1ff' : camp === 3 ? '#aeea00' : camp === 1 ? '#4fc3f7' : '#ff7043') : '#ff7043');
     }
     // Enfers : le Baron surgit dès la vague 20 (boss intermédiaire,
     // sans vider le champ — la vague finale reste à la vague 30).
     // Égouts : le Tyran dès la vague 25 (sur 35) · Espace : l'Abomination dès la vague 30 (sur 40)
     const midWave = MID_BOSS_WAVE[G.campaign];
     if (midWave && G.wave === midWave) {
-      const midType = G.campaign === 4 ? 'finalBossSpace' : G.campaign === 3 ? 'finalBossEgout' : 'finalBossEnfer';
+      const midType = G.campaign === 5 ? 'finalBossTempete' : G.campaign === 4 ? 'finalBossSpace' : G.campaign === 3 ? 'finalBossEgout' : 'finalBossEnfer';
       if (!G.enemies.some(e => e.type === midType)) spawnFinalBoss();
     }
     // fin de la vague 50 : le portail dimensionnel apparaît
@@ -328,7 +350,7 @@ function update(dt) {
   // présent pendant toute la vague — il apparaît dès son début
   if (G.state === 'playing' && G.wave >= finalWave() && !G.pendingVictory &&
       !G.enemies.some(en => en.type === 'finalBoss' || en.type === 'finalBossGlace' || en.type === 'finalBossEnfer'
-        || en.type === 'finalBossEgout' || en.type === 'finalBossSpace')) {
+        || en.type === 'finalBossEgout' || en.type === 'finalBossSpace' || en.type === 'finalBossTempete')) {
     spawnFinalBoss();
   }
 
@@ -477,7 +499,7 @@ function update(dt) {
 
       // mouvements signature des boss finaux (hors attaques de base)
       if (e.type === 'finalBoss' || e.type === 'finalBossGlace' || e.type === 'finalBossEnfer'
-        || e.type === 'finalBossEgout' || e.type === 'finalBossSpace') updateFinalBoss(e, dt, p);
+        || e.type === 'finalBossEgout' || e.type === 'finalBossSpace' || e.type === 'finalBossTempete') updateFinalBoss(e, dt, p);
     }
   }
 
@@ -656,7 +678,7 @@ function update(dt) {
 
   // Régénération hors combat (3s sans dégâts) : le montant dépend de la
   // campagne — ~8 PV/s (Terres) à ~43 PV/s (Espace)
-  const REGEN_PS = [8, 16, 27, 35, 43]; // PV par seconde
+  const REGEN_PS = [8, 16, 27, 35, 43, 52]; // PV par seconde
   if (G.time - p.lastHurt > 3 && p.hp < p.maxHp) {
     p.hp = Math.min(p.maxHp, p.hp + REGEN_PS[G.campaign || 0] * dt);
   }
@@ -672,6 +694,7 @@ function update(dt) {
     if (G.campaign === 1) G.stats.iceUlt = true; // coffre : débloque la Pluie de Glace
     if (G.campaign === 2) G.stats.hellUlt = true; // trône : débloque la Colère Infernale
     if (G.campaign === 4) { G.stats.bowUnlocked = true; G.bowReveal = G.time; } // ARC CINÉTIQUE COSMIQUE
+    if (G.campaign === 5) grantPass2(); // 2ᵉ emplacement passif (Souverain des Ouragans)
     saveStats();
     G.enemies.length = 0; G.drops.length = 0; G.fireZones.length = 0;
     G.portals.length = 0; G.projectiles.length = 0; G.lightnings.length = 0;
@@ -679,6 +702,7 @@ function update(dt) {
     G.lasers.length = 0; G.hands.length = 0; G.volcanoes.length = 0; G.hellStorm = null;
     G.acidZones.length = 0; G.blackHoles.length = 0;
     G.acidRain = 0; G.voidStorm = 0;
+    G.stormGale = 0; G.stormTornado = null;
     G.bowShots.length = 0; G.singZones.length = 0;
     // salve de fête : or, violet, vert
     const cols = ['#ffd740', '#e040fb', '#69f0ae', '#40c4ff', '#ff8a65'];
@@ -697,6 +721,7 @@ function update(dt) {
   updateHellEvents(rawDt);   // braises, essaims et événements des Enfers
   updateSewerEvents(rawDt);  // vase, rats et événements des Égouts
   updateSpaceEvents(rawDt);  // void, essaims et événements de l'Espace
+  updateStormEvents(rawDt);  // rafales, tornades et événements des Tempêtes
   updateTutorial(dt); // étapes guidées du tutoriel (si actif)
   updateNuke(rawDt); // bombardier B-2 + bombe : cinématique en temps réel
   updateIceUlt(rawDt); // pluie de pics de glace (ultime campagne 2)

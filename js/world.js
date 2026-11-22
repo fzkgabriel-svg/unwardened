@@ -53,6 +53,7 @@ const PROP_TYPES = {
   hell:   ['bone', 'skull', 'ash', 'fire', 'obsid', 'rock'],
   sewer:  ['pipe', 'grate', 'bones', 'water', 'banner', 'cage', 'rat'],
   space:  ['debris', 'meteor', 'star', 'shard', 'crystal', 'ruinpillar'],
+  storm:  ['tornflag', 'deadwood', 'rock', 'cloudshard', 'weathervane', 'ruinpillar', 'banner'],
 };
 
 // ---------- GÉNÉRATION ----------
@@ -61,7 +62,7 @@ const worldCache = {}; // idx -> monde généré (non sérialisé, regén déter
 // types de décor qui ondulent sous le vent (rendus par frame, pas pré-rendus)
 const SWAY_TYPES = new Set(['grass', 'flower', 'tree', 'bigtree', 'bush', 'fern', 'pine',
   'shroom', 'frozenbush', 'firegrass', 'cosmictree', 'alienflora', 'crystal',
-  'energycrystal', 'glowshroom', 'mush']);
+  'energycrystal', 'glowshroom', 'mush', 'windgrass', 'tornflag']);
 
 function genDecor(rng, def, count, x0, y0, x1, y1) {
   const out = [];
@@ -348,7 +349,7 @@ export function genWorld(idx) {
   {
     const erng = mulberry32(hashSeed(`emerald${idx}:${seed}`));
     const RAR_E = { commun: 3, rare: 5, epique: 8, legendaire: 14 };
-    const CAMP_E = [1, 1.4, 1.8, 2.4, 3.2];
+    const CAMP_E = [1, 1.4, 1.8, 2.4, 3.2, 4.0];
     for (const b of buildings) {
       b.emerald = Math.max(1, Math.round(
         (RAR_E[b.def.rarity] || 3) * (CAMP_E[camp] || 1) * (0.8 + erng() * 0.4)));
@@ -356,9 +357,10 @@ export function genWorld(idx) {
   }
 
   // lacs : RNG dédié (layout existant préservé), évite bâtiments et spawn.
-  // Les Enfers n'ont pas de lacs : le sol est une croûte de braise.
+  // Les Enfers n'ont pas de lacs (croûte de braise) ; les Tempêtes non plus
+  // (royaume suspendu au-dessus des nuages).
   const lrng = mulberry32(hashSeed(`lake${idx}:${seed}`));
-  const lakes = def.biome === 'hell' ? [] : genLakes(lrng, w, h, spawn, buildings);
+  const lakes = (def.biome === 'hell' || def.biome === 'storm') ? [] : genLakes(lrng, w, h, spawn, buildings);
   // le décor ne doit pas pousser dans l'eau
   const inLake = (x, y) => (lakes || []).some(l => {
     const dx = x - l.x, dy = y - l.y;
@@ -426,6 +428,7 @@ export function genWorld(idx) {
     hell:   ['skull', 'bone', 'ash', 'deadwood', 'obsid', 'basalt'],
     sewer:  ['water', 'slime', 'grate', 'pipe', 'drip', 'bones'],
     space:  ['debris', 'meteor', 'shard', 'holo', 'ruinpillar', 'crystal'],
+    storm:  ['tornflag', 'deadwood', 'rock', 'cloudshard', 'weathervane', 'ruinpillar'],
   };
   const clrng = mulberry32(hashSeed(`cluster${idx}:${seed}`));
   const clist = CLUSTERS[def.biome] || CLUSTERS.plain;
@@ -458,6 +461,7 @@ export function genWorld(idx) {
     hell:   ['sacrifice', 'sacrifice', 'bonecircle', 'sacrifice'],
     sewer:  ['sump', 'sump', 'cisternmini', 'sump'],
     space:  ['artifact', 'artifact', 'ruinmini', 'artifact', 'viewpoint'],
+    storm:  ['viewpoint', 'stonecircle', 'viewpoint', 'artifact'],
   };
   const srng = mulberry32(hashSeed(`secret${idx}:${seed}`));
   const secrets = [];
@@ -476,13 +480,33 @@ export function genWorld(idx) {
     }
   }
 
+  // ---------- ROYAUME DES TEMPÊTES : courants d'air ----------
+  // Zones où le vent souffle fort : le joueur est poussé dans la direction
+  // du courant (et légèrement ralenti en sortant). RNG dédié -> layout préservé.
+  const wng = mulberry32(hashSeed(`wind${idx}:${seed}`));
+  const windZones = [];
+  if (def.biome === 'storm') {
+    const nz = 9 + (wng() < 0.5 ? 1 : 0);
+    for (let i = 0; i < nz; i++) {
+      const wx = rr(wng, CONFIG.edgeMargin + 120, w - CONFIG.edgeMargin - 120);
+      const wy = rr(wng, CONFIG.edgeMargin + 120, h - CONFIG.edgeMargin - 120);
+      if (Math.hypot(wx - spawn.x, wy - spawn.y) < 460) continue;
+      const a = wng() * TAU;
+      windZones.push({
+        x: wx, y: wy, r: rr(wng, 140, 250),
+        dx: Math.cos(a), dy: Math.sin(a) * 0.55,
+        str: rr(wng, 0.9, 1.7), ph: wng() * TAU,
+      });
+    }
+  }
+
   // le décor ne pousse ni dans l'eau ni dans/derrière un obstacle (montagnes, rochers)
   const decorClean = decor.filter(d => !inLake(d.x, d.y) &&
     !obstacles.some(o => Math.hypot(d.x - o.x, d.y - o.y) < o.r + 20));
 
   const world = {
     idx, def, seed, w, h, spawn, buildings, decor: decorClean, sectors, obstacles, lakes,
-    falls, secrets,
+    falls, secrets, windZones,
     // portail retour : seulement s'il reste dans la même campagne
     returnPortal: (idx > 0 && campaignOf(idx - 1) === campaignOf(idx)) ? { x: spawn.x + 160, y: spawn.y - 60 } : null,
     portal: saved && saved.portal ? { x: saved.portal.x, y: saved.portal.y } : null,

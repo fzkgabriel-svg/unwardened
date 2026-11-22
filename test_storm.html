@@ -1,0 +1,76 @@
+<!doctype html>
+<html><body>
+<canvas id="game" width="1200" height="640"></canvas>
+<pre id="out">RUNNING</pre>
+<script type="module">
+import { G, ctx } from './js/state.js';
+import { genWorld, curWorld, tryInteract, nearestInteractable } from './js/world.js';
+import { WORLDS, CAMPAIGNS, campaignOf, campaignStart, campaignEnd } from './js/world_data.js';
+import { modState, pass2Unlocked, grantPass2, equippedMods, modShieldMax } from './js/modules.js';
+import { enemyTypes } from './js/enemies.js';
+import { drawStormEnemy } from './js/gfx/enemy_storm.js';
+import { drawProfile } from './js/hud/profile.js';
+import { drawCampaign } from './js/menu/campaign.js';
+import { campaignUnlocked } from './js/menu/common.js';
+const out = [];
+const T = (name, fn) => { try { const r = fn(); out.push(name + '=' + (r === undefined ? 'ok' : r)); } catch (e) { out.push(name + '=FAIL:' + e.message); } };
+try {
+  // ---------- structure campagne ----------
+  T('campaigns', () => CAMPAIGNS.length);
+  T('worlds', () => WORLDS.length);
+  T('campOf10', () => campaignOf(10));
+  T('campStart5', () => campaignStart(5));
+  T('campEnd5', () => campaignEnd(5));
+  T('stormDef', () => WORLDS[10].biome);
+  T('unlock5_before', () => campaignUnlocked(5));
+  G.stats = G.stats || {};
+  G.stats.campaignDone = { 0: true, 1: true, 2: true, 3: true, 4: true };
+  T('unlock5_after', () => campaignUnlocked(5));
+
+  // ---------- monde tempête ----------
+  G.state = 'playing'; G.campaign = 5; G.worldIndex = 10; G.wave = 1;
+  G.player = { x: 100, y: 100, r: 15, hp: 100, maxHp: 600, level: 1, xp: 0, xpNext: 50, potions: 0, maxPotions: 3, alive: true, lastHurt: -99, slowT: 0, hitSlowT: 0, potionCooldown: 0, poisonT: 0, poisonDps: 0, attackMode: 1, speed: 2.1, ultCharge: 0, shieldT: 0, shieldCd: 0, handCd: 0, handUsed: false, switchLock: 0 };
+  G.inv = { mats: {}, items: {}, equip: {}, modules: { owned: [], eq: { act: null, pass: null }, passUnlocked: false } };
+  G.enemies = []; G.drops = []; G.portals = []; G.particles = []; G.damageTexts = []; G.rings = [];
+  G.camX = 0; G.camY = 0; G.time = 1;
+  const w = genWorld(10);
+  T('stormBuildings', () => w.buildings.length + ':' + w.buildings.filter(b => b.def.camp === 5).length);
+  T('windZones', () => (w.windZones || []).length);
+  T('stormDecor', () => w.decor.filter(d => ['windgrass','tornflag','cloudshard','stormrock','weathervane'].includes(d.type)).length);
+  T('noLakes', () => w.lakes.length);
+  // butin bâtiment tempête
+  const b = w.buildings.find(b => !b.looted);
+  if (b) {
+    G.player.x = b.x + b.w / 2 + 30; G.player.y = b.y;
+    const xp0 = G.player.xp, em0 = (G.inv.mats.emeraude || 0);
+    T('loot', () => { const r = tryInteract(); return r + ' xp+' + (G.player.xp - xp0) + ' em+' + ((G.inv.mats.emeraude || 0) - em0); });
+  }
+  // ennemis tempête
+  T('stormTypes', () => ['courant','rafale','esprit','gardien','colosse','bossOuragan','finalBossTempete'].every(t => enemyTypes[t]));
+  T('finalBossName', () => enemyTypes.finalBossTempete.name);
+  // rendu ennemi storm
+  T('drawStorm', () => { const e = { type: 'courant', color: '#b3e5fc', x: 100, y: 100, r: 12, hp: 10, maxHp: 10, t: 0, ph: 0, flash: 0, dirX: 1, dirY: 0, vx: 0, vy: 0, slowT: 0, stunT: 0, atkCd: 0, aggro: 300, targetX: 0, targetY: 0, boltCd: 0, boltT: 0, mode: 0, modeT: 0, castT: 0, castX: 0, castY: 0, wobble: 0 }; G.enemies = [e]; G.player.x = 200; G.player.y = 100; ctx.save(); ctx.translate(0,0); drawStormEnemy(e); ctx.restore(); return 'ok'; });
+  // ---------- 2e slot passif ----------
+  T('pass2_locked', () => !pass2Unlocked(G.inv));
+  T('grantPass2', () => grantPass2());
+  T('pass2_unlocked', () => pass2Unlocked(G.inv));
+  // deux passifs simultanés
+  const ms = modState(G.inv);
+  ms.owned.push('bouclier','onde','regeneration','rempart','instinct','absorption');
+  ms.eq.pass = 'bouclier'; ms.eq.pass2 = 'regeneration';
+  T('twoPassives', () => equippedMods().map(m => m.name).join(','));
+  T('eqMods', () => equippedMods().length);
+  T('shieldMax', () => modShieldMax());
+  G.inv.equip = {}; G.inv.buffs = {};
+  // ---------- HUD profil + carte campagne ----------
+  G.state = 'playing';
+  T('profile', () => { drawProfile(); return 'ok'; });
+  G.state = 'menu'; G.menuView = 'campaign'; G.campaignSel = 5; G.campaignWorlds = {};
+  T('campaignMap', () => { drawCampaign(); return 'ok'; });
+  G.campaignSel = 1; // verrouillée ? campaignDone a tout -> déverrouillée. tester 0 sans stats
+  document.getElementById('out').textContent = 'STORM ' + out.join(' | ');
+} catch (err) {
+  document.getElementById('out').textContent = 'FAIL ' + err.message + ' @' + (err.stack||'').split('\n')[1];
+}
+</script>
+</body></html>

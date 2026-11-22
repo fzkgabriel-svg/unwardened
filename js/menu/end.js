@@ -141,7 +141,8 @@ export function drawVictory() {
     'Le Souverain de Glace est vaincu — la Terre Gelée est libérée !',
     'Le Baron de l\'Enfer est vaincu — les Enfers sont libérés !',
     'Le Tyran des Profondeurs est vaincu — les Égouts sont libérés !',
-    'L\'Abomination Cosmique est vaincue — l\'Espace est libéré !'];
+    'L\'Abomination Cosmique est vaincue — l\'Espace est libéré !',
+    'Le Souverain des Ouragans est vaincu — le Royaume des Tempêtes est libéré !'];
   ctx.fillText(vicNames[G.campaign] || vicNames[0], W / 2, H / 2 - 128);
   if (G.campaign === 1) {
     ctx.save();
@@ -169,6 +170,13 @@ export function drawVictory() {
     ctx.shadowColor = 'rgba(179,157,219,0.9)'; ctx.shadowBlur = 16;
     ctx.fillStyle = '#e1bee7'; ctx.font = 'bold 19px Inter, sans-serif';
     ctx.fillText('🕳 LES ÉTOILES SAUVEES — la prochaine campagne vous attend', W / 2, H / 2 - 100);
+    ctx.restore();
+  }
+  if (G.campaign === 5) {
+    ctx.save();
+    ctx.shadowColor = 'rgba(79,195,247,0.9)'; ctx.shadowBlur = 16;
+    ctx.fillStyle = '#b3e5fc'; ctx.font = 'bold 19px Inter, sans-serif';
+    ctx.fillText('🌪 2ᵉ EMPLACEMENT PASSIF DÉBLOQUÉ — équiper dans le menu Modules !', W / 2, H / 2 - 100);
     ctx.restore();
   }
 
@@ -202,7 +210,7 @@ export function drawVictory() {
   // boutons REJOUER / MENU (même géométrie que le game over)
   // sur la victoire, le bouton devient « MONDE SUIVANT » s'il reste une campagne
   const b = goButtons();
-  const hasNext = G.campaign < 4;
+  const hasNext = G.campaign < 5;
   drawMenuButton(b.replay, hasNext ? '▶  MONDE SUIVANT' : '↻  REJOUER',
     hasNext ? '#1565c0' : '#4caf50', hasNext ? '#64b5f6' : '#69f0ae', true);
   drawMenuButton(b.menu, '⌂  MENU', '#455a64', '#90a4ae', false);

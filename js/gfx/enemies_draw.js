@@ -4,6 +4,7 @@ import { drawFrozenEnemy } from './enemy_ice.js';
 import { drawHellEnemy } from './enemy_hell.js';
 import { drawSewerEnemy } from './enemy_sewer.js';
 import { drawSpaceEnemy } from './enemy_space.js';
+import { drawStormEnemy } from './enemy_storm.js';
 
 
 export function drawShadow(x, y, r) {
@@ -14,7 +15,7 @@ export function drawShadow(x, y, r) {
 export function drawEnemy(e) {
   const p = G.player;
   const isFinal = e.type === 'finalBoss' || e.type === 'finalBossGlace' || e.type === 'finalBossEnfer'
-    || e.type === 'finalBossEgout' || e.type === 'finalBossSpace';
+    || e.type === 'finalBossEgout' || e.type === 'finalBossSpace' || e.type === 'finalBossTempete';
   drawShadow(e.x, e.y, e.r);
   // aura pour les mini-boss et boss
   if (e.isBoss || e.isMini) {
@@ -59,7 +60,8 @@ export function drawEnemy(e) {
     const hell = e.type === 'finalBossEnfer';
     const sewer = e.type === 'finalBossEgout';
     const space = e.type === 'finalBossSpace';
-    const tcol = frozen ? '129,212,250' : hell ? '255,171,0' : sewer ? '174,234,0' : space ? '179,157,219' : '255,112,67';
+    const storm = e.type === 'finalBossTempete';
+    const tcol = frozen ? '129,212,250' : hell ? '255,171,0' : sewer ? '174,234,0' : space ? '179,157,219' : storm ? '79,195,247' : '255,112,67';
     ctx.strokeStyle = `rgba(${tcol},${0.3 + prog * 0.6})`;
     ctx.lineWidth = 3; ctx.setLineDash([10, 8]);
     ctx.beginPath(); ctx.arc(m.tx, m.ty, 55 + prog * 45, 0, TAU); ctx.stroke();
@@ -112,7 +114,8 @@ export function drawEnemy(e) {
   if (isFinal && e.phase > 0 && !e.bossDying) {
     const frozen = e.type === 'finalBossGlace';
     const col = frozen ? '#80d8ff' : e.type === 'finalBossEnfer' ? '#ffab00'
-      : e.type === 'finalBossEgout' ? '#aeea00' : e.type === 'finalBossSpace' ? '#b388ff' : '#e040fb';
+      : e.type === 'finalBossEgout' ? '#aeea00' : e.type === 'finalBossSpace' ? '#b388ff'
+      : e.type === 'finalBossTempete' ? '#4fc3f7' : '#e040fb';
     const pulse = 1 + Math.sin(G.time * (4 + e.phase * 3)) * 0.08;
     ctx.strokeStyle = col; ctx.globalAlpha = 0.5 + e.phase * 0.15; ctx.lineWidth = 3;
     ctx.setLineDash([14 + e.phase * 6, 10]);
@@ -132,7 +135,8 @@ export function drawEnemy(e) {
   if (e.shieldT > 0 && !e.bossDying) {
     const pulse = 0.75 + Math.sin(G.time * 8) * 0.15;
     const col = e.type === 'finalBossGlace' ? '129,212,250' : e.type === 'finalBossEnfer' ? '255,171,0'
-      : e.type === 'finalBossEgout' ? '174,234,0' : e.type === 'finalBossSpace' ? '179,157,219' : '224,64,251';
+      : e.type === 'finalBossEgout' ? '174,234,0' : e.type === 'finalBossSpace' ? '179,157,219'
+      : e.type === 'finalBossTempete' ? '79,195,247' : '224,64,251';
     ctx.strokeStyle = `rgba(${col},${0.85 * pulse})`;
     ctx.fillStyle = `rgba(${col},${0.10 * pulse})`;
     ctx.lineWidth = 3;
@@ -328,6 +332,8 @@ export function drawEnemy(e) {
     drawSewerEnemy(e);
   } else if (['alien', 'drone', 'tentacule', 'cristal', 'overlord', 'bossVoid', 'finalBossSpace'].includes(e.type)) {
     drawSpaceEnemy(e);
+  } else if (['courant', 'rafale', 'esprit', 'gardien', 'colosse', 'bossOuragan', 'finalBossTempete'].includes(e.type)) {
+    drawStormEnemy(e);
   } else { // golem / mini-boss / boss
     const g = ctx.createRadialGradient(-4, -4, 2, 0, 0, e.r);
     g.addColorStop(0, light); g.addColorStop(1, bodyColor);
@@ -451,7 +457,8 @@ export function drawEnemy(e) {
   if (e.bossDying) {
     const k = Math.max(0, e.bossDying / 2.4);
     const col = e.type === 'finalBossGlace' ? '129,212,250' : e.type === 'finalBossEnfer' ? '255,171,0'
-      : e.type === 'finalBossEgout' ? '174,234,0' : e.type === 'finalBossSpace' ? '179,157,219' : '224,64,251';
+      : e.type === 'finalBossEgout' ? '174,234,0' : e.type === 'finalBossSpace' ? '179,157,219'
+      : e.type === 'finalBossTempete' ? '79,195,247' : '224,64,251';
     const h = e.r * (3.4 - k * 1.5);
     const g = ctx.createLinearGradient(0, e.y - h, 0, e.y + e.r * 0.6);
     g.addColorStop(0, `rgba(${col},0)`);

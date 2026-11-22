@@ -59,6 +59,14 @@ export const MATERIAL_DROPS = {
   overlord: { cristal: 0.20, essence: 0.18, or: 0.10, fer: 0.14, emeraude: 0.20 },
   bossVoid: { or: 0.25, cristal: 0.25, essence: 0.22, fer: 0.30, emeraude: 0.60 },
   finalBossSpace:{ or: 0.9, cristal: 0.9, essence: 1.0, fer: 0.9, cuir: 0.8, emeraude: 1.0 },
+  // Le Royaume des Tempêtes
+  courant:  { fer: 0.06, cuir: 0.05, essence: 0.03 },
+  rafale:   { cristal: 0.08, essence: 0.05, fer: 0.05 },
+  esprit:   { essence: 0.14, cristal: 0.10, or: 0.05 },
+  gardien:  { fer: 0.12, cristal: 0.10, essence: 0.07, cuir: 0.08 },
+  colosse:  { cristal: 0.18, essence: 0.14, or: 0.10, fer: 0.16, emeraude: 0.20 },
+  bossOuragan:{ or: 0.28, cristal: 0.28, essence: 0.25, fer: 0.32, emeraude: 0.60 },
+  finalBossTempete:{ or: 1.0, cristal: 1.0, essence: 1.1, fer: 1.0, cuir: 0.9, emeraude: 1.0 },
 };
 
 // raretés des objets forgés (couleurs dans utils.itemTier)

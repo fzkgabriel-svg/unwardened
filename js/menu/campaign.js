@@ -26,9 +26,12 @@ const INFO = [
     boss: 'Le Tyran des Profondeurs', reward: 'Système de Modules + emplacements passifs' },
   { icon: '🛸', diff: '★★★★★ EXPERT',     diffCol: '#b388ff', waves: 40,
     desc: 'L\'Espace : avant-poste perdu à des années-lumière. L\'Abomination Cosmique dévore les étoiles.',
-    boss: 'L\'Abomination Cosmique', reward: 'Arc Cinétique Cosmique + victoire finale' },
+    boss: 'L\'Abomination Cosmique', reward: 'Arc Cinétique Cosmique' },
+  { icon: '🌪️', diff: '★★★★★★ LÉGENDAIRE', diffCol: '#4fc3f7', waves: 45,
+    desc: 'Le Royaume des Tempêtes : falaises suspendues au-dessus des nuages, tornades géantes et le Souverain des Ouragans.',
+    boss: 'Le Souverain des Ouragans', reward: '2ᵉ emplacement passif + victoire ultime' },
 ];
-const NAMES = ['LES TERRES OUBLIÉES', 'LA TERRE GELÉE', 'LES ENFERS', 'LES ÉGOUTS', 'L\'ESPACE'];
+const NAMES = ['LES TERRES OUBLIÉES', 'LA TERRE GELÉE', 'LES ENFERS', 'LES ÉGOUTS', 'L\'ESPACE', 'LE ROYAUME DES TEMPÊTES'];
 // territoires : position, rayon, palette, façon de remplir le blob (graine fixe)
 const TERR = [
   { x: 185, y: 345, r: 96,  c1: '#7ec850', c2: '#2f5d22', rim: '#a8e063', part: '#d8f7a8', dark: '#1c3310', kind: 'terre' },
@@ -36,6 +39,7 @@ const TERR = [
   { x: 530, y: 350, r: 100, c1: '#e8704a', c2: '#6e1d10', rim: '#ffab70', part: '#ffc38a', dark: '#260a04', kind: 'enfer' },
   { x: 700, y: 185, r: 96,  c1: '#b8cc3f', c2: '#3d5218', rim: '#d7e86a', part: '#ecf7a0', dark: '#141f05', kind: 'egout' },
   { x: 870, y: 350, r: 100, c1: '#9a86d8', c2: '#2a1650', rim: '#c9b3f5', part: '#d9ccff', dark: '#0c0620', kind: 'espace' },
+  { x: 1035, y: 175, r: 92, c1: '#7fb8d8', c2: '#2c4a63', rim: '#a8d8f0', part: '#cfeaff', dark: '#0d1a26', kind: 'tempete' },
 ];
 // blob organique déterministe par territoire (12 sommets)
 function blobPts(c) {
@@ -57,7 +61,7 @@ function inTerr(c, x, y) {
   }
   return inside || Math.hypot(x - TERR[c].x, y - TERR[c].y) < TERR[c].r * 0.55;
 }
-function terrAt(x, y) { for (let c = 0; c < 5; c++) if (inTerr(c, x, y)) return c; return -1; }
+function terrAt(x, y) { for (let c = 0; c < 6; c++) if (inTerr(c, x, y)) return c; return -1; }
 
 // sentiers animés entre territoires (courbes vers le haut)
 function pathCurve(a, b) {
@@ -70,11 +74,11 @@ function campParts() { return G._campParts = G._campParts || []; }
 function spawnCampPart() {
   const ps = campParts();
   if (ps.length > 110) return;
-  const c = (Math.random() * 5) | 0, t = TERR[c];
+  const c = (Math.random() * 6) | 0, t = TERR[c];
   const a = Math.random() * TAU, rr = Math.sqrt(Math.random()) * t.r * 0.9;
   ps.push({
     x: t.x + Math.cos(a) * rr, y: t.y + Math.sin(a) * rr * 0.85,
-    vx: (Math.random() - 0.5) * 10, vy: (Math.random() - 0.5) * 8 - (c === 2 || c === 4 ? 12 : c === 1 ? 16 : -4),
+    vx: (Math.random() - 0.5) * 10, vy: (Math.random() - 0.5) * 8 - (c === 2 || c === 4 ? 12 : c === 1 ? 16 : c === 5 ? 26 : -4),
     life: 4 + Math.random() * 4, max: 8, col: Math.random() < 0.5 ? t.part : t.rim,
     r: 1 + Math.random() * 2.2, tw: Math.random() * TAU, c,
   });
@@ -101,11 +105,11 @@ function campCam(dt) {
 // ---------- déblocages : animation à la transition ----------
 function checkUnlockFx() {
   if (!G._campSeen) { // première visite : état initial silencieux, pas de faux déblocages
-    G._campSeen = [0, 1, 2, 3, 4].map(c => campaignUnlocked(c));
+    G._campSeen = [0, 1, 2, 3, 4, 5].map(c => campaignUnlocked(c));
     return;
   }
   const seen = G._campSeen;
-  for (let c = 0; c < 5; c++) {
+  for (let c = 0; c < 6; c++) {
     const u = campaignUnlocked(c);
     if (u && !seen[c]) {
       seen[c] = true;
@@ -121,14 +125,13 @@ export function campaignPlayBtn() {
   const f = campaignFiche();
   return { x: f.x + f.w - 268, y: f.y + 62, w: 236, h: 46 };
 }
-// boutons de niveau : les 2 mondes de la campagne, cliquables comme des boutons
+// niveau de la campagne : 1 seul monde par campagne — bouton unique large
 export function campaignWorldBtns(c) {
   const f = campaignFiche();
-  const tx = f.x + 152, bw = 158, bh = 30, gap = 12, y = f.y + 62;
-  const w0 = WORLDS[campaignStart(c)], w1 = WORLDS[campaignEnd(c) - 1];
+  const tx = f.x + 152, bw = 326, bh = 30, y = f.y + 62;
+  const w0 = WORLDS[campaignStart(c)];
   return [
-    { idx: campaignStart(c),     name: w0.name, sel: 0, x: tx,             y, w: bw, h: bh },
-    { idx: campaignStart(c) + 1, name: w1.name, sel: 1, x: tx + bw + gap, y, w: bw, h: bh },
+    { idx: campaignStart(c), name: w0.name, sel: 0, x: tx, y, w: bw, h: bh },
   ];
 }
 function backBtn() { return { x: 30, y: H - 60, w: 160, h: 40 }; }
@@ -258,6 +261,35 @@ function drawTerrDecor(kind, cx, cy, r, t, unlocked) {
           ctx.fillRect(-1, -9, 2, 13);
         }
         break;
+      case 'tempete': // tornade + nuages + éclairs + moulins
+        if (i % 4 === 0) { // tornade miniature
+          ctx.fillStyle = 'rgba(200,230,250,0.55)';
+          ctx.beginPath();
+          ctx.moveTo(0, -14);
+          ctx.quadraticCurveTo(-5, -6, -8, 0);
+          ctx.quadraticCurveTo(0, 5, 8, 0);
+          ctx.quadraticCurveTo(5, -6, 0, -14);
+          ctx.closePath(); ctx.fill();
+          ctx.strokeStyle = 'rgba(240,250,255,0.8)'; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(-5, -10); ctx.lineTo(5, -4); ctx.moveTo(-4, -6); ctx.lineTo(4, -1); ctx.stroke();
+        } else if (i % 4 === 1) { // nuage
+          ctx.fillStyle = 'rgba(230,242,252,0.8)';
+          ctx.beginPath(); ctx.arc(-3, 2, 4.5, 0, TAU); ctx.arc(2, 0, 5.5, 0, TAU); ctx.arc(6, 3, 3.5, 0, TAU); ctx.fill();
+        } else if (i % 4 === 2) { // éclair
+          const s = 0.6 + 0.4 * Math.abs(Math.sin(t * 4 + i * 2));
+          ctx.strokeStyle = `rgba(227,242,253,${0.5 * s + 0.3})`; ctx.lineWidth = 1.6;
+          ctx.beginPath();
+          ctx.moveTo(0, -12); ctx.lineTo(3, -6); ctx.lineTo(-2, -3); ctx.lineTo(3, 4);
+          ctx.stroke();
+        } else { // moulin
+          ctx.strokeStyle = '#cfd8dc'; ctx.lineWidth = 1.6;
+          ctx.beginPath(); ctx.moveTo(0, 6); ctx.lineTo(0, -8); ctx.stroke();
+          ctx.save(); ctx.translate(0, -8); ctx.rotate(t * 2 + i);
+          ctx.fillStyle = '#eceff1';
+          ctx.fillRect(-1.5, -9, 3, 9); ctx.fillRect(-9, -1.5, 9, 3);
+          ctx.restore();
+        }
+        break;
     }
     ctx.restore();
   });
@@ -318,6 +350,48 @@ function drawPreview(c, x, y, s, t) {
       ctx.beginPath(); ctx.arc(0, -4, 16, 0, TAU); ctx.fill();
       ctx.strokeStyle = 'rgba(200,180,255,0.8)'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.ellipse(0, -4, 24, 7, -0.35, 0, TAU); ctx.stroke();
+      break;
+    case 'tempete':
+      // ciel orageux + tornade animée + embruns
+      const pg2 = ctx.createLinearGradient(0, -58, 0, 20);
+      pg2.addColorStop(0, '#33506b'); pg2.addColorStop(1, '#7fa8c4');
+      ctx.fillStyle = pg2; ctx.fillRect(-60, -60, 120, 46);
+      // nuages sombres
+      ctx.fillStyle = 'rgba(70,95,120,0.8)';
+      for (const [nx, ny, nr] of [[-30, -20, 16], [10, -26, 20], [40, -14, 14]]) {
+        ctx.beginPath(); ctx.arc(nx, ny, nr, 0, TAU); ctx.arc(nx + nr * 0.7, ny + 4, nr * 0.7, 0, TAU); ctx.fill();
+      }
+      // tornade centrale
+      ctx.save(); ctx.translate(0, 14);
+      ctx.fillStyle = 'rgba(210,235,252,0.85)';
+      ctx.beginPath();
+      ctx.moveTo(-6, -58); ctx.quadraticCurveTo(-10, -20, -16, 6);
+      ctx.quadraticCurveTo(0, 12, 16, 6); ctx.quadraticCurveTo(10, -20, 6, -58);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      for (let s = 0; s < 18; s++) {
+        const a2 = s * 0.5 + t * 7;
+        const rr2 = 14 * (0.2 + s * 0.022);
+        const xx = Math.cos(a2) * rr2 * 0.55, yy = -rr2 * 0.8 + s * 3.4;
+        s === 0 ? ctx.moveTo(xx, yy) : ctx.lineTo(xx, yy);
+      }
+      ctx.stroke();
+      ctx.restore();
+      // embruns
+      for (let i = 0; i < 6; i++) {
+        const ex = -50 + ((t * 130 + i * 41) % 100);
+        const ey = -30 + Math.sin(t * 2 + i) * 8 + i * 6;
+        ctx.strokeStyle = 'rgba(230,245,255,0.6)'; ctx.lineWidth = 1.4;
+        ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(ex + 14, ey); ctx.stroke();
+      }
+      // éclairs
+      if (Math.sin(t * 0.9) > 0.92) {
+        ctx.strokeStyle = 'rgba(240,250,255,0.9)'; ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(28, -50); ctx.lineTo(32, -36); ctx.lineTo(26, -30); ctx.lineTo(34, -14);
+        ctx.stroke();
+      }
       break;
   }
   ctx.restore();
@@ -408,7 +482,8 @@ function drawTerritory(c, t, dt) {
   // nom + difficulté
   ctx.textAlign = 'center';
   ctx.font = `700 15px ${UI}`; ctx.fillStyle = unlocked ? '#fff' : 'rgba(255,255,255,0.35)';
-  ctx.fillText(NAMES[c], terr.x, terr.y - terr.r * 0.86 - 26);
+  // biome non découvert : le nom du territoire reste secret
+  ctx.fillText(unlocked ? NAMES[c] : '••• TERRITOIRE INCONNU •••', terr.x, terr.y - terr.r * 0.86 - 26);
   ctx.font = `700 11px ${UI}`; ctx.fillStyle = unlocked ? info.diffCol : 'rgba(255,255,255,0.25)';
   ctx.fillText(info.diff, terr.x, terr.y + terr.r * 0.86 + (unlocked ? 14 : 30));
 
@@ -492,11 +567,12 @@ function drawFiche(c, t) {
   const tx = f.x + 152;
   ctx.textAlign = 'left';
   ctx.font = `700 19px ${UI}`; ctx.fillStyle = unlocked ? C_TEXT : 'rgba(255,255,255,0.4)';
-  ctx.fillText(`${info.icon}  ${NAMES[c]}`, tx, f.y + 36);
+  // biome non découvert : nom masqué dans la fiche aussi
+  ctx.fillText(unlocked ? `${info.icon}  ${NAMES[c]}` : '❓  BIOME INCONNU', tx, f.y + 36);
   ctx.font = `700 11px ${UI}`; ctx.fillStyle = info.diffCol;
   ctx.fillText(info.diff, tx, f.y + 56);
   if (done) { ctx.fillStyle = '#ffd740'; ctx.font = `700 11px ${UI}`; ctx.fillText('★ CAMPAGNE TERMINÉE', tx + 130, f.y + 56); }
-  // niveaux : les 2 mondes de la campagne en boutons cliquables
+  // niveau : le seul monde de la campagne en bouton cliquable
   const ws = (G.campaignWorlds && G.campaignWorlds[c]) || 0;
   for (const wb of campaignWorldBtns(c)) {
     const selW = ws === wb.sel;
@@ -580,7 +656,7 @@ export function drawCampaign() {
   drawMapBG(t);
 
   // ---- sentiers animés (sous les territoires) ----
-  for (let c = 0; c < 4; c++) {
+  for (let c = 0; c < 5; c++) {
     const a = TERR[c], b = TERR[c + 1];
     const unlocked = campaignUnlocked(c + 1);
     const { mx, my } = pathCurve(a, b);
@@ -598,7 +674,7 @@ export function drawCampaign() {
   const cam = G._campCam;
   ctx.save();
   ctx.translate(W / 2, H / 2); ctx.scale(cam.z, cam.z); ctx.translate(-cam.cx, -cam.cy);
-  for (let c = 0; c < 5; c++) drawTerritory(c, t, dt);
+  for (let c = 0; c < 6; c++) drawTerritory(c, t, dt);
   ctx.restore();
 
   // ---- particules d'ambiance (espace écran) ----

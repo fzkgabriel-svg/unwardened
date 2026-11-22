@@ -1442,5 +1442,88 @@ function drawDecorItem(d, def, g = ctx) {
     }
     ctx.fillStyle = 'rgba(160,200,255,0.9)';
     ctx.beginPath(); ctx.arc(d.x, d.y - 10 * s, 2 * s, 0, TAU); ctx.fill();
+  } else if (d.type === 'windgrass') {
+    // herbe balayée par le vent : brins qui ondulent fort
+    const s = d.s, sway = Math.sin(G.time * 5 + d.c * 30) * 6 * s;
+    ctx.strokeStyle = '#6fae7a'; ctx.lineWidth = 1.8; ctx.lineCap = 'round';
+    for (let k = -2; k <= 2; k++) {
+      const bx = d.x + k * 3.4 * s;
+      const tipX = bx + sway * (0.5 + Math.abs(k) * 0.3), tipY = d.y - 11 * s;
+      ctx.beginPath();
+      ctx.moveTo(bx, d.y + 3 * s);
+      ctx.quadraticCurveTo(bx + sway * 0.4, d.y - 6 * s, tipX, tipY);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = 'rgba(200,240,210,0.7)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(d.x - 2 * s, d.y - 4 * s); ctx.quadraticCurveTo(d.x - 2 * s + sway * 0.5, d.y - 8 * s, d.x - 2 * s + sway * 0.8, d.y - 10 * s); ctx.stroke();
+  } else if (d.type === 'tornflag') {
+    // drapeau déchiré flottant au vent
+    const s = d.s, sway = Math.sin(G.time * 6 + d.c * 40) * 5 * s;
+    ctx.strokeStyle = '#8d6e63'; ctx.lineWidth = 2.4; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(d.x, d.y + 3 * s); ctx.lineTo(d.x, d.y - 22 * s); ctx.stroke();
+    // tissu déchiré animé
+    ctx.fillStyle = '#4fc3f7';
+    ctx.beginPath();
+    ctx.moveTo(d.x, d.y - 22 * s);
+    ctx.quadraticCurveTo(d.x + 14 * s + sway, d.y - 19 * s, d.x + 18 * s + sway * 1.4, d.y - 15 * s);
+    ctx.lineTo(d.x + 12 * s + sway, d.y - 13 * s);
+    ctx.lineTo(d.x + 16 * s + sway * 1.2, d.y - 9 * s);
+    ctx.lineTo(d.x + 8 * s + sway * 0.7, d.y - 11 * s);
+    ctx.lineTo(d.x + 4 * s + sway * 0.4, d.y - 14 * s);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(d.x, d.y - 22 * s); ctx.lineTo(d.x + 18 * s + sway * 1.4, d.y - 15 * s); ctx.stroke();
+  } else if (d.type === 'cloudshard') {
+    // fragment de nuage cristallin flottant
+    const s = d.s, bob = Math.sin(G.time * 2.4 + d.c * 20) * 3;
+    const pg = ctx.createLinearGradient(d.x, d.y - 10 * s + bob, d.x, d.y + 8 * s + bob);
+    pg.addColorStop(0, 'rgba(230,245,255,0.85)'); pg.addColorStop(1, 'rgba(140,190,225,0.4)');
+    ctx.fillStyle = pg;
+    ctx.beginPath();
+    ctx.moveTo(d.x, d.y - 11 * s + bob);
+    ctx.lineTo(d.x + 6 * s, d.y - 3 * s + bob);
+    ctx.lineTo(d.x + 4 * s, d.y + 7 * s + bob);
+    ctx.lineTo(d.x - 4 * s, d.y + 7 * s + bob);
+    ctx.lineTo(d.x - 6 * s, d.y - 3 * s + bob);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(d.x, d.y - 11 * s + bob); ctx.lineTo(d.x, d.y + 7 * s + bob); ctx.stroke();
+  } else if (d.type === 'stormrock') {
+    // rocher taillé par le vent : strates érodées
+    const s = d.s;
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath(); ctx.ellipse(d.x, d.y + 3 * s, 11 * s, 4 * s, 0, 0, TAU); ctx.fill();
+    const pg = ctx.createLinearGradient(d.x - 10 * s, d.y - 8 * s, d.x + 10 * s, d.y + 6 * s);
+    pg.addColorStop(0, '#7d97a8'); pg.addColorStop(1, '#3d5462');
+    ctx.fillStyle = pg;
+    ctx.beginPath();
+    ctx.moveTo(d.x - 10 * s, d.y + 3 * s);
+    ctx.lineTo(d.x - 7 * s, d.y - 6 * s); ctx.lineTo(d.x - 2 * s, d.y - 10 * s);
+    ctx.lineTo(d.x + 5 * s, d.y - 7 * s); ctx.lineTo(d.x + 10 * s, d.y - 2 * s);
+    ctx.lineTo(d.x + 8 * s, d.y + 3 * s);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.lineWidth = 1.4; ctx.stroke();
+    // strates
+    ctx.strokeStyle = 'rgba(200,225,240,0.35)'; ctx.lineWidth = 1;
+    for (let k = 0; k < 3; k++) {
+      const yy = d.y - (2 + k * 3.4) * s;
+      ctx.beginPath(); ctx.moveTo(d.x - 8 * s + k, yy); ctx.lineTo(d.x + 7 * s - k, yy - 1 * s); ctx.stroke();
+    }
+  } else if (d.type === 'weathervane') {
+    // girouette médiévale : flèche animée par le vent
+    const s = d.s;
+    ctx.strokeStyle = '#78909c'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(d.x, d.y + 3 * s); ctx.lineTo(d.x, d.y - 20 * s); ctx.stroke();
+    const ang = Math.sin(G.time * 1.8 + d.c * 10) * 0.5 + 0.3; // orientation fluctuante
+    ctx.save(); ctx.translate(d.x, d.y - 19 * s); ctx.rotate(ang);
+    ctx.fillStyle = '#ffd740';
+    ctx.beginPath();
+    ctx.moveTo(10 * s, 0); ctx.lineTo(-6 * s, -4 * s); ctx.lineTo(-6 * s, 4 * s);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#455a64'; ctx.lineWidth = 1.2; ctx.stroke();
+    ctx.restore();
+    // girouette en forme de coq simplifié
+    ctx.fillStyle = '#eceff1';
+    ctx.beginPath(); ctx.arc(d.x + Math.cos(ang) * 8 * s, d.y - 19 * s - 3 * s, 2.6 * s, 0, TAU); ctx.fill();
   }
 }

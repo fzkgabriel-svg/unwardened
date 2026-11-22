@@ -12,11 +12,11 @@ export const ctx = canvas.getContext('2d');
 ctx.scale(SS, SS);
 export const W = 1200, H = 640;
 export const TAU = Math.PI * 2;
-export const VERSION = '3.29.0';
+export const VERSION = '1.30.0';
 export const FINAL_WAVE = 20; // vague du boss final (campagne 1) // incrémenter à chaque mise à jour du jeu
 // vagues finales : campagne 2 -> 25, 3 -> 30, 4 (Égouts) -> 35, 5 (Espace) -> 40
 export function finalWave() {
-  return G.campaign === 4 ? 40 : G.campaign === 3 ? 35 : G.campaign === 2 ? 30 : G.campaign === 1 ? 25 : FINAL_WAVE;
+  return G.campaign === 5 ? 45 : G.campaign === 4 ? 40 : G.campaign === 3 ? 35 : G.campaign === 2 ? 30 : G.campaign === 1 ? 25 : FINAL_WAVE;
 }
 
 export const G = {
@@ -148,6 +148,10 @@ export const G = {
   voidHole: null,    // micro-trou noir en télégraphe (campagne 4)
   acidRain: 0,     // pluie acide active (secondes restantes, campagne 3)
   voidStorm: 0,    // tempête de void active (secondes restantes, campagne 4)
+  stormEventT: 26, // compte à rebours du prochain événement des Tempêtes
+  stormGale: 0,    // rafale globale active (secondes restantes, campagne 5)
+  stormGaleDx: 1, stormGaleDy: 0, // direction de la rafale
+  stormTornado: null, // tornade en cours {x, y, r, life, tick} (campagne 5)
   charInput: null,   // saisie du nom d'un nouveau personnage {slot, text}
   adminInput: null,  // saisie du mot de passe admin {text}
   resetConfirm: -1,  // slot en attente de confirmation de reset (-1 = aucune)

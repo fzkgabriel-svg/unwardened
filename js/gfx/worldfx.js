@@ -516,6 +516,7 @@ const FALL_COL = {
   hell:   ['#ff5722', '#ff9800', '#ffd54f'],
   sewer:  ['#7cb86a', '#a4d68a', '#d4ecc0'],
   space:  ['#5a8ae0', '#82b1ff', '#cfe4ff'],
+  storm:  ['#9fd4f0', '#cfe8f8', '#f4fbff'],
 };
 export function drawFalls() {
   const w = curWorld();
@@ -573,6 +574,7 @@ const GRADE = {
   hell:   ['rgba(255,120,50,0.15)',  'rgba(130,25,8,0.18)'],
   sewer:  ['rgba(140,205,110,0.11)', 'rgba(10,30,10,0.20)'],
   space:  ['rgba(150,115,255,0.17)', 'rgba(10,10,55,0.20)'],
+  storm:  ['rgba(170,215,245,0.16)', 'rgba(50,80,110,0.16)'],
 };
 export function drawBiomeGrade() {
   const w = curWorld();
@@ -629,6 +631,7 @@ const AMB = {
   hell:   { n: 65, col: ['rgba(255,140,50,', 'rgba(255,210,90,', 'rgba(255,80,30,'], spd: [12, 34], size: [1.2, 2.8], mode: 'ember' },
   sewer:  { n: 60, col: ['rgba(170,255,120,', 'rgba(140,230,160,'],       spd: [6, 18],  size: [1, 2.2], mode: 'spore' },
   space:  { n: 72, col: ['rgba(140,200,255,', 'rgba(220,140,255,', 'rgba(160,255,220,'], spd: [8, 26], size: [1, 2.4], mode: 'mote' },
+  storm:  { n: 80, col: ['rgba(220,240,255,', 'rgba(160,205,235,'],       spd: [60, 110], size: [1, 2.2], mode: 'gust' },
 };
 export function drawAmbient() {
   const w = curWorld();
@@ -645,11 +648,17 @@ export function drawAmbient() {
     let px = cx - 140 + gx * cell + (seed * 97 % cell);
     let py = cy - 140 + gy * cell + (seed * 89 % cell);
     const tw = 0.4 + 0.6 * Math.abs(Math.sin(t * (1.2 + (i % 4) * 0.4) + i));
-    if (cfg.mode === 'snow' || cfg.mode === 'leaf' || cfg.mode === 'spore') {
-      // chute douce + balayage latéral
-      py += (t * cfg.spd[1] * (0.6 + (i % 3) * 0.3)) % (H + 280);
-      px += Math.sin(t * 0.9 + i * 2.3) * (cfg.mode === 'snow' ? 26 : 12);
-      if (py > cy + H + 140) py -= H + 280;
+    if (cfg.mode === 'snow' || cfg.mode === 'leaf' || cfg.mode === 'spore' || cfg.mode === 'gust') {
+      // chute douce + balayage latéral ; 'gust' = embruns horizontaux très rapides
+      if (cfg.mode === 'gust') {
+        px += (t * cfg.spd[1] * (0.8 + (i % 3) * 0.3)) % (W + 280);
+        py += Math.sin(t * 1.4 + i * 1.9) * 46;
+        if (px > cx + W + 140) px -= W + 280;
+      } else {
+        py += (t * cfg.spd[1] * (0.6 + (i % 3) * 0.3)) % (H + 280);
+        px += Math.sin(t * 0.9 + i * 2.3) * (cfg.mode === 'snow' ? 26 : 12);
+        if (py > cy + H + 140) py -= H + 280;
+      }
     } else if (cfg.mode === 'ember') {
       // braises : remontent en vacillant
       py -= (t * cfg.spd[1] * (0.7 + (i % 3) * 0.25)) % (H + 280);
@@ -742,7 +751,141 @@ export function drawAmbient() {
       ctx.quadraticCurveTo(wx + wl * 0.5, wy - 4, wx + wl, wy);
       ctx.stroke();
     }
+  } else if (sky === 'storm') {
+    // nappes de nuages orageux qui défilent + spirales lointaines + éclairs ambiants
+    const cxp = cx - 300, span = W + 600;
+    for (let i = 0; i < 7; i++) {
+      const mx = cxp + ((i * 331 + t * (46 + i * 9)) % span);
+      const my = cy + 40 + (i * 137 % Math.max(120, H * 0.5)) + Math.sin(t * 0.5 + i * 1.7) * 22;
+      const mr = 150 + (i % 3) * 80;
+      const a = 0.06 + 0.03 * Math.sin(t * 0.8 + i * 2.4);
+      const mg = ctx.createRadialGradient(mx, my, mr * 0.2, mx, my, mr);
+      mg.addColorStop(0, `rgba(120,145,175,${a})`); mg.addColorStop(1, 'rgba(120,145,175,0)');
+      ctx.fillStyle = mg;
+      ctx.beginPath(); ctx.ellipse(mx, my, mr * 1.5, mr * 0.6, 0, 0, TAU); ctx.fill();
+    }
+    // tornades lointaines : colonnes de débris en rotation au fond
+    for (let i = 0; i < 2; i++) {
+      const tx = cxp + ((i * 997 + 400 + t * 9) % span);
+      const ty = cy + H * 0.62 + i * 60 + Math.sin(t + i * 4) * 14;
+      const tr = 46 + i * 12;
+      ctx.save();
+      ctx.translate(tx, ty); ctx.rotate(Math.sin(t * 0.7 + i) * 0.06);
+      const tg = ctx.createLinearGradient(0, -tr * 2.6, 0, 0);
+      tg.addColorStop(0, 'rgba(180,215,240,0)'); tg.addColorStop(0.55, 'rgba(190,220,245,0.20)'); tg.addColorStop(1, 'rgba(220,240,255,0.34)');
+      ctx.fillStyle = tg;
+      ctx.beginPath();
+      ctx.moveTo(-tr * 0.4, -tr * 2.6);
+      ctx.quadraticCurveTo(-tr * 0.55, -tr * 1.2, -tr * 0.7, 0);
+      ctx.quadraticCurveTo(0, tr * 0.5, tr * 0.7, 0);
+      ctx.quadraticCurveTo(tr * 0.55, -tr * 1.2, tr * 0.4, -tr * 2.6);
+      ctx.closePath(); ctx.fill();
+      // spirale interne
+      ctx.strokeStyle = 'rgba(240,250,255,0.5)'; ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let s = 0; s < 26; s++) {
+        const a2 = s * 0.55 + t * (5 + i);
+        const rr2 = tr * (0.15 + s * 0.022);
+        const yy = -rr2 * 0.9;
+        const xx = Math.cos(a2) * rr2 * 0.55;
+        s === 0 ? ctx.moveTo(xx, yy) : ctx.lineTo(xx, yy);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+    // éclairs ambiants : flash bref aléatoire dans le ciel visible
+    const fl = Math.sin(t * 0.23) * Math.sin(t * 1.71 + 2);
+    if (fl > 0.985) {
+      ctx.fillStyle = `rgba(230,240,255,${(fl - 0.985) * 9})`;
+      ctx.fillRect(cx - 100, cy - 100, W + 200, H * 0.6);
+    }
   }
+}
+
+// ---------- zones de vent + tornade d'événement (coords monde) ----------
+export function drawWindZones() {
+  const w = curWorld();
+  if (!w || w.def.biome !== 'storm' || G.state === 'menu') return;
+  const t = G.time;
+  for (const zn of w.windZones || []) {
+    const cx0 = zn.x, cy0 = zn.y;
+    const len = Math.hypot(zn.dx, zn.dy);
+    const ux = zn.dx / len, uy = zn.dy / len;
+    const pulse = 0.7 + 0.3 * Math.sin(t * 2.2 + zn.ph);
+    // voile turbulent
+    ctx.fillStyle = 'rgba(150,200,240,0.05)';
+    ctx.beginPath(); ctx.ellipse(cx0, cy0, zn.r * 1.05, zn.r * 0.62, 0, 0, TAU); ctx.fill();
+    ctx.strokeStyle = 'rgba(170,215,250,0.14)';
+    ctx.lineWidth = 1.4;
+    ctx.setLineDash([10, 8]);
+    ctx.lineDashOffset = -t * 60 * zn.str * pulse;
+    ctx.beginPath(); ctx.ellipse(cx0, cy0, zn.r * 1.05, zn.r * 0.62, 0, 0, TAU); ctx.stroke();
+    ctx.setLineDash([]);
+    // filets de vent dans le sens du courant
+    for (let i = 0; i < 7; i++) {
+      const off = ((i * 97 + t * 220 * zn.str * pulse) % (zn.r * 2.2)) - zn.r * 1.1;
+      const px0 = cx0 + ux * off - uy * (zn.r * 0.36) * (i % 2 ? 1 : -1) * 0.5;
+      const py0 = cy0 + uy * off + ux * (zn.r * 0.36) * (i % 2 ? 1 : -1) * 0.5;
+      const a = 0.12 + 0.1 * Math.sin(t * 4 + i * 2);
+      ctx.strokeStyle = `rgba(220,240,255,${a})`;
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(px0 - ux * 26, py0 - uy * 26);
+      ctx.quadraticCurveTo(px0, py0 - 8, px0 + ux * 26, py0 + uy * 26);
+      ctx.stroke();
+    }
+    // flèches de direction aux extrémités
+    ctx.fillStyle = `rgba(200,230,255,${0.3 + 0.15 * Math.sin(t * 3)})`;
+    for (const s of [-1, 1]) {
+      const ax = cx0 + ux * s * zn.r * 0.85, ay = cy0 + uy * s * zn.r * 0.85;
+      ctx.save(); ctx.translate(ax, ay); ctx.rotate(Math.atan2(uy, ux));
+      ctx.beginPath();
+      ctx.moveTo(10, 0); ctx.lineTo(-4, -6); ctx.lineTo(-4, 6); ctx.closePath(); ctx.fill();
+      ctx.restore();
+    }
+  }
+}
+
+export function drawStormTornado() {
+  const tn = G.stormTornado;
+  if (!tn || G.state === 'menu') return;
+  const t = G.time, lifeF = Math.min(1, tn.life / 1.2) * Math.min(1, (6.5 - tn.life + 0.5) / 0.5);
+  ctx.save();
+  ctx.translate(tn.x, tn.y);
+  ctx.globalAlpha = Math.max(0, Math.min(1, lifeF));
+  // colonne de débris : cône étroit en haut, large en bas
+  for (let layer = 0; layer < 4; layer++) {
+    const f = layer / 4;
+    const rr = tn.r * (0.35 + f * 1.1);
+    const yy = -rr * 3.4 * (1 - f * 0.55);
+    const hgt = rr * 3.6;
+    ctx.fillStyle = `rgba(${180 + f * 40},${215 + f * 30},${240 + f * 15},${0.16 - f * 0.03})`;
+    ctx.beginPath();
+    ctx.moveTo(-rr * 0.32, yy);
+    ctx.quadraticCurveTo(-rr * 0.5, yy + hgt * 0.5, -rr * 0.85, yy + hgt);
+    ctx.quadraticCurveTo(0, yy + hgt * 1.15, rr * 0.85, yy + hgt);
+    ctx.quadraticCurveTo(rr * 0.5, yy + hgt * 0.5, rr * 0.32, yy);
+    ctx.closePath(); ctx.fill();
+  }
+  // spirale de débris
+  ctx.strokeStyle = 'rgba(240,250,255,0.65)';
+  ctx.lineWidth = 2.4;
+  ctx.beginPath();
+  for (let s = 0; s < 40; s++) {
+    const a2 = s * 0.5 + t * 7;
+    const rr2 = tn.r * (0.2 + s * 0.02);
+    const xx = Math.cos(a2) * rr2 * 0.6, yy = -rr2 * 0.8 + s * 2.4;
+    s === 0 ? ctx.moveTo(xx, yy) : ctx.lineTo(xx, yy);
+  }
+  ctx.stroke();
+  // débris sombres orbitant
+  for (let i = 0; i < 8; i++) {
+    const a3 = t * 6 + i * 0.8, rr3 = tn.r * (0.5 + (i % 3) * 0.2);
+    ctx.fillStyle = 'rgba(90,120,145,0.55)';
+    ctx.fillRect(Math.cos(a3) * rr3 * 0.6 - 2, Math.sin(a3) * rr3 * 0.35 - rr3 * 0.55 - 2, 4, 4);
+  }
+  ctx.restore();
+  ctx.globalAlpha = 1;
 }
 
 export function drawEffects() {

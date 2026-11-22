@@ -139,7 +139,7 @@ export function drawAdmin() {
   // ou pendant les 3 s qui suivent le clic (flash de confirmation)
   const st = G.stats || {};
   const allDone = !!(st.campaignDone && st.campaignDone[0] && st.campaignDone[1] && st.campaignDone[2]
-    && st.campaignDone[3] && st.campaignDone[4] && st.iceUlt && st.hellUlt && st.bowUnlocked);
+    && st.campaignDone[3] && st.campaignDone[4] && st.campaignDone[5] && st.iceUlt && st.hellUlt && st.bowUnlocked);
   const justClicked = G.adminUnlockFx !== undefined && G.time - G.adminUnlockFx < 3;
   const unlockOn = allDone || justClicked;
   drawUtilBtn({ x: W / 2 - 280, y: H - 112, w: 270, h: 44 },

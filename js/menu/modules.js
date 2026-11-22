@@ -3,7 +3,7 @@
 // cartes holographiques par rareté, panneau de détail, boutique intégrée.
 import { G, ctx, W, H, TAU } from '../state.js';
 import { roundRect, hexA } from '../utils.js';
-import { MODULES, MOD_IDS, modState, modulesUnlocked, ensureModules, unlockPassSlot, PASS_SLOT_PRICE, modLevel, modUpgradeCost, upgradeModule } from '../modules.js';
+import { MODULES, MOD_IDS, modState, modulesUnlocked, ensureModules, unlockPassSlot, PASS_SLOT_PRICE, modLevel, modUpgradeCost, upgradeModule, pass2Unlocked } from '../modules.js';
 import { saveInv } from '../inventory.js';
 import { inR, UI, SERIF, C_TEXT, C_MUTED, C_GOLD, menuButtons, drawMenuButton } from './common.js';
 import { sfxClick, sfxEquip, sfxConfirm } from '../audio.js';
@@ -15,12 +15,13 @@ const CYAN = '#18ffff', VIOLET = '#7b2ff7';
 // ---------- layout ----------
 function layout() {
   const t = G.time || 0;
-  // pods d'équipement (haut, centrés)
-  const sw = Math.min(300, W * 0.24), sh = 92, gap = 34;
-  const sx = W / 2 - (sw * 2 + gap) / 2, sy = 88;
+  // pods d'équipement (haut, centrés) — 1 actif + 2 passifs
+  const sw = Math.min(290, W * 0.23), sh = 92, gap = 26;
+  const sx = W / 2 - (sw * 3 + gap * 2) / 2, sy = 88;
   const slots = [
     { key: 'act', label: 'MODULE ACTIF', hint: 'Touche X', x: sx, y: sy, w: sw, h: sh },
-    { key: 'pass', label: 'MODULE PASSIF', hint: '', x: sx + sw + gap, y: sy, w: sw, h: sh },
+    { key: 'pass', label: 'PASSIF 1', hint: '', x: sx + sw + gap, y: sy, w: sw, h: sh },
+    { key: 'pass2', label: 'PASSIF 2', hint: '', x: sx + (sw + gap) * 2, y: sy, w: sw, h: sh },
   ];
   // panneau détail (droite) — plus haut pour accueillir description + stats + 2 boutons
   const dw = Math.min(360, W * 0.3), dy = 190, dh = 400;
@@ -58,6 +59,11 @@ export function modClickAt(x, y) {
   // pods d'équipement
   for (const s of L.slots) {
     if (inR(s, x, y)) {
+      // pass2 verrouillé : le clic affiche la condition de déblocage
+      if (s.key === 'pass2' && !pass2Unlocked(G.inv)) {
+        G.modMsg = { msg: '🔒 Vainquez le SOUVERAIN DES OURAGANS (campagne 6) pour débloquer ce slot', t: G.time, bad: true };
+        sfxClick(); return 'deny';
+      }
       const id = eq[s.key];
       if (id) { eq[s.key] = null; saveInv(G.inv); G.modFx = G.time; sfxClick(); return 'unequip'; }
       const sel = G.modSel && MODULES[G.modSel];
@@ -65,6 +71,11 @@ export function modClickAt(x, y) {
         const want = s.key === 'act' ? 'actif' : 'passif';
         if (sel.type !== want) {
           G.modMsg = { msg: sel.type === 'actif' ? 'MODULE ACTIF — slot ACTIF requis' : 'MODULE PASSIF — slot PASSIF requis', t: G.time, bad: true };
+          sfxClick(); return 'deny';
+        }
+        // un module passif ne peut pas occuper deux slots
+        if (s.key !== 'act' && (eq.pass === G.modSel || eq.pass2 === G.modSel)) {
+          G.modMsg = { msg: 'Ce module est déjà installé dans un autre slot passif', t: G.time, bad: true };
           sfxClick(); return 'deny';
         }
         if (s.key === 'pass' && !ms.passUnlocked) {
@@ -100,13 +111,24 @@ export function modClickAt(x, y) {
   // bouton équiper du panneau détail
   if (G.modSel && ms.owned.includes(G.modSel) && inR(L.equipBtn, x, y)) {
     const m = MODULES[G.modSel];
-    const target = m.type === 'actif' ? 'act' : 'pass';
+    let target = m.type === 'actif' ? 'act' : null;
+    if (m.type === 'passif') {
+      // premier slot passif libre ; sinon le 2ᵉ si débloqué ; sinon message
+      if (eq.pass == null && ms.passUnlocked) target = 'pass';
+      else if (eq.pass2 == null && pass2Unlocked(G.inv)) target = 'pass2';
+      else if (eq.pass == null) target = 'pass'; // slot 1 verrouillé -> tente l'achat
+      else { G.modMsg = { msg: 'Les 2 slots passifs sont occupés — retirez-en un', t: G.time, bad: true }; sfxClick(); return 'deny'; }
+    }
     if (target === 'pass' && !ms.passUnlocked) {
       const r = unlockPassSlot(G.inv);
       G.modMsg = { msg: r.msg, t: G.time, bad: !r.ok };
       if (r.ok) { eq.pass = G.modSel; saveInv(G.inv); G.modFx = G.time; sfxEquip(); }
       else sfxClick();
       return r.ok ? 'unlock' : 'deny';
+    }
+    if ((eq.pass === G.modSel || eq.pass2 === G.modSel)) {
+      G.modMsg = { msg: 'Ce module est déjà installé dans un slot passif', t: G.time, bad: true };
+      sfxClick(); return 'deny';
     }
     eq[target] = G.modSel;
     saveInv(G.inv); G.modFx = G.time; sfxEquip();
@@ -192,7 +214,7 @@ function drawHeader(t) {
 // ---------- pods d'équipement ----------
 function drawSlot(s, id, locked, t) {
   const ms = modState(G.inv);
-  const isLocked = s.key === 'pass' && !ms.passUnlocked;
+  const isLocked = (s.key === 'pass' && !ms.passUnlocked) || (s.key === 'pass2' && !pass2Unlocked(G.inv));
   const m = id ? MODULES[id] : null;
   const hov = !isLocked && inR(s, G.mouse.x, G.mouse.y);
   const fxAge = G.modFx !== undefined ? t - G.modFx : 99;
@@ -245,10 +267,18 @@ function drawSlot(s, id, locked, t) {
   } else if (isLocked) {
     ctx.font = '26px serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#ffd740';
     ctx.fillText('🔒', s.x + s.w / 2 - 30, s.y + s.h / 2 + 4);
-    ctx.textAlign = 'left'; ctx.font = `700 12px ${UI}`; ctx.fillStyle = '#ffd740';
-    ctx.fillText(`DÉBLOQUER · ${PASS_SLOT_PRICE} ◆`, s.x + s.w / 2 - 8, s.y + s.h / 2 - 4);
-    ctx.font = `9.5px ${UI}`; ctx.fillStyle = C_MUTED;
-    ctx.fillText('slot passif verrouillé — cliquez pour acheter', s.x + 16, s.y + s.h - 12);
+    if (s.key === 'pass2') {
+      ctx.textAlign = 'left'; ctx.font = `700 10.5px ${UI}`; ctx.fillStyle = '#ffd740';
+      ctx.fillText('RÉCOMPENSE SOUVERAIN', s.x + s.w / 2 - 8, s.y + s.h / 2 - 12);
+      ctx.font = `8.5px ${UI}`; ctx.fillStyle = C_MUTED;
+      ctx.fillText('2ᵉ slot passif — cliquez pour', s.x + 12, s.y + s.h - 22);
+      ctx.fillText('voir la condition', s.x + 12, s.y + s.h - 10);
+    } else {
+      ctx.textAlign = 'left'; ctx.font = `700 12px ${UI}`; ctx.fillStyle = '#ffd740';
+      ctx.fillText(`DÉBLOQUER · ${PASS_SLOT_PRICE} ◆`, s.x + s.w / 2 - 8, s.y + s.h / 2 - 4);
+      ctx.font = `9.5px ${UI}`; ctx.fillStyle = C_MUTED;
+      ctx.fillText('slot passif verrouillé — cliquez pour acheter', s.x + 16, s.y + s.h - 12);
+    }
   } else {
     ctx.font = '24px serif'; ctx.textAlign = 'center';
     ctx.fillStyle = hov ? 'rgba(24,255,255,0.5)' : 'rgba(255,255,255,0.14)';
@@ -276,7 +306,7 @@ function drawCard(c, t) {
   const owned = modState(G.inv).owned.includes(id);
   const sel = G.modSel === id;
   const eq = modState(G.inv).eq;
-  const equipped = eq.act === id || eq.pass === id;
+  const equipped = eq.act === id || eq.pass === id || eq.pass2 === id;
   const hov = inR(c, G.mouse.x, G.mouse.y);
   const rc = RAR_COL[m.rar] || '#90a4ae';
   const enter = Math.max(0, Math.min(1, (t - (G.modViewT || 0)) / 0.6 - c.i * 0.045));
@@ -371,7 +401,7 @@ function drawDetail(L, id, t) {
   const owned = modState(G.inv).owned.includes(id);
   const ms = modState(G.inv);
   const eq = ms.eq;
-  const equipped = eq.act === id || eq.pass === id;
+  const equipped = eq.act === id || eq.pass === id || eq.pass2 === id;
   const rc = RAR_COL[m.rar] || '#90a4ae';
   const enter = Math.max(0, Math.min(1, (t - (G.modViewT || 0)) / 0.6 - 0.15));
   ctx.save();
@@ -513,7 +543,7 @@ function drawEmptyDetail(L, t) {
 // ---------- résumé des bonus équipés ----------
 function drawSummary(t) {
   const ms = G.inv ? modState(G.inv) : null;
-  const eqIds = ms ? [ms.eq.act, ms.eq.pass].filter(Boolean) : [];
+  const eqIds = ms ? [ms.eq.act, ms.eq.pass, ms.eq.pass2].filter(Boolean) : [];
   const y = H - 20;
   ctx.textAlign = 'left';
   ctx.font = `600 10px ${UI}`; ctx.letterSpacing = '2px';

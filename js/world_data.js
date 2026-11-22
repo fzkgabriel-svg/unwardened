@@ -112,19 +112,31 @@ export const WORLDS = [
     wall: '#4e5566', wallDark: '#2e3444', roof: '#6a7b95', roofAlt: '#3d4a63', trim: '#64b5f6',
     window: '#90caf9', door: '#1c2030',
   },
+  // ---------- CAMPAGNE 6 : LE ROYAUME DES TEMPÊTES (monde 10) ----------
+  {
+    name: 'Le Royaume des Tempêtes',
+    biome: 'storm',
+    ground: '#5d7a8c', groundDark: '#3d5462', field: '#7d99a8',
+    blobA: 'rgba(180,220,240,0.24)', blobB: 'rgba(120,170,200,0.20)', blobC: 'rgba(90,140,190,0.16)',
+    decor: ['windgrass', 'windgrass', 'windgrass', 'windgrass', 'flower', 'flower', 'tornflag', 'tornflag', 'deadwood', 'rock', 'rock', 'cloudshard', 'stormrock', 'weathervane', 'ruinpillar', 'shard', 'banner'],
+    wall: '#8fa3ad', wallDark: '#5d707c', roof: '#54687a', roofAlt: '#6e8296', trim: '#4fc3f7',
+    window: '#b3e5fc', door: '#2c3e4a',
+  },
 ];
 
-// ---------- CAMPAGNES : chaque campagne possède 2 mondes (portails internes) ----------
+// ---------- CAMPAGNES : 1 campagne = 1 monde (les seconds mondes des paires
+// historiques — index impairs — ne sont plus jouables) ----------
 export const CAMPAIGNS = [
-  { id: 0, name: 'Les Terres Oubliées', worlds: [0, 1], diff: 'NORMAL' },
-  { id: 1, name: 'The Frozen Land',    worlds: [2, 3], diff: 'MOYEN' },
-  { id: 2, name: 'Les Enfers',         worlds: [4, 5], diff: 'IMPOSSIBLE' },
-  { id: 3, name: 'Les Égouts',         worlds: [6, 7], diff: 'TERRIFIANT' },
-  { id: 4, name: 'L\'Espace',          worlds: [8, 9], diff: 'CATASTROPHIQUE' },
+  { id: 0, name: 'Les Terres Oubliées', worlds: [0],    diff: 'NORMAL' },
+  { id: 1, name: 'The Frozen Land',    worlds: [2],    diff: 'MOYEN' },
+  { id: 2, name: 'Les Enfers',         worlds: [4],    diff: 'IMPOSSIBLE' },
+  { id: 3, name: 'Les Égouts',         worlds: [6],    diff: 'TERRIFIANT' },
+  { id: 4, name: 'L\'Espace',          worlds: [8],    diff: 'CATASTROPHIQUE' },
+  { id: 5, name: 'Le Royaume des Tempêtes', worlds: [10], diff: 'MYTHIQUE' },
 ];
-export function campaignOf(idx) { return idx >= 8 ? 4 : idx >= 6 ? 3 : idx >= 4 ? 2 : idx >= 2 ? 1 : 0; }
-export function campaignStart(c) { return [0, 2, 4, 6, 8][c] || 0; }
-export function campaignEnd(c) { return [2, 4, 6, 8, 10][c] || 2; } // borne exclusive
+export function campaignOf(idx) { return Math.min(5, Math.floor(idx / 2)); }
+export function campaignStart(c) { return c * 2; }
+export function campaignEnd(c) { return c * 2 + 1; } // borne exclusive
 
 
 // ---------- BIBLIOTHÈQUE DE BÂTIMENTS ----------
@@ -177,6 +189,16 @@ export const BUILDING_TYPES = [
   { id: 'reactor',   name: 'Réacteur désaffecté', cat: 'industriel', rarity: 'epique',     w: 200, h: 200, weight: 8,  loot: 'gas',       camp: 4, drawAs: 'gas' },
   { id: 'monolith',  name: 'Monolithe',           cat: 'ruine',      rarity: 'epique',     w: 120, h: 190, weight: 9,  loot: 'shrine',    camp: 4, drawAs: 'shrine' },
   { id: 'station',   name: 'Grande Station',      cat: 'rare',       rarity: 'legendaire', w: 330, h: 200, weight: 3,  loot: 'shrine',    camp: 4, drawAs: 'castle' },
+  // ---------- structures des TEMPÊTES (campagne 6 uniquement) ----------
+  { id: 'windmill',  name: 'Moulin à vent',        cat: 'industriel', rarity: 'commun',     w: 120, h: 160, weight: 24, loot: 'warehouse', camp: 5, drawAs: 'mill' },
+  { id: 'cottage',   name: 'Chaumière du Vent',   cat: 'maison',     rarity: 'commun',     w: 160, h: 115, weight: 22, loot: 'house',     camp: 5, drawAs: 'house' },
+  { id: 'ruinsw',    name: 'Ruines Éoliennes',     cat: 'ruine',      rarity: 'commun',     w: 155, h: 110, weight: 18, loot: 'ruins',     camp: 5, drawAs: 'ruins' },
+  { id: 'templew',   name: 'Temple du Vent',      cat: 'rare',       rarity: 'rare',       w: 150, h: 150, weight: 12, loot: 'shrine',    camp: 5, drawAs: 'shrine' },
+  { id: 'watcht2',   name: 'Tour des Signaux',    cat: 'industriel', rarity: 'rare',       w: 75,  h: 195, weight: 11, loot: 'factory',   camp: 5, drawAs: 'tower' },
+  { id: 'hangar',    name: 'Hangar d\'Apparatils',cat: 'industriel', rarity: 'rare',       w: 230, h: 150, weight: 10, loot: 'warehouse', camp: 5, drawAs: 'warehouse' },
+  { id: 'bastionw',  name: 'Bastion des Rafales', cat: 'industriel', rarity: 'epique',     w: 240, h: 155, weight: 8,  loot: 'gas',       camp: 5, drawAs: 'rampart' },
+  { id: 'stormarch', name: 'Arche-tempête',       cat: 'ruine',      rarity: 'epique',     w: 185, h: 125, weight: 9,  loot: 'shrine',    camp: 5, drawAs: 'arch' },
+  { id: 'skycastle', name: 'Château des Cimes',   cat: 'rare',       rarity: 'legendaire', w: 320, h: 205, weight: 3,  loot: 'shrine',    camp: 5, drawAs: 'castle' },
 ];
 // bonus de fouille : XP garanti + fiole selon la rareté du bâtiment
 export const LOOT_BONUS = {

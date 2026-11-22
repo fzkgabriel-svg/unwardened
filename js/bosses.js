@@ -34,6 +34,7 @@ function advanceBossPhase(e, phase) {
   const frozen = e.type === 'finalBossGlace';
   const ephase = e.type === 'finalBossEgout';
   const esac = e.type === 'finalBossSpace';
+  const ststorm = e.type === 'finalBossTempete';
   const names = hell
     ? ['', '🔥 FUREUR DU BARON', '☠️ RAGE DE L\'ENFER']
     : frozen
@@ -42,8 +43,10 @@ function advanceBossPhase(e, phase) {
         ? ['', '☣ FURIE TOXIQUE', '👑 FUREUR DU TYRAN']
         : esac
           ? ['', '🌀 FUREUR COSMIQUE', '💀 ABOMINATION']
-          : ['', '😡 COLÈRE ANCESTRALE', '💀 FUREUR DU ROI OUBLIÉ'];
-  const col = hell ? '#ffab00' : frozen ? '#80d8ff' : ephase ? '#aeea00' : esac ? '#b388ff' : '#e040fb';
+          : ststorm
+            ? ['', '🌪 COLÈRE DU VENT', '⚡ FUREUR DES OURAGANS']
+            : ['', '😡 COLÈRE ANCESTRALE', '💀 FUREUR DU ROI OUBLIÉ'];
+  const col = hell ? '#ffab00' : frozen ? '#80d8ff' : ephase ? '#aeea00' : esac ? '#b388ff' : ststorm ? '#4fc3f7' : '#e040fb';
   addDamageText(G.player.x, G.player.y - 90, names[phase], col);
   addDamageText(e.x, e.y - e.r - 40, names[phase], col);
   // enragé : plus rapide, plus douloureux, attaque plus souvent
@@ -70,7 +73,31 @@ function bossSuperAttack(e, phase) {
   const frozen = e.type === 'finalBossGlace';
   const ephase = e.type === 'finalBossEgout';
   const esac = e.type === 'finalBossSpace';
+  const ststorm = e.type === 'finalBossTempete';
   const power = 1 + phase * 0.5; // plus mortel à la phase 3
+  if (ststorm) {
+    // super attaque des tempêtes : tornades aspirantes + rafale d'éclairs
+    for (let i = 0; i < 2 + phase; i++) {
+      const a = Math.random() * TAU, d = 100 + Math.random() * 220;
+      const x = clampW(p.x + Math.cos(a) * d), y = clampH(p.y + Math.sin(a) * d);
+      G.stormTornado = { x, y, r: 110 + phase * 15, life: 7 + phase, tick: 0 };
+      G.rings.push({ x, y, r: 10, maxR: 160, life: 24, maxLife: 24, color: '#4fc3f7' });
+    }
+    G.stormGale = 5 + phase * 2;
+    G.stormGaleDx = Math.cos(Math.atan2(p.y - e.y, p.x - e.x));
+    G.stormGaleDy = Math.sin(Math.atan2(p.y - e.y, p.x - e.x));
+    const base = Math.atan2(p.y - e.y, p.x - e.x);
+    for (let i = 0; i < 13; i++) {
+      const a = base + (i - 6) * 0.18;
+      G.projectiles.push({ x: e.x, y: e.y, vx: Math.cos(a) * 6.8, vy: Math.sin(a) * 6.8, life: 2.6, r: 9, dmg: e.damage * 0.8 * power, color: '#b3e5fc', bolt: true });
+    }
+    G.shockwaves.push({ x: e.x, y: e.y, r: e.r, maxR: 450, speed: 14, dmg: e.damage * 1.4 * power, hit: false, color: '#4fc3f7', slow: 0.8 });
+    G.screenShake = Math.max(G.screenShake, 22);
+    G.screenFlash = Math.max(G.screenFlash, 0.65);
+    spawnParticles(e.x, e.y, '#4fc3f7', 50, 11);
+    spawnParticles(e.x, e.y, '#e1f5fe', 30, 10);
+    return;
+  }
   if (ephase) {
     // super attaque des égouts : geysers d'acide en cercle + gerbe de vases
     const n = 8 + phase * 3;
@@ -180,12 +207,19 @@ function startBossMove(e, p) {
   const frozen = e.type === 'finalBossGlace';
   const ephase = e.type === 'finalBossEgout';
   const esac = e.type === 'finalBossSpace';
+  const ststorm = e.type === 'finalBossTempete';
   const pace = phasePace(e);
   const roll = Math.random();
   const mk = (kind, t, extra = {}) => {
     e.bossMove = { kind, t: t * pace, dur: t * pace, tx: p.x, ty: p.y, ...extra };
   };
-  if (ephase) {
+  if (ststorm) {
+    if (roll < 0.28)      mk('tornado', 1.0, { track: true });  // tornade sous le joueur
+    else if (roll < 0.50) mk('cyclone', 1.1, { track: true });   // double tornade + rafale
+    else if (roll < 0.72) mk('boltvolley', 0.9, { track: true }); // éventail d'éclairs
+    else if (roll < 0.88) mk('gale', 0.9, { track: true });      // rafale violente poussant le joueur
+    else                  mk('slam', 1.0, { track: true });      // onde de vent
+  } else if (ephase) {
     if (roll < 0.30)      mk('acidrain', 1.1, { track: true }); // pluie de vases sur le joueur
     else if (roll < 0.55) mk('acidgout', 0.9, { track: true }); // gerbe de projectiles acides
     else if (roll < 0.80) mk('geysers', 1.0, { track: true });  // geysers autour du joueur
@@ -210,7 +244,7 @@ function startBossMove(e, p) {
     else if (roll < 0.62) mk('slam', 1.0, { track: true });    // onde sismique
     else                  mk('volley', 0.8, { track: true });  // rafale d'ombres
   }
-  e.moveCd = (ephase ? 4.4 : esac ? 4.8 : hell ? 4.2 : frozen ? 4.6 : 5.6) * pace;
+  e.moveCd = (ststorm ? 4.5 : ephase ? 4.4 : esac ? 4.8 : hell ? 4.2 : frozen ? 4.6 : 5.6) * pace;
 }
 
 export function updateFinalBoss(e, dt, p) {
@@ -227,7 +261,8 @@ export function updateFinalBoss(e, dt, p) {
   if (m.t > 0 && Math.random() < dt * 22) {
     spawnParticles(m.tx + (Math.random() - 0.5) * 60, m.ty + (Math.random() - 0.5) * 40,
       e.type === 'finalBossGlace' ? '#b3e5fc' : e.type === 'finalBossEnfer' ? '#ff7043'
-        : e.type === 'finalBossEgout' ? '#aeea00' : e.type === 'finalBossSpace' ? '#b388ff' : '#8d6e63', 2, 3);
+        : e.type === 'finalBossEgout' ? '#aeea00' : e.type === 'finalBossSpace' ? '#b388ff'
+        : e.type === 'finalBossTempete' ? '#4fc3f7' : '#8d6e63', 2, 3);
   }
   if (m.t <= 0) { execBossMove(e, m, p); e.bossMove = null; }
 }
@@ -237,9 +272,54 @@ function execBossMove(e, m, p) {
   const frozen = e.type === 'finalBossGlace';
   const ephase = e.type === 'finalBossEgout';
   const esac = e.type === 'finalBossSpace';
-  // chaque mouvement signature a son timbre : feu, glace, ombres, terre, vase ou void
-  sfxBossAtk(ephase ? 'acid' : esac ? 'void' : hell ? 'fire' : frozen ? 'ice' : 'shadow');
+  const ststorm = e.type === 'finalBossTempete';
+  // chaque mouvement signature a son timbre : feu, glace, ombres, terre, vase, void ou vent
+  sfxBossAtk(ststorm ? 'storm' : ephase ? 'acid' : esac ? 'void' : hell ? 'fire' : frozen ? 'ice' : 'shadow');
   switch (m.kind) {
+    case 'tornado': {
+      // tornade aspirante sous le joueur
+      G.stormTornado = { x: m.tx, y: m.ty, r: 115, life: 7.5, tick: 0 };
+      G.rings.push({ x: m.tx, y: m.ty, r: 10, maxR: 170, life: 24, maxLife: 24, color: '#4fc3f7' });
+      spawnParticles(m.tx, m.ty, '#b3e5fc', 24, 8);
+      G.screenShake = Math.max(G.screenShake, 10);
+      break;
+    }
+    case 'cyclone': {
+      // double tornade + rafale globale
+      for (const [ox, oy] of [[-70, -40], [70, 40]]) {
+        G.stormTornado = { x: clampW(m.tx + ox), y: clampH(m.ty + oy), r: 100, life: 8, tick: 0 };
+      }
+      G.stormGale = 4; G.stormGaleDx = 1; G.stormGaleDy = 0;
+      G.rings.push({ x: m.tx, y: m.ty, r: 10, maxR: 220, life: 26, maxLife: 26, color: '#4fc3f7' });
+      G.screenShake = Math.max(G.screenShake, 13);
+      break;
+    }
+    case 'boltvolley': {
+      // éventail de 9 éclairs vers le joueur
+      const base = Math.atan2(m.ty - e.y, m.tx - e.x);
+      for (let i = 0; i < 9; i++) {
+        const a = base + (i - 4) * 0.22;
+        G.projectiles.push({
+          x: e.x, y: e.y, vx: Math.cos(a) * 6.4, vy: Math.sin(a) * 6.4,
+          life: 2.4, r: 9, dmg: e.damage * 0.75, color: '#b3e5fc', bolt: true
+        });
+      }
+      spawnParticles(e.x, e.y - e.r * 0.4, '#e1f5fe', 16, 7);
+      break;
+    }
+    case 'gale': {
+      // rafale violente : onde de choc + poussée latérale du joueur
+      const a = Math.atan2(m.ty - e.y, m.tx - e.x);
+      G.shockwaves.push({ x: e.x, y: e.y, r: e.r, maxR: 380, speed: 16, dmg: e.damage * 1.2, hit: false, color: '#4fc3f7', slow: 0.7 });
+      const p = G.player;
+      p.x = clampW(p.x + Math.cos(a + Math.PI / 2) * 160);
+      p.y = clampH(p.y + Math.sin(a + Math.PI / 2) * 160);
+      for (let i = 0; i < 14; i++) {
+        spawnParticles(p.x + (Math.random() - 0.5) * 300, p.y + (Math.random() - 0.5) * 200, '#eaf6ff', 1, 2);
+      }
+      G.screenShake = Math.max(G.screenShake, 14);
+      break;
+    }
     case 'acidrain': {
       // pluie de vases acides autour du joueur
       for (let i = 0; i < 12; i++) {
@@ -332,10 +412,10 @@ function execBossMove(e, m, p) {
       G.shockwaves.push({
         x: m.tx, y: m.ty, r: 12, maxR: 400, speed: hell ? 15 : frozen ? 10 : 12,
         dmg: e.damage * (hell ? 1.7 : 1.5), hit: false,
-        color: hell ? '#ff7043' : frozen ? '#b3e5fc' : '#ff7043', slow: frozen ? 1.2 : 0.8
+        color: hell ? '#ff7043' : frozen ? '#b3e5fc' : ststorm ? '#4fc3f7' : '#ff7043', slow: frozen ? 1.2 : 0.8
       });
       G.screenShake = Math.max(G.screenShake, 9);
-      spawnParticles(m.tx, m.ty, hell ? '#ffab40' : frozen ? '#e1f5fe' : '#a1887f', 26, 8);
+      spawnParticles(m.tx, m.ty, hell ? '#ffab40' : frozen ? '#e1f5fe' : ststorm ? '#b3e5fc' : '#a1887f', 26, 8);
       break;
     }
     case 'volley':
