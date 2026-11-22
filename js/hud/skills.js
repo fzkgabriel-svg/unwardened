@@ -245,35 +245,23 @@ export function drawSkillBar() {
 }
 
 // ---------- panneau arme active (parchemin compact en bas à gauche) ----------
-// nom, niveau réel de l'arme (+% exponentiel) + objet forgé équipé — sans barre XP
+// uniquement les dégâts totaux de l'arme équipée (base × artefacts × niveau)
 export function drawWeaponPanel() {
   const p = G.player;
   const titan = p.ultActive > 0;
   const key = modeKey(p.attackMode);
   const st = titan ? { name: 'Titan de Feu', col: '#ff8a50' }
     : MODE_STYLE[p.attackMode === 5 ? 'bow' : p.attackMode === 3 ? 'lance' : 'sword'];
-  const mi = titan ? { lvl: 1 } : modeInfo(G.inv, key);
-  const dmgPct = titan ? 0 : Math.round((modeMult(G.inv, key) - 1) * 100);
-  // objet équipé dans le slot arme (talismans / réceptacles)
-  const eqId = G.inv && G.inv.equip ? G.inv.equip.weapon : null;
-  const eqIt = eqId ? ITEMS[eqId] : null;
+  const wMult = G.equip ? G.equip.weaponMult : 1;
+  const mMult = titan ? 1 : modeMult(G.inv, key);
+  const dmgTot = Math.round((p.attackDamage ?? 30) * wMult * mMult);
 
-  const pw = 236, ph = 56, px = 14, py = H - 100;
+  const pw = 150, ph = 56, px = 14, py = H - 100;
   parchment(px, py, pw, ph, 0.9);
-  // filet or sous le panneau
   ctx.strokeStyle = HPAL.goldLo; ctx.lineWidth = 1;
   roundRect(px + 3, py + 3, pw - 6, ph - 6, 6); ctx.stroke();
 
-  // gemme d'arme à gauche
-  gem(px + 22, py + ph / 2, 8, st.col, 1.2);
-  crisp(st.name.toUpperCase(), px + 38, py + 23, 16, '#33240f', 'left', { font: HUD_CINZEL, weight: 700, spacing: 1 });
-  crisp(titan ? 'PUISSANCE INFERNALE' : `NIV ${mi.lvl} · +${dmgPct} %`, px + 38, py + 41, 11.5, '#5a4526', 'left', { weight: 700, spacing: 0.8 });
-  // objet forgé équipé (colonne droite)
-  if (eqIt) {
-    crisp(eqIt.name.length > 20 ? eqIt.name.slice(0, 19) + '…' : eqIt.name, px + pw - 12, py + 24, 10.5, '#4a3517', 'right', { weight: 600 });
-    const ds = eqIt.desc || '';
-    crisp(ds.length > 30 ? ds.slice(0, 29) + '…' : ds, px + pw - 12, py + 38, 9.5, '#6d5a3a', 'right', { weight: 500 });
-  } else {
-    crisp('aucun objet forgé', px + pw - 12, py + 31, 10, '#8a7654', 'right', { weight: 500, spacing: 0.3 });
-  }
+  gem(px + 24, py + ph / 2, 8, st.col, 1.2);
+  crisp('DÉGÂTS', px + 42, py + 22, 10, '#5a4526', 'left', { weight: 700, spacing: 1.2 });
+  crisp(`${dmgTot}`, px + 42, py + 44, 20, '#33240f', 'left', { font: HUD_CINZEL, weight: 700 });
 }

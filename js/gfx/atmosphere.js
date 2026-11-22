@@ -24,10 +24,9 @@ export function drawGrain() {
   ctx.restore();
 }
 
-//Cycle jour/nuit : retourne 0 (nuit) -> 1 (jour) -> 0, période 120s
+//Cycle jour/nuit : désactivé — toujours plein jour (retourne 1)
 export function dayNight() {
-  const cyc = (G.time % 120) / 120;
-  return 0.5 + 0.5 * Math.sin(cyc * TAU - Math.PI / 2);
+  return 1;
 }
 const lerpC = (a, b, t) => `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * t)).join(',')})`;
 
