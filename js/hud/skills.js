@@ -245,7 +245,7 @@ export function drawSkillBar() {
 }
 
 // ---------- panneau arme active (parchemin compact en bas à gauche) ----------
-// uniquement les dégâts totaux de l'arme équipée (base × artefacts × niveau)
+// % de puissance totale de l'arme (artefacts × niveau) + dégâts bruts au-dessus
 export function drawWeaponPanel() {
   const p = G.player;
   const titan = p.ultActive > 0;
@@ -255,13 +255,16 @@ export function drawWeaponPanel() {
   const wMult = G.equip ? G.equip.weaponMult : 1;
   const mMult = titan ? 1 : modeMult(G.inv, key);
   const dmgTot = Math.round((p.attackDamage ?? 30) * wMult * mMult);
+  const dmgPct = Math.round((wMult * mMult - 1) * 100);
 
   const pw = 150, ph = 56, px = 14, py = H - 100;
+  // dégâts totaux : petit compteur juste au-dessus du panneau arme
+  crisp(`⚔ ${dmgTot}`, px + pw / 2, py - 8, 11, '#ffd740', 'center', { weight: 700, spacing: 0.5 });
   parchment(px, py, pw, ph, 0.9);
   ctx.strokeStyle = HPAL.goldLo; ctx.lineWidth = 1;
   roundRect(px + 3, py + 3, pw - 6, ph - 6, 6); ctx.stroke();
 
   gem(px + 24, py + ph / 2, 8, st.col, 1.2);
-  crisp('DÉGÂTS', px + 42, py + 22, 10, '#5a4526', 'left', { weight: 700, spacing: 1.2 });
-  crisp(`${dmgTot}`, px + 42, py + 44, 20, '#33240f', 'left', { font: HUD_CINZEL, weight: 700 });
+  crisp('PUISSANCE', px + 42, py + 22, 10, '#5a4526', 'left', { weight: 700, spacing: 1.2 });
+  crisp(`+${dmgPct} %`, px + 42, py + 44, 20, '#33240f', 'left', { font: HUD_CINZEL, weight: 700 });
 }
