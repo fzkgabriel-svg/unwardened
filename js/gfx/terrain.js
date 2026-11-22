@@ -399,5 +399,168 @@ function drawDecorItem(d, def, g = ctx) {
     ctx.beginPath(); ctx.ellipse(d.x, d.y, 9 * s, 4.5 * s, 0, 0, TAU); ctx.fill();
     ctx.fillStyle = 'rgba(60,45,40,0.6)';
     ctx.beginPath(); ctx.ellipse(d.x, d.y - 1 * s, 4 * s, 2.4 * s, 0, 0, TAU); ctx.fill();
+  } else if (d.type === 'slime') {
+    // flaque de vase : luisance verdâtre au sol
+    const s = d.s;
+    const pulse = 0.7 + Math.sin(G.time * 3 + d.c * 30) * 0.3;
+    const gg = ctx.createRadialGradient(d.x, d.y, 1, d.x, d.y, 14 * s);
+    gg.addColorStop(0, `rgba(180,255,120,${0.5 * pulse})`);
+    gg.addColorStop(0.6, `rgba(110,190,60,${0.35 * pulse})`);
+    gg.addColorStop(1, 'rgba(90,150,50,0)');
+    ctx.fillStyle = gg;
+    ctx.beginPath(); ctx.ellipse(d.x, d.y, 14 * s, 8 * s, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = `rgba(200,255,140,${0.6 * pulse})`;
+    ctx.beginPath(); ctx.arc(d.x - 3 * s, d.y - 1 * s, 2 * s, 0, TAU); ctx.fill();
+  } else if (d.type === 'bones') {
+    // squelette d'égout : cage thoracique + fémurs croisés
+    const s = d.s;
+    ctx.save();
+    ctx.translate(d.x, d.y); ctx.rotate(d.rot);
+    ctx.strokeStyle = 'rgba(225,215,190,0.75)'; ctx.lineWidth = 2.2 * s; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-8 * s, 6 * s); ctx.quadraticCurveTo(0, -8 * s, 8 * s, 6 * s); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-6 * s, -2 * s); ctx.lineTo(6 * s, -2 * s); ctx.stroke();
+    for (let i = -1; i <= 1; i++) {
+      ctx.beginPath(); ctx.moveTo(i * 4.5 * s, 2 * s); ctx.lineTo(i * 4.5 * s, 7 * s); ctx.stroke();
+    }
+    ctx.strokeStyle = 'rgba(230,220,200,0.6)'; ctx.lineWidth = 2 * s;
+    ctx.beginPath(); ctx.moveTo(-9 * s, -6 * s); ctx.lineTo(5 * s, 6 * s); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(9 * s, -7 * s); ctx.lineTo(-4 * s, 5 * s); ctx.stroke();
+    ctx.restore();
+  } else if (d.type === 'pipe') {
+    // tuyau d'égout : tronçon cylindrique avec anneaux de renfort
+    const s = d.s;
+    ctx.save();
+    ctx.translate(d.x, d.y); ctx.rotate(d.rot);
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath(); ctx.ellipse(0, 5 * s, 22 * s, 6 * s, 0, 0, TAU); ctx.fill();
+    const pg = ctx.createLinearGradient(0, -8 * s, 0, 8 * s);
+    pg.addColorStop(0, '#5c7a52'); pg.addColorStop(0.5, '#3e5533'); pg.addColorStop(1, '#26381f');
+    ctx.fillStyle = pg;
+    ctx.fillRect(-20 * s, -7 * s, 40 * s, 14 * s);
+    ctx.fillStyle = '#2c3f24';
+    ctx.fillRect(-24 * s, -8 * s, 5 * s, 16 * s);
+    ctx.fillRect(19 * s, -8 * s, 5 * s, 16 * s);
+    ctx.fillStyle = 'rgba(140,90,40,0.4)';
+    ctx.beginPath(); ctx.ellipse(-8 * s, 3 * s, 4 * s, 2 * s, 0.4, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(10 * s, -2 * s, 3 * s, 1.6 * s, -0.3, 0, TAU); ctx.fill();
+    ctx.restore();
+  } else if (d.type === 'grate') {
+    // grille d'égout : cadre + barreaux
+    const s = d.s;
+    ctx.save();
+    ctx.translate(d.x, d.y); ctx.rotate(d.rot);
+    ctx.fillStyle = '#1a2415';
+    ctx.fillRect(-16 * s, -12 * s, 32 * s, 24 * s);
+    ctx.strokeStyle = '#5a7048'; ctx.lineWidth = 2 * s;
+    ctx.strokeRect(-16 * s, -12 * s, 32 * s, 24 * s);
+    ctx.lineWidth = 1.4 * s;
+    for (let i = -3; i <= 3; i++) {
+      ctx.beginPath(); ctx.moveTo(i * 4.2 * s, -10 * s); ctx.lineTo(i * 4.2 * s, 10 * s); ctx.stroke();
+    }
+    ctx.beginPath(); ctx.moveTo(-15 * s, 0); ctx.lineTo(15 * s, 0); ctx.stroke();
+    ctx.restore();
+  } else if (d.type === 'mush') {
+    // champignon toxique géant des égouts
+    const s = d.s;
+    const pulse = 0.8 + Math.sin(G.time * 2.5 + d.c * 20) * 0.2;
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.beginPath(); ctx.ellipse(d.x, d.y, 10 * s, 4 * s, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#c8d8b0';
+    ctx.fillRect(d.x - 3 * s, d.y - 12 * s, 6 * s, 13 * s);
+    const mg = ctx.createRadialGradient(d.x - 3 * s, d.y - 15 * s, 1, d.x, d.y - 14 * s, 11 * s);
+    mg.addColorStop(0, `rgba(190,255,140,${pulse})`);
+    mg.addColorStop(1, `rgba(80,160,60,${0.9 * pulse})`);
+    ctx.fillStyle = mg;
+    ctx.beginPath(); ctx.arc(d.x, d.y - 14 * s, 10 * s, Math.PI, 0); ctx.fill();
+    ctx.fillStyle = `rgba(220,255,170,${pulse})`;
+    ctx.beginPath(); ctx.arc(d.x - 3 * s, d.y - 17 * s, 1.4 * s, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(d.x + 3 * s, d.y - 15 * s, 1.1 * s, 0, TAU); ctx.fill();
+  } else if (d.type === 'rat') {
+    // nids de rats : petit tas sombre + queue qui dépasse
+    const s = d.s;
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath(); ctx.ellipse(d.x, d.y + 2 * s, 8 * s, 4 * s, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#4a4238';
+    ctx.beginPath(); ctx.ellipse(d.x, d.y, 7 * s, 4.5 * s, 0, 0, TAU); ctx.fill();
+    ctx.strokeStyle = '#6a5a48'; ctx.lineWidth = 1.6 * s;
+    ctx.beginPath(); ctx.moveTo(d.x + 6 * s, d.y + 1 * s); ctx.quadraticCurveTo(d.x + 14 * s, d.y + 6 * s, d.x + 17 * s, d.y - 2 * s); ctx.stroke();
+    ctx.fillStyle = '#c0392b';
+    ctx.beginPath(); ctx.arc(d.x - 3 * s, d.y - 1 * s, 1.2 * s, 0, TAU); ctx.fill();
+  } else if (d.type === 'water') {
+    // flaque d'eau usée : reflet verdâtre aux reflets irisés
+    const s = d.s;
+    const gg = ctx.createRadialGradient(d.x - 2 * s, d.y - 2 * s, 1, d.x, d.y, 15 * s);
+    gg.addColorStop(0, 'rgba(140,180,120,0.5)');
+    gg.addColorStop(0.7, 'rgba(80,110,70,0.35)');
+    gg.addColorStop(1, 'rgba(60,80,50,0)');
+    ctx.fillStyle = gg;
+    ctx.beginPath(); ctx.ellipse(d.x, d.y, 15 * s, 9 * s, 0, 0, TAU); ctx.fill();
+    ctx.strokeStyle = 'rgba(190,230,150,0.4)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.ellipse(d.x - 2 * s, d.y - 1 * s, 6 * s, 2.5 * s, -0.3, 0, TAU); ctx.stroke();
+  } else if (d.type === 'crater') {
+    // cratère lunaire : anneau d'éjecta + fond ombragé
+    const s = d.s;
+    ctx.fillStyle = 'rgba(0,0,0,0.28)';
+    ctx.beginPath(); ctx.ellipse(d.x, d.y, 16 * s, 9 * s, 0, 0, TAU); ctx.fill();
+    const cg = ctx.createRadialGradient(d.x, d.y - 2 * s, 1, d.x, d.y, 15 * s);
+    cg.addColorStop(0, '#171a21'); cg.addColorStop(0.7, '#3a4150'); cg.addColorStop(1, '#565e70');
+    ctx.fillStyle = cg;
+    ctx.beginPath(); ctx.ellipse(d.x, d.y, 13 * s, 7.5 * s, 0, 0, TAU); ctx.fill();
+    ctx.strokeStyle = 'rgba(160,175,200,0.35)'; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.ellipse(d.x, d.y, 13 * s, 7.5 * s, 0, 0, TAU); ctx.stroke();
+  } else if (d.type === 'debris') {
+    // débris de station : tôle froissée + boulons
+    const s = d.s;
+    ctx.save();
+    ctx.translate(d.x, d.y); ctx.rotate(d.rot);
+    ctx.fillStyle = '#3d4556';
+    ctx.beginPath();
+    ctx.moveTo(-12 * s, 6 * s); ctx.lineTo(-8 * s, -8 * s); ctx.lineTo(4 * s, -10 * s); ctx.lineTo(12 * s, -2 * s); ctx.lineTo(8 * s, 8 * s);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#59637a'; ctx.lineWidth = 1.4; ctx.stroke();
+    ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(-6 * s, -5 * s); ctx.lineTo(8 * s, -6 * s); ctx.stroke();
+    ctx.restore();
+  } else if (d.type === 'meteor') {
+    // météorite : rocher noir creusé + traînée calcinée
+    const s = d.s;
+    ctx.strokeStyle = 'rgba(255,140,60,0.4)'; ctx.lineWidth = 3 * s;
+    ctx.beginPath(); ctx.moveTo(d.x + 16 * s, d.y + 10 * s); ctx.lineTo(d.x + 5 * s, d.y + 3 * s); ctx.stroke();
+    const mg = ctx.createRadialGradient(d.x - 3 * s, d.y - 3 * s, 1, d.x, d.y, 11 * s);
+    mg.addColorStop(0, '#4a4038'); mg.addColorStop(0.7, '#241d18'); mg.addColorStop(1, '#0d0a08');
+    ctx.fillStyle = mg;
+    ctx.beginPath(); ctx.arc(d.x, d.y, 10 * s, 0, TAU); ctx.fill();
+    ctx.fillStyle = 'rgba(255,120,50,0.5)';
+    ctx.beginPath(); ctx.arc(d.x - 2 * s, d.y - 2 * s, 2 * s, 0, TAU); ctx.fill();
+  } else if (d.type === 'star') {
+    // plante cristalline lunaire : faisceau de pointes bleutées
+    const s = d.s;
+    ctx.save();
+    ctx.translate(d.x, d.y); ctx.rotate(d.rot);
+    for (let i = 0; i < 5; i++) {
+      const a = i * TAU / 5 - Math.PI / 2;
+      ctx.fillStyle = i % 2 ? 'rgba(140,190,255,0.75)' : 'rgba(190,225,255,0.85)';
+      ctx.save(); ctx.rotate(a);
+      ctx.beginPath();
+      ctx.moveTo(0, 0); ctx.lineTo(3 * s, -10 * s); ctx.lineTo(-3 * s, -10 * s);
+      ctx.closePath(); ctx.fill();
+      ctx.restore();
+    }
+    ctx.fillStyle = 'rgba(220,240,255,0.9)';
+    ctx.beginPath(); ctx.arc(0, 0, 2.4 * s, 0, TAU); ctx.fill();
+    ctx.restore();
+  } else if (d.type === 'shard') {
+    // éclat de verre spatial : prisme violet
+    const s = d.s;
+    ctx.save();
+    ctx.translate(d.x, d.y); ctx.rotate(d.rot);
+    ctx.fillStyle = 'rgba(120,90,200,0.8)';
+    ctx.beginPath();
+    ctx.moveTo(0, -12 * s); ctx.lineTo(7 * s, 2 * s); ctx.lineTo(0, 12 * s); ctx.lineTo(-7 * s, 2 * s);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(200,180,255,0.8)'; ctx.lineWidth = 1.2; ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, -12 * s); ctx.lineTo(0, 10 * s); ctx.stroke();
+    ctx.restore();
   }
 }

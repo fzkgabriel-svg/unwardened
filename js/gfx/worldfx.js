@@ -123,6 +123,95 @@ export function drawFireZones() {
   }
 }
 
+// Flaques d'acide de la Déluge Acide : mare toxique scintillante
+export function drawAcidZones() {
+  for (const z of G.acidZones) {
+    const fade = Math.min(1, z.life / 2); // résorption en fin de vie
+    const w = 0.9 + Math.sin(G.time * 6 + z.x * 0.1) * 0.1;
+    ctx.save();
+    ctx.translate(z.x, z.y);
+    ctx.scale(1, 0.62);
+    // liseré bouillonnant
+    const g = ctx.createRadialGradient(0, 0, z.r * 0.1, 0, 0, z.r * w);
+    g.addColorStop(0, `rgba(217,255,106,${0.75 * fade})`);
+    g.addColorStop(0.55, `rgba(174,234,0,${0.5 * fade})`);
+    g.addColorStop(1, 'rgba(51,105,30,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(0, 0, z.r * w, 0, TAU); ctx.fill();
+    // bulles de vase
+    ctx.fillStyle = `rgba(240,255,150,${0.5 * fade})`;
+    for (let i = 0; i < 6; i++) {
+      const a = i * TAU / 6 + G.time * 1.5;
+      const br = z.r * (0.2 + ((G.time * 0.7 + i * 0.33) % 0.5));
+      ctx.beginPath(); ctx.arc(Math.cos(a) * br, Math.sin(a) * br * 0.62, 2.5 + Math.sin(G.time * 5 + i) * 1, 0, TAU); ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+// Trous noirs : puits de gravité avec disque d'accrétion et lentille
+export function drawBlackHoles() {
+  for (const h of G.blackHoles) {
+    const lifeK = Math.min(1, h.life / 1.2); // s'éteint à l'implosion
+    const pull = h.pull || 0;
+    ctx.save();
+    ctx.translate(h.x, h.y);
+    // lentille gravitationnelle : halo violet déformé
+    const hg = ctx.createRadialGradient(0, 0, h.r * 0.4, 0, 0, h.r * 1.5);
+    hg.addColorStop(0, `rgba(123,31,162,${0.55 * lifeK})`);
+    hg.addColorStop(0.6, `rgba(92,33,160,${0.28 * lifeK})`);
+    hg.addColorStop(1, 'rgba(13,10,31,0)');
+    ctx.fillStyle = hg;
+    ctx.beginPath(); ctx.arc(0, 0, h.r * 1.5, 0, TAU); ctx.fill();
+    // disque d'accrétion : anneau incliné qui tourne
+    ctx.save();
+    ctx.scale(1, 0.42);
+    ctx.rotate(G.time * (2 + pull * 3));
+    for (let i = 0; i < 14; i++) {
+      const a = i * TAU / 14;
+      ctx.fillStyle = i % 2 ? `rgba(179,157,219,${0.75 * lifeK})` : `rgba(128,216,255,${0.75 * lifeK})`;
+      ctx.beginPath();
+      ctx.arc(Math.cos(a) * h.r * (0.95 + Math.sin(i * 7) * 0.12), Math.sin(a) * h.r * (0.95 + Math.cos(i * 5) * 0.12),
+        3.5 + Math.sin(G.time * 6 + i * 2) * 1.2, 0, TAU);
+      ctx.fill();
+    }
+    ctx.restore();
+    // horizon des événements : noir absolu + anneau photonique
+    ctx.fillStyle = '#05030f';
+    ctx.beginPath(); ctx.arc(0, 0, h.r * 0.42 * lifeK + 4, 0, TAU); ctx.fill();
+    ctx.strokeStyle = `rgba(227,190,231,${0.9 * lifeK})`;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.arc(0, 0, h.r * 0.42 * lifeK + 4, 0, TAU); ctx.stroke();
+    // jet polaire
+    const jg = ctx.createLinearGradient(0, -h.r * 1.6, 0, 0);
+    jg.addColorStop(0, 'rgba(179,157,219,0)'); jg.addColorStop(1, `rgba(179,157,219,${0.4 * lifeK})`);
+    ctx.fillStyle = jg;
+    ctx.beginPath(); ctx.moveTo(-h.r * 0.12, -h.r * 1.7); ctx.lineTo(h.r * 0.12, -h.r * 1.7); ctx.lineTo(h.r * 0.3, 0); ctx.lineTo(-h.r * 0.3, 0); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+}
+
+// Télégraphe du micro-trou noir des événements spatiaux
+export function drawVoidHole() {
+  const h = G.voidHole;
+  if (!h) return;
+  const pulse = 0.5 + Math.sin(G.time * 8) * 0.5;
+  ctx.save();
+  ctx.translate(h.x, h.y);
+  ctx.strokeStyle = `rgba(179,157,219,${0.4 + pulse * 0.5})`;
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(0, 0, 40 + pulse * 10, 0, TAU); ctx.stroke();
+  ctx.strokeStyle = `rgba(227,190,231,${0.3 + pulse * 0.4})`;
+  ctx.setLineDash([8, 10]);
+  ctx.beginPath(); ctx.arc(0, 0, 70 + pulse * 16, G.time * 3, G.time * 3 + TAU * 0.8); ctx.stroke();
+  ctx.setLineDash([]);
+  const g = ctx.createRadialGradient(0, 0, 2, 0, 0, 26);
+  g.addColorStop(0, '#000'); g.addColorStop(0.7, '#1a0033'); g.addColorStop(1, 'rgba(74,20,140,0)');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(0, 0, 26, 0, TAU); ctx.fill();
+  ctx.restore();
+}
+
 // Portails d'apparition des monstres (tourbillon violet)
 export function drawPortals() {
   for (const po of G.portals) {
@@ -207,6 +296,32 @@ export function drawProjectiles() {
       ctx.beginPath(); ctx.arc(0, 0, pr.r, 0, TAU); ctx.fill();
       ctx.fillStyle = 'rgba(255,235,150,0.9)';
       ctx.beginPath(); ctx.arc(-pr.r * 0.25, -pr.r * 0.25, pr.r * 0.35, 0, TAU); ctx.fill();
+      ctx.restore();
+      continue;
+    }
+    if (pr.acid) {
+      // bille de vase toxique : orbe vert + trainée acide
+      ctx.rotate(Math.atan2(pr.vy, pr.vx));
+      ctx.fillStyle = 'rgba(174,234,0,0.3)';
+      ctx.beginPath(); ctx.ellipse(-9, 0, 9, 4, 0, 0, TAU); ctx.fill();
+      const ag = ctx.createRadialGradient(-pr.r * 0.2, -pr.r * 0.2, 1, 0, 0, pr.r);
+      ag.addColorStop(0, '#f4ff81'); ag.addColorStop(0.55, '#aeea00'); ag.addColorStop(1, '#33691e');
+      ctx.fillStyle = ag;
+      ctx.beginPath(); ctx.arc(0, 0, pr.r, 0, TAU); ctx.fill();
+      ctx.strokeStyle = '#827717'; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.restore();
+      continue;
+    }
+    if (pr.bolt || pr.voidBolt) {
+      // rayon stellaire : orbe violet + traînée nébuleuse
+      ctx.rotate(Math.atan2(pr.vy || 1, pr.vx || 0.01));
+      ctx.fillStyle = 'rgba(179,157,219,0.35)';
+      ctx.beginPath(); ctx.ellipse(-11, 0, 11, 5, 0, 0, TAU); ctx.fill();
+      const bg = ctx.createRadialGradient(-pr.r * 0.2, -pr.r * 0.2, 1, 0, 0, pr.r);
+      bg.addColorStop(0, '#f3e5f5'); bg.addColorStop(0.55, '#b388ff'); bg.addColorStop(1, '#4a148c');
+      ctx.fillStyle = bg;
+      ctx.beginPath(); ctx.arc(0, 0, pr.r, 0, TAU); ctx.fill();
+      ctx.strokeStyle = '#ce93d8'; ctx.lineWidth = 1.5; ctx.stroke();
       ctx.restore();
       continue;
     }

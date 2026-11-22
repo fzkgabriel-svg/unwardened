@@ -7,19 +7,21 @@ import { curWorld, CONFIG, RARITY_COLOR } from '../world.js';
 export function drawObstacle(o, def) {
   const ice = def.biome === 'ice';
   const hell = def.biome === 'hell';
-  if (o.type === 'mountain') drawMountain(o, ice, hell); else drawBoulder(o, ice, hell);
+  const sewer = def.biome === 'sewer';
+  const space = def.biome === 'space';
+  if (o.type === 'mountain') drawMountain(o, ice, hell, sewer, space); else drawBoulder(o, ice, hell, sewer, space);
 }
 
 // montagne : pic rocheux détaillé — crêtes en contrebas, facettes ombrées,
 // calotte neigeuse sculptée, éboulis et sapins à la base
-function drawMountain(o, ice, hell = false) {
+function drawMountain(o, ice, hell = false, sewer = false, space = false) {
   const r = o.r, sd = o.seed * 7919 % 1, sd2 = (o.seed * 104729 % 1) - 0.5;
   const px = o.x + sd2 * r * 0.3, py = o.y - r * 1.55; // sommet
   const baseY = o.y + r * 0.5;
-  const rockHi = hell ? '#7a4a3a' : ice ? '#9db4c8' : '#94856f';
-  const rockMid = hell ? '#5c322a' : ice ? '#748ca3' : '#776a58';
-  const rockLo = hell ? '#3a1d18' : ice ? '#546d85' : '#4e443a';
-  const ridgeCol = (back, sc) => hell ? (back ? '#4a2620' : '#5f322b') : ice ? (back ? '#54708a' : '#6a869e') : (back ? '#4c4139' : '#5f5346');
+  const rockHi = hell ? '#7a4a3a' : space ? '#4d5568' : sewer ? '#5a6a45' : ice ? '#9db4c8' : '#94856f';
+  const rockMid = hell ? '#5c322a' : space ? '#3a4150' : sewer ? '#43502f' : ice ? '#748ca3' : '#776a58';
+  const rockLo = hell ? '#3a1d18' : space ? '#232833' : sewer ? '#2a341e' : ice ? '#546d85' : '#4e443a';
+  const ridgeCol = (back, sc) => hell ? (back ? '#4a2620' : '#5f322b') : space ? (back ? '#2e3444' : '#3d4556') : sewer ? (back ? '#35401f' : '#43502f') : ice ? (back ? '#54708a' : '#6a869e') : (back ? '#4c4139' : '#5f5346');
 
   // halo atmosphérique derrière le massif
   const hz = ctx.createRadialGradient(o.x, o.y - r * 0.6, r * 0.3, o.x, o.y - r * 0.6, r * 1.9);
@@ -109,6 +111,32 @@ function drawMountain(o, ice, hell = false) {
       ctx.quadraticCurveTo(vx + r * 0.15, py + r * 0.5, vx + (i - 1) * r * 0.2, py + r * (0.75 + i * 0.12));
       ctx.stroke();
     }
+  } else if (space) {
+    // cratère spatial : dépression bleutée + lueur au fond
+    const lg = ctx.createRadialGradient(px, py + r * 0.1, 2, px, py + r * 0.1, r * 0.6);
+    lg.addColorStop(0, 'rgba(160,190,255,0.9)');
+    lg.addColorStop(0.5, 'rgba(90,110,200,0.5)');
+    lg.addColorStop(1, 'rgba(40,50,110,0)');
+    ctx.fillStyle = lg;
+    ctx.beginPath(); ctx.ellipse(px, py + r * 0.1, r * 0.55, r * 0.32, 0, 0, TAU); ctx.fill();
+    ctx.strokeStyle = 'rgba(170,200,255,0.7)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.ellipse(px, py + r * 0.1, r * 0.55, r * 0.32, 0, 0, TAU); ctx.stroke();
+  } else if (sewer) {
+    // calotte de vase : luisance verdâtre suintant le long du pic
+    const lg = ctx.createRadialGradient(px, py + r * 0.08, 2, px, py + r * 0.08, r * 0.55);
+    lg.addColorStop(0, 'rgba(200,255,130,0.85)');
+    lg.addColorStop(0.5, 'rgba(110,180,60,0.5)');
+    lg.addColorStop(1, 'rgba(60,110,40,0)');
+    ctx.fillStyle = lg;
+    ctx.beginPath(); ctx.ellipse(px, py + r * 0.08, r * 0.55, r * 0.3, 0, 0, TAU); ctx.fill();
+    ctx.strokeStyle = 'rgba(160,230,90,0.6)'; ctx.lineWidth = 2;
+    for (let i = 0; i < 3; i++) {
+      const vx = px + (i - 1) * r * 0.28;
+      ctx.beginPath();
+      ctx.moveTo(vx, py + r * 0.1);
+      ctx.quadraticCurveTo(vx + r * 0.12, py + r * 0.45, vx + (i - 1) * r * 0.18, py + r * (0.7 + i * 0.1));
+      ctx.stroke();
+    }
   } else {
   const capH = ice ? 0.5 : 0.34;
   const capBase = py + r * capH;
@@ -170,8 +198,8 @@ function drawMountain(o, ice, hell = false) {
     ctx.beginPath(); ctx.ellipse(bx, by, br, br * 0.7, 0, 0, TAU); ctx.fill();
   }
   // sapins nains accrochés à la pente (leurs pieds épousent le versant)
-  // (absents des Enfers : le décor « deadwood » s'en charge)
-  for (let i = 0; !hell && i < 3; i++) {
+  // (absents des Enfers/Égouts/Espace : d'autres décors s'en chargent)
+  for (let i = 0; !hell && !sewer && !space && i < 3; i++) {
     const tx = o.x - r * 0.62 + i * r * 0.5 + sd2 * r * 0.3;
     const nx = Math.max(-0.95, Math.min(0.95, (tx - o.x) / r));
     // hauteur de la surface rocheuse à cet x (approximation linéaire du versant)
@@ -203,7 +231,7 @@ function drawMountain(o, ice, hell = false) {
   // brume au pied
   const mist = ctx.createLinearGradient(0, baseY - r * 0.25, 0, baseY + r * 0.2);
   mist.addColorStop(0, 'rgba(255,255,255,0)');
-  mist.addColorStop(1, ice ? 'rgba(230,242,252,0.4)' : hell ? 'rgba(255,90,30,0.18)' : 'rgba(230,225,210,0.3)');
+  mist.addColorStop(1, ice ? 'rgba(230,242,252,0.4)' : hell ? 'rgba(255,90,30,0.18)' : space ? 'rgba(150,180,255,0.15)' : sewer ? 'rgba(160,220,110,0.16)' : 'rgba(230,225,210,0.3)');
   ctx.fillStyle = mist;
   ctx.beginPath(); ctx.ellipse(o.x, baseY + r * 0.05, r * 1.15, r * 0.32, 0, 0, TAU); ctx.fill();
 }
@@ -222,9 +250,9 @@ function drawBoulder(o, ice, hell = false) {
   for (const b of blocks) {
     const bx = o.x + b.dx + (o.seed % 1) * r * 0.15, by = o.y + b.dy;
     const g = ctx.createRadialGradient(bx - b.rx * 0.3, by - b.ry * 0.35, 1, bx, by, b.rx);
-    g.addColorStop(0, hell ? '#6b3a30' : ice ? '#d7e3ec' : '#a8a29a');
-    g.addColorStop(0.6, hell ? '#4a2620' : ice ? '#93a9bd' : '#7d746a');
-    g.addColorStop(1, hell ? '#2e1512' : ice ? '#5f7488' : '#4e463e');
+    g.addColorStop(0, hell ? '#6b3a30' : space ? '#565e70' : sewer ? '#6a7a4a' : ice ? '#d7e3ec' : '#a8a29a');
+    g.addColorStop(0.6, hell ? '#4a2620' : space ? '#3d4556' : sewer ? '#4c5c33' : ice ? '#93a9bd' : '#7d746a');
+    g.addColorStop(1, hell ? '#2e1512' : space ? '#232833' : sewer ? '#2e3a1f' : ice ? '#5f7488' : '#4e463e');
     ctx.fillStyle = g;
     ctx.beginPath(); ctx.ellipse(bx, by, b.rx, b.ry, 0, 0, TAU); ctx.fill();
     ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 1.6; ctx.stroke();

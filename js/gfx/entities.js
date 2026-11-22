@@ -10,7 +10,8 @@ function drawShadow(x, y, r) {
 
 export function drawEnemy(e) {
   const p = G.player;
-  const isFinal = e.type === 'finalBoss' || e.type === 'finalBossGlace' || e.type === 'finalBossEnfer';
+  const isFinal = e.type === 'finalBoss' || e.type === 'finalBossGlace' || e.type === 'finalBossEnfer'
+    || e.type === 'finalBossEgout' || e.type === 'finalBossSpace';
   drawShadow(e.x, e.y, e.r);
   // aura pour les mini-boss et boss
   if (e.isBoss || e.isMini) {
@@ -53,7 +54,9 @@ export function drawEnemy(e) {
     const prog = Math.min(1, 1 - Math.max(0, m.t) / m.dur);
     const frozen = e.type === 'finalBossGlace';
     const hell = e.type === 'finalBossEnfer';
-    const tcol = frozen ? '129,212,250' : hell ? '255,171,0' : '255,112,67';
+    const sewer = e.type === 'finalBossEgout';
+    const space = e.type === 'finalBossSpace';
+    const tcol = frozen ? '129,212,250' : hell ? '255,171,0' : sewer ? '174,234,0' : space ? '179,157,219' : '255,112,67';
     ctx.strokeStyle = `rgba(${tcol},${0.3 + prog * 0.6})`;
     ctx.lineWidth = 3; ctx.setLineDash([10, 8]);
     ctx.beginPath(); ctx.arc(m.tx, m.ty, 55 + prog * 45, 0, TAU); ctx.stroke();
@@ -105,7 +108,8 @@ export function drawEnemy(e) {
   // boss final enragé (phase 2/3) : aura tournante + étincelles
   if (isFinal && e.phase > 0 && !e.bossDying) {
     const frozen = e.type === 'finalBossGlace';
-    const col = frozen ? '#80d8ff' : e.type === 'finalBossEnfer' ? '#ffab00' : '#e040fb';
+    const col = frozen ? '#80d8ff' : e.type === 'finalBossEnfer' ? '#ffab00'
+      : e.type === 'finalBossEgout' ? '#aeea00' : e.type === 'finalBossSpace' ? '#b388ff' : '#e040fb';
     const pulse = 1 + Math.sin(G.time * (4 + e.phase * 3)) * 0.08;
     ctx.strokeStyle = col; ctx.globalAlpha = 0.5 + e.phase * 0.15; ctx.lineWidth = 3;
     ctx.setLineDash([14 + e.phase * 6, 10]);
@@ -124,7 +128,8 @@ export function drawEnemy(e) {
   // bouclier de phase : dôme hexagonal scintillant (10 s après chaque changement de phase)
   if (e.shieldT > 0 && !e.bossDying) {
     const pulse = 0.75 + Math.sin(G.time * 8) * 0.15;
-    const col = e.type === 'finalBossGlace' ? '129,212,250' : e.type === 'finalBossEnfer' ? '255,171,0' : '224,64,251';
+    const col = e.type === 'finalBossGlace' ? '129,212,250' : e.type === 'finalBossEnfer' ? '255,171,0'
+      : e.type === 'finalBossEgout' ? '174,234,0' : e.type === 'finalBossSpace' ? '179,157,219' : '224,64,251';
     ctx.strokeStyle = `rgba(${col},${0.85 * pulse})`;
     ctx.fillStyle = `rgba(${col},${0.10 * pulse})`;
     ctx.lineWidth = 3;
@@ -697,6 +702,390 @@ export function drawEnemy(e) {
       ctx.fillStyle = '#ffab00';
       ctx.beginPath(); ctx.arc(e.r * 0.2, e.r * 1.5, 3, 0, TAU); ctx.fill();
     }
+  } else if (['rat', 'vase', 'crapaud', 'ver', 'chanter', 'matriarche', 'bossEgout', 'finalBossEgout'].includes(e.type)) {
+    // ================= LES ÉGOUTS : créatures souterraines =================
+    if (e.type === 'finalBossEgout') {
+      // LE TYRAN DES PROFONDEURS : serpent colossal, écailles de vase,
+      // crête de champignons,gueule béante, aura toxique
+      const g = ctx.createLinearGradient(0, -e.r * 1.1, 0, e.r);
+      g.addColorStop(0, '#7cb342'); g.addColorStop(0.5, '#4e6b2f'); g.addColorStop(1, '#26331a');
+      ctx.fillStyle = g;
+      // corps serpentin en S
+      ctx.beginPath();
+      ctx.moveTo(0, -e.r * 1.25);
+      ctx.quadraticCurveTo(e.r * 1.1, -e.r * 0.9, e.r * 0.9, e.r * 0.1);
+      ctx.quadraticCurveTo(e.r * 0.8, e.r * 0.8, 0, e.r);
+      ctx.quadraticCurveTo(-e.r * 0.8, e.r * 0.8, -e.r * 0.9, e.r * 0.1);
+      ctx.quadraticCurveTo(-e.r * 1.1, -e.r * 0.9, 0, -e.r * 1.25);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = '#1a240f'; ctx.lineWidth = 4; ctx.stroke();
+      // écailles : arcs verticaux
+      ctx.strokeStyle = 'rgba(174,234,0,0.4)'; ctx.lineWidth = 2;
+      for (let i = 0; i < 6; i++) {
+        const yy = -e.r * 0.8 + i * e.r * 0.3;
+        ctx.beginPath(); ctx.moveTo(-e.r * 0.55, yy); ctx.quadraticCurveTo(0, yy - e.r * 0.12, e.r * 0.55, yy); ctx.stroke();
+      }
+      // crête de champignons toxiques sur la tête
+      for (let i = 0; i < 5; i++) {
+        const cx = (i - 2) * e.r * 0.22, cy = -e.r * 1.05 + Math.abs(i - 2) * e.r * 0.12;
+        ctx.fillStyle = i % 2 ? '#c5e1a5' : '#9ccc65';
+        ctx.beginPath(); ctx.arc(cx, cy, e.r * 0.09, 0, TAU); ctx.fill();
+        ctx.fillStyle = '#33691e';
+        ctx.fillRect(cx - 1, cy - e.r * 0.22, 2, e.r * 0.22);
+      }
+      // yeux jaunes verts luminescents
+      const gl = 0.8 + Math.sin(G.time * 5) * 0.2;
+      ctx.fillStyle = `rgba(212,255,80,${gl})`;
+      ctx.beginPath(); ctx.ellipse(-e.r * 0.28, -e.r * 0.95, e.r * 0.08, e.r * 0.12, 0, 0, TAU); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(e.r * 0.28, -e.r * 0.95, e.r * 0.08, e.r * 0.12, 0, 0, TAU); ctx.fill();
+      // gueule : crocs + langue fourchue
+      ctx.fillStyle = '#1a240f';
+      ctx.beginPath(); ctx.ellipse(0, -e.r * 0.72, e.r * 0.3, e.r * 0.14, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#e8f5e9';
+      for (const s of [-1, 1]) for (let k = 0; k < 2; k++) {
+        ctx.beginPath();
+        ctx.moveTo(s * (e.r * 0.12 + k * e.r * 0.14) - 2, -e.r * 0.74);
+        ctx.lineTo(s * (e.r * 0.12 + k * e.r * 0.14), -e.r * 0.58);
+        ctx.lineTo(s * (e.r * 0.12 + k * e.r * 0.14) + 2, -e.r * 0.74);
+        ctx.closePath(); ctx.fill();
+      }
+      ctx.strokeStyle = '#aed581'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(0, -e.r * 0.62);
+      ctx.quadraticCurveTo(e.r * 0.1, -e.r * 0.45, e.r * 0.22, -e.r * 0.5);
+      ctx.stroke();
+      // aura toxique
+      ctx.fillStyle = 'rgba(174,234,0,0.15)';
+      ctx.beginPath(); ctx.ellipse(0, e.r * 0.95, e.r * 1.35, e.r * 0.4, 0, 0, TAU); ctx.fill();
+    } else if (e.type === 'bossEgout' || e.type === 'matriarche') {
+      // roi des rats / matrriarche : gros rongeur, armure d'os, queue
+      const big = e.type === 'bossEgout';
+      const g = ctx.createRadialGradient(-e.r * 0.2, -e.r * 0.3, 2, 0, 0, e.r);
+      g.addColorStop(0, '#8d7b68'); g.addColorStop(1, '#3e2f23');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.ellipse(0, e.r * 0.1, e.r * 0.95, e.r * 0.85, 0, 0, TAU); ctx.fill();
+      ctx.strokeStyle = '#1c130c'; ctx.lineWidth = big ? 3.5 : 2.5; ctx.stroke();
+      // tête + museau
+      ctx.fillStyle = '#6d5a48';
+      ctx.beginPath(); ctx.arc(-e.r * 0.75, -e.r * 0.45, e.r * 0.48, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#d7ccc8';
+      ctx.beginPath(); ctx.ellipse(-e.r * 1.05, -e.r * 0.35, e.r * 0.22, e.r * 0.15, 0, 0, TAU); ctx.fill();
+      // oreilles
+      ctx.fillStyle = '#5d4a3a';
+      for (const s of [-1, 1]) {
+        ctx.beginPath();
+        ctx.arc(-e.r * 0.75 + s * e.r * 0.35, -e.r * 0.9, e.r * 0.2, 0, TAU);
+        ctx.fill();
+      }
+      ctx.fillStyle = '#ec407a';
+      for (const s of [-1, 1]) {
+        ctx.beginPath();
+        ctx.arc(-e.r * 0.75 + s * e.r * 0.35, -e.r * 0.9, e.r * 0.1, 0, TAU);
+        ctx.fill();
+      }
+      // yeux rouges
+      ctx.fillStyle = '#ff1744';
+      ctx.beginPath(); ctx.arc(-e.r * 0.95, -e.r * 0.55, e.r * 0.07, 0, TAU); ctx.fill();
+      // crocs
+      ctx.fillStyle = '#fff';
+      for (const s of [-1, 1]) {
+        ctx.beginPath();
+        ctx.moveTo(-e.r * 1.1 + s * e.r * 0.06, -e.r * 0.5); ctx.lineTo(-e.r * 1.1 + s * e.r * 0.06, -e.r * 0.32); ctx.lineTo(-e.r * 1.1 + s * e.r * 0.14, -e.r * 0.5);
+        ctx.closePath(); ctx.fill();
+      }
+      // queue
+      ctx.strokeStyle = '#6d5a48'; ctx.lineWidth = big ? 5 : 3.5; ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(e.r * 0.7, e.r * 0.3);
+      ctx.quadraticCurveTo(e.r * 1.5, e.r * 0.5, e.r * 1.3, -e.r * 0.4);
+      ctx.stroke();
+      if (big) { // armure d'os du roi
+        ctx.fillStyle = '#eceff1';
+        ctx.beginPath(); ctx.arc(0, -e.r * 0.6, e.r * 0.3, Math.PI, 0); ctx.fill();
+        for (const s of [-1, 1]) {
+          ctx.beginPath(); ctx.moveTo(s * e.r * 0.4, -e.r * 0.5); ctx.lineTo(s * e.r * 0.6, -e.r * 0.1); ctx.lineTo(s * e.r * 0.2, -e.r * 0.1); ctx.closePath(); ctx.fill();
+        }
+      }
+    } else if (e.type === 'rat') {
+      // rat géant : corps allongé, queue, oreilles
+      ctx.fillStyle = '#7a6a55';
+      ctx.beginPath(); ctx.ellipse(0, e.r * 0.15, e.r * 1.0, e.r * 0.6, 0, 0, TAU); ctx.fill();
+      ctx.strokeStyle = '#3e3226'; ctx.lineWidth = 2; ctx.stroke();
+      // queue
+      ctx.strokeStyle = '#8d7b68'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(e.r * 0.8, e.r * 0.3); ctx.quadraticCurveTo(e.r * 1.6, e.r * 0.6, e.r * 1.5, -e.r * 0.2); ctx.stroke();
+      // oreilles + museau
+      ctx.fillStyle = '#6d5c48';
+      for (const s of [-1, 1]) ctx.beginPath(), ctx.arc(s * e.r * 0.25, -e.r * 0.5, e.r * 0.2, 0, TAU), ctx.fill();
+      ctx.fillStyle = '#d7ccc8';
+      ctx.beginPath(); ctx.ellipse(-e.r * 0.85, -e.r * 0.1, e.r * 0.2, e.r * 0.12, 0, 0, TAU); ctx.fill();
+    } else if (e.type === 'vase') {
+      // vase toxique : blob vert translucide, bulles
+      const sq = 1 + Math.sin(e.wobble) * 0.1;
+      ctx.scale(1 / sq, sq);
+      const g = ctx.createRadialGradient(-e.r * 0.3, -e.r * 0.3, 2, 0, 0, e.r);
+      g.addColorStop(0, '#c5e1a5'); g.addColorStop(0.6, '#7cb342'); g.addColorStop(1, '#33691e');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.ellipse(0, 0, e.r, e.r * 0.85, 0, 0, TAU); ctx.fill();
+      ctx.strokeStyle = '#1b5e20'; ctx.lineWidth = 2; ctx.stroke();
+      // bulles internes
+      ctx.fillStyle = 'rgba(255,255,255,0.3)';
+      for (let i = 0; i < 3; i++) {
+        const bx = Math.sin(e.wobble * 1.5 + i * 2) * e.r * 0.4;
+        const by = Math.cos(e.wobble + i) * e.r * 0.3 - i * e.r * 0.15;
+        ctx.beginPath(); ctx.arc(bx, by, e.r * 0.1, 0, TAU); ctx.fill();
+      }
+      // flaques de vase au sol
+      ctx.fillStyle = 'rgba(174,234,0,0.3)';
+      ctx.beginPath(); ctx.ellipse(0, e.r * 0.8, e.r * 1.1, e.r * 0.3, 0, 0, TAU); ctx.fill();
+    } else if (e.type === 'crapaud') {
+      // crapaud des égouts : corps large, bosses, yeux en haut
+      ctx.fillStyle = '#5d7a3a';
+      ctx.beginPath(); ctx.ellipse(0, e.r * 0.2, e.r * 1.05, e.r * 0.75, 0, 0, TAU); ctx.fill();
+      ctx.strokeStyle = '#2f4518'; ctx.lineWidth = 2.5; ctx.stroke();
+      // yeux sur bosses
+      for (const s of [-1, 1]) {
+        ctx.fillStyle = '#7a9a4a';
+        ctx.beginPath(); ctx.arc(s * e.r * 0.4, -e.r * 0.55, e.r * 0.22, 0, TAU); ctx.fill();
+        ctx.strokeStyle = '#2f4518'; ctx.lineWidth = 2; ctx.stroke();
+        ctx.fillStyle = '#ffd740';
+        ctx.beginPath(); ctx.arc(s * e.r * 0.4, -e.r * 0.55, e.r * 0.09, 0, TAU); ctx.fill();
+      }
+      // bouche + verrues
+      ctx.fillStyle = '#26331a';
+      ctx.beginPath(); ctx.ellipse(0, -e.r * 0.05, e.r * 0.35, e.r * 0.1, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#7cb342';
+      for (let i = 0; i < 4; i++) {
+        ctx.beginPath(); ctx.arc((i - 1.5) * e.r * 0.45, e.r * 0.35 + (i % 2) * e.r * 0.15, e.r * 0.07, 0, TAU); ctx.fill();
+      }
+    } else if (e.type === 'ver') {
+      // ver des profondeurs : corps segmenté qui ondulle
+      ctx.strokeStyle = '#8d7b68'; ctx.lineCap = 'round';
+      ctx.lineWidth = e.r * 0.55;
+      ctx.beginPath();
+      ctx.moveTo(e.r * 0.9, 0);
+      for (let i = 0; i <= 5; i++) {
+        const t = i / 5;
+        ctx.lineTo(e.r * 0.9 - t * e.r * 1.6, Math.sin(e.wobble * 1.4 - t * 3) * e.r * 0.3);
+      }
+      ctx.stroke();
+      // tête + mâchoire
+      ctx.fillStyle = '#a1887f';
+      ctx.beginPath(); ctx.arc(-e.r * 0.7, Math.sin(e.wobble * 1.4 - 3) * e.r * 0.3, e.r * 0.55, 0, TAU); ctx.fill();
+      ctx.strokeStyle = '#5d4037'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = '#ff5252';
+      ctx.beginPath(); ctx.arc(-e.r * 0.85, Math.sin(e.wobble * 1.4 - 3) * e.r * 0.3 - e.r * 0.15, e.r * 0.1, 0, TAU); ctx.fill();
+      // segments
+      ctx.strokeStyle = 'rgba(62,39,35,0.7)'; ctx.lineWidth = 1.5;
+      for (let i = 1; i < 5; i++) {
+        const t = i / 5;
+        const sx = e.r * 0.9 - t * e.r * 1.6, sy = Math.sin(e.wobble * 1.4 - t * 3) * e.r * 0.3;
+        ctx.beginPath(); ctx.moveTo(sx - e.r * 0.1, sy - e.r * 0.22); ctx.lineTo(sx + e.r * 0.1, sy + e.r * 0.22); ctx.stroke();
+      }
+    } else {
+      // chanter des égouts : capuchon, larve, chant
+      ctx.fillStyle = '#4e342e';
+      ctx.beginPath();
+      ctx.moveTo(0, -e.r * 1.1);
+      ctx.quadraticCurveTo(e.r * 0.9, -e.r * 0.3, e.r * 0.75, e.r * 0.95);
+      ctx.lineTo(-e.r * 0.75, e.r * 0.95);
+      ctx.quadraticCurveTo(-e.r * 0.9, -e.r * 0.3, 0, -e.r * 1.1);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = '#1c0f0c'; ctx.lineWidth = 2.5; ctx.stroke();
+      // visage larvaire
+      ctx.fillStyle = '#c5e1a5';
+      ctx.beginPath(); ctx.ellipse(0, -e.r * 0.4, e.r * 0.3, e.r * 0.38, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#33691e';
+      ctx.beginPath(); ctx.arc(-e.r * 0.12, -e.r * 0.45, e.r * 0.07, 0, TAU); ctx.fill();
+      ctx.beginPath(); ctx.arc(e.r * 0.12, -e.r * 0.45, e.r * 0.07, 0, TAU); ctx.fill();
+      // antennes
+      ctx.strokeStyle = '#a1887f'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+      for (const s of [-1, 1]) {
+        ctx.beginPath(); ctx.moveTo(s * e.r * 0.15, -e.r * 1.0);
+        ctx.quadraticCurveTo(s * e.r * 0.5, -e.r * 1.4, s * e.r * 0.65, -e.r * 1.2); ctx.stroke();
+      }
+      // notes de chant
+      ctx.fillStyle = 'rgba(165,214,167,0.7)';
+      for (let i = 0; i < 3; i++) {
+        const nx = Math.sin(G.time * 2 + i * 2) * e.r * 0.5 + e.r * 0.4;
+        const ny = -e.r * 1.4 - i * e.r * 0.3 - (G.time * 12 + i * 20) % e.r * 0.5;
+        ctx.beginPath(); ctx.arc(nx, ny, e.r * 0.08, 0, TAU); ctx.fill();
+      }
+    }
+  } else if (['alien', 'drone', 'tentacule', 'cristal', 'overlord', 'bossVoid', 'finalBossSpace'].includes(e.type)) {
+    // ================= L'ESPACE : créatures extraterrestres =================
+    if (e.type === 'finalBossSpace') {
+      // L'ABOMINATION COSMIQUE : masse de matière noire, yeux stellaires,
+      // tentacules d'énergie, disque d'accrétion
+      // disque d'accrétion
+      ctx.save(); ctx.rotate(G.time * 0.6);
+      for (let i = 0; i < 12; i++) {
+        const a = i * TAU / 12;
+        ctx.fillStyle = i % 2 ? 'rgba(179,157,219,0.5)' : 'rgba(64,196,255,0.5)';
+        ctx.beginPath(); ctx.arc(Math.cos(a) * e.r * 1.35, Math.sin(a) * e.r * 0.4, e.r * 0.1, 0, TAU); ctx.fill();
+      }
+      ctx.restore();
+      // corps : sphère de matière noire avec dégradé
+      const g = ctx.createRadialGradient(-e.r * 0.2, -e.r * 0.3, e.r * 0.1, 0, 0, e.r * 1.05);
+      g.addColorStop(0, '#3d2a6e'); g.addColorStop(0.6, '#1a1033'); g.addColorStop(1, '#05030f');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(0, 0, e.r, 0, TAU); ctx.fill();
+      ctx.strokeStyle = '#b388ff'; ctx.lineWidth = 3; ctx.stroke();
+      // halo d'énergie
+      const hg = ctx.createRadialGradient(0, 0, e.r * 0.8, 0, 0, e.r * 1.6);
+      hg.addColorStop(0, 'rgba(179,157,219,0.25)'); hg.addColorStop(1, 'rgba(179,157,219,0)');
+      ctx.fillStyle = hg;
+      ctx.beginPath(); ctx.arc(0, 0, e.r * 1.6, 0, TAU); ctx.fill();
+      // yeux stellaires
+      const gl = 0.8 + Math.sin(G.time * 4) * 0.2;
+      ctx.fillStyle = `rgba(179,229,252,${gl})`;
+      ctx.beginPath(); ctx.ellipse(-e.r * 0.3, -e.r * 0.2, e.r * 0.09, e.r * 0.14, 0, 0, TAU); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(e.r * 0.3, -e.r * 0.2, e.r * 0.09, e.r * 0.14, 0, 0, TAU); ctx.fill();
+      // bouche : vortex
+      ctx.fillStyle = '#000';
+      ctx.beginPath(); ctx.ellipse(0, e.r * 0.35, e.r * 0.35, e.r * 0.2, 0, 0, TAU); ctx.fill();
+      ctx.strokeStyle = '#b388ff'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.ellipse(0, e.r * 0.35, e.r * 0.35, e.r * 0.2, 0, 0, TAU); ctx.stroke();
+      // tentacules d'énergie
+      ctx.strokeStyle = 'rgba(179,157,219,0.7)'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+      for (let i = 0; i < 6; i++) {
+        const a = i * TAU / 6 + G.time * 0.8;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a) * e.r * 0.9, Math.sin(a) * e.r * 0.9);
+        ctx.quadraticCurveTo(Math.cos(a + 0.5) * e.r * 1.4, Math.sin(a + 0.5) * e.r * 1.4,
+          Math.cos(a + 1) * e.r * 1.2, Math.sin(a + 1) * e.r * 1.2);
+        ctx.stroke();
+      }
+    } else if (e.type === 'bossVoid' || e.type === 'overlord') {
+      // seigneur stellaire / dominateur : navire-organisme, antennes, cœur
+      const big = e.type === 'bossVoid';
+      // antennes
+      ctx.strokeStyle = '#3949ab'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+      for (const s of [-1, 1]) {
+        ctx.beginPath(); ctx.moveTo(s * e.r * 0.4, -e.r * 0.7);
+        ctx.quadraticCurveTo(s * e.r * 0.8, -e.r * 1.3, s * e.r * 0.6, -e.r * 1.6); ctx.stroke();
+        ctx.fillStyle = '#80d8ff';
+        ctx.beginPath(); ctx.arc(s * e.r * 0.6, -e.r * 1.6, e.r * 0.08, 0, TAU); ctx.fill();
+      }
+      // corps : capsule alien
+      const g = ctx.createLinearGradient(0, -e.r, 0, e.r);
+      g.addColorStop(0, '#5c6bc0'); g.addColorStop(0.6, '#283593'); g.addColorStop(1, '#1a237e');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.ellipse(0, 0, e.r * 0.85, e.r, 0, 0, TAU); ctx.fill();
+      ctx.strokeStyle = '#0d1442'; ctx.lineWidth = big ? 3.5 : 2.5; ctx.stroke();
+      // plaques
+      ctx.strokeStyle = 'rgba(144,202,249,0.4)'; ctx.lineWidth = 1.5;
+      for (let i = 0; i < 4; i++) {
+        const yy = -e.r * 0.6 + i * e.r * 0.4;
+        ctx.beginPath(); ctx.moveTo(-e.r * 0.7, yy); ctx.quadraticCurveTo(0, yy + e.r * 0.15, e.r * 0.7, yy); ctx.stroke();
+      }
+      // cœur lumineux
+      const cp = 1 + Math.sin(G.time * 4) * 0.15;
+      const cg = ctx.createRadialGradient(0, e.r * 0.1, 2, 0, e.r * 0.1, e.r * 0.5 * cp);
+      cg.addColorStop(0, '#e3f2fd'); cg.addColorStop(0.5, '#64b5f6'); cg.addColorStop(1, 'rgba(30,50,150,0)');
+      ctx.fillStyle = cg;
+      ctx.beginPath(); ctx.arc(0, e.r * 0.1, e.r * 0.5 * cp, 0, TAU); ctx.fill();
+      if (big) { // couronne d'étoiles
+        ctx.fillStyle = '#ffd740';
+        for (let i = 0; i < 8; i++) {
+          const a = i * TAU / 8 + G.time * 0.4;
+          ctx.beginPath(); ctx.arc(Math.cos(a) * e.r * 1.1, Math.sin(a) * e.r * 0.5 - e.r * 0.3, e.r * 0.06, 0, TAU); ctx.fill();
+        }
+      }
+    } else if (e.type === 'alien') {
+      // alien rampant : corps vert, grosse tête, yeux noirs
+      ctx.fillStyle = '#7cb342';
+      ctx.beginPath(); ctx.ellipse(0, e.r * 0.1, e.r * 0.8, e.r * 0.7, 0, 0, TAU); ctx.fill();
+      ctx.strokeStyle = '#33691e'; ctx.lineWidth = 2; ctx.stroke();
+      // tête
+      ctx.fillStyle = '#9ccc65';
+      ctx.beginPath(); ctx.ellipse(-e.r * 0.55, -e.r * 0.4, e.r * 0.55, e.r * 0.5, 0, 0, TAU); ctx.fill();
+      // yeux allongés noirs
+      ctx.fillStyle = '#000';
+      for (const s of [-1, 1]) {
+        ctx.beginPath();
+        ctx.ellipse(-e.r * 0.65 + s * e.r * 0.1, -e.r * 0.45, e.r * 0.16, e.r * 0.08, s * 0.4, 0, TAU);
+        ctx.fill();
+      }
+      // pattes
+      ctx.strokeStyle = '#558b2f'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+      const st = Math.sin(e.wobble * 3) * e.r * 0.2;
+      for (const [lx, ly] of [[-0.3, 0.55], [0.3, 0.55], [-0.2, -0.2], [0.3, -0.15]]) {
+        ctx.beginPath(); ctx.moveTo(e.r * lx, e.r * ly); ctx.lineTo(e.r * lx + st * 0.5, e.r * 0.85); ctx.stroke();
+      }
+    } else if (e.type === 'drone') {
+      // drone de chasse : sphère métallique, rotor, canon
+      // rotor
+      ctx.strokeStyle = 'rgba(200,230,255,0.8)'; ctx.lineWidth = 2;
+      const ra = G.time * 20;
+      ctx.beginPath(); ctx.moveTo(-e.r * 0.8, -e.r * 0.7); ctx.lineTo(e.r * 0.8, -e.r * 0.7); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, -e.r * 0.85); ctx.lineTo(0, -e.r * 0.55); ctx.stroke();
+      // corps
+      const g = ctx.createRadialGradient(-e.r * 0.2, -e.r * 0.2, 1, 0, 0, e.r);
+      g.addColorStop(0, '#90a4ae'); g.addColorStop(1, '#37474f');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(0, 0, e.r * 0.75, 0, TAU); ctx.fill();
+      ctx.strokeStyle = '#102027'; ctx.lineWidth = 2; ctx.stroke();
+      // œil
+      const bl = 0.7 + Math.sin(G.time * 6) * 0.3;
+      ctx.fillStyle = `rgba(128,216,255,${bl})`;
+      ctx.beginPath(); ctx.arc(-e.r * 0.3, 0, e.r * 0.14, 0, TAU); ctx.fill();
+      // canon
+      ctx.fillStyle = '#263238';
+      ctx.fillRect(-e.r * 1.15, -e.r * 0.1, e.r * 0.5, e.r * 0.2);
+      ctx.strokeStyle = '#102027'; ctx.lineWidth = 1.5;
+      ctx.strokeRect(-e.r * 1.15, -e.r * 0.1, e.r * 0.5, e.r * 0.2);
+    } else if (e.type === 'tentacule') {
+      // tentacule stellaire : masse centrale + tentacules ondulants
+      ctx.fillStyle = '#4a148c';
+      ctx.beginPath(); ctx.arc(0, 0, e.r * 0.7, 0, TAU); ctx.fill();
+      ctx.strokeStyle = '#1a0033'; ctx.lineWidth = 3; ctx.stroke();
+      // cœur
+      const cp = 1 + Math.sin(G.time * 3) * 0.15;
+      const cg = ctx.createRadialGradient(0, 0, 2, 0, 0, e.r * 0.5 * cp);
+      cg.addColorStop(0, '#e1bee7'); cg.addColorStop(0.6, '#8e24aa'); cg.addColorStop(1, 'rgba(40,10,60,0)');
+      ctx.fillStyle = cg;
+      ctx.beginPath(); ctx.arc(0, 0, e.r * 0.5 * cp, 0, TAU); ctx.fill();
+      // tentacules
+      ctx.strokeStyle = '#7b1fa2'; ctx.lineWidth = 5; ctx.lineCap = 'round';
+      for (let i = 0; i < 5; i++) {
+        const a = i * TAU / 5 + G.time * 0.5 + e.wobble;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a) * e.r * 0.5, Math.sin(a) * e.r * 0.5);
+        ctx.quadraticCurveTo(Math.cos(a + 0.4) * e.r * 1.1, Math.sin(a + 0.4) * e.r * 1.1,
+          Math.cos(a + 0.8) * e.r * 1.3, Math.sin(a + 0.8) * e.r * 1.3);
+        ctx.stroke();
+        ctx.fillStyle = '#ce93d8';
+        ctx.beginPath(); ctx.arc(Math.cos(a + 0.8) * e.r * 1.3, Math.sin(a + 0.8) * e.r * 1.3, e.r * 0.08, 0, TAU); ctx.fill();
+      }
+    } else {
+      // cristal vivant : prisme facetté, éclats
+      const g = ctx.createLinearGradient(0, -e.r, 0, e.r);
+      g.addColorStop(0, '#80deea'); g.addColorStop(0.5, '#00838f'); g.addColorStop(1, '#004d40');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(0, -e.r * 1.1);
+      ctx.lineTo(e.r * 0.7, -e.r * 0.3);
+      ctx.lineTo(e.r * 0.5, e.r * 0.9);
+      ctx.lineTo(-e.r * 0.5, e.r * 0.9);
+      ctx.lineTo(-e.r * 0.7, -e.r * 0.3);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = '#b2ebf2'; ctx.lineWidth = 2; ctx.stroke();
+      // facettes
+      ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(0, -e.r * 1.1); ctx.lineTo(0, e.r * 0.8); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-e.r * 0.7, -e.r * 0.3); ctx.lineTo(e.r * 0.7, -e.r * 0.3); ctx.stroke();
+      // nucleus
+      const gl = 0.7 + Math.sin(G.time * 5) * 0.3;
+      ctx.fillStyle = `rgba(224,247,250,${gl})`;
+      ctx.beginPath(); ctx.arc(0, -e.r * 0.1, e.r * 0.15, 0, TAU); ctx.fill();
+      // pointes latérales
+      ctx.fillStyle = '#4dd0e1';
+      for (const s of [-1, 1]) {
+        ctx.beginPath();
+        ctx.moveTo(s * e.r * 0.7, -e.r * 0.3); ctx.lineTo(s * e.r * 1.1, e.r * 0.1); ctx.lineTo(s * e.r * 0.55, e.r * 0.25);
+        ctx.closePath(); ctx.fill();
+      }
+    }
   } else { // golem / mini-boss / boss
     const g = ctx.createRadialGradient(-4, -4, 2, 0, 0, e.r);
     g.addColorStop(0, light); g.addColorStop(1, bodyColor);
@@ -819,7 +1208,8 @@ export function drawEnemy(e) {
   // pilier d'âme : colonne d'énergie qui s'élève pendant l'agonie du boss final
   if (e.bossDying) {
     const k = Math.max(0, e.bossDying / 2.4);
-    const col = e.type === 'finalBossGlace' ? '129,212,250' : e.type === 'finalBossEnfer' ? '255,171,0' : '224,64,251';
+    const col = e.type === 'finalBossGlace' ? '129,212,250' : e.type === 'finalBossEnfer' ? '255,171,0'
+      : e.type === 'finalBossEgout' ? '174,234,0' : e.type === 'finalBossSpace' ? '179,157,219' : '224,64,251';
     const h = e.r * (3.4 - k * 1.5);
     const g = ctx.createLinearGradient(0, e.y - h, 0, e.y + e.r * 0.6);
     g.addColorStop(0, `rgba(${col},0)`);
@@ -989,6 +1379,103 @@ function drawVolcanoSpawn(x, y, prog) {
   ctx.restore();
 }
 
+// bulle de vase toxique dont le héros sort (Égouts) : le blob vert se
+// déchire et éclate en gouttes pendant que le héros grandit
+function drawSewerSpawn(x, y, prog) {
+  const p = G.player;
+  const R = p.r * 1.5 * (1.2 - prog * 0.45);
+  let alpha = 0.9;
+  if (prog > 0.5) alpha *= Math.max(0, 1 - (prog - 0.5) / 0.45);
+  if (alpha <= 0.01) return;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.globalAlpha = alpha;
+  const sq = 1 + Math.sin(prog * 18) * 0.08;
+  ctx.scale(1 / sq, sq);
+  const g = ctx.createRadialGradient(-R * 0.3, -R * 0.35, 4, 0, 0, R);
+  g.addColorStop(0, '#c5e1a5'); g.addColorStop(0.55, '#7cb342'); g.addColorStop(1, '#33691e');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.ellipse(0, 0, R, R * 0.9, 0, 0, TAU); ctx.fill();
+  ctx.strokeStyle = '#1b5e20'; ctx.lineWidth = 3; ctx.stroke();
+  // reflets visqueux
+  ctx.fillStyle = 'rgba(255,255,255,0.25)';
+  ctx.beginPath(); ctx.ellipse(-R * 0.35, -R * 0.4, R * 0.22, R * 0.13, -0.5, 0, TAU); ctx.fill();
+  // bulles internes
+  ctx.fillStyle = 'rgba(220,231,117,0.5)';
+  for (let i = 0; i < 4; i++) {
+    const bx = Math.sin(prog * 12 + i * 2.4) * R * 0.5;
+    const by = Math.cos(prog * 9 + i * 1.8) * R * 0.35;
+    ctx.beginPath(); ctx.arc(bx, by, R * 0.08, 0, TAU); ctx.fill();
+  }
+  // éclats toxiques en fin de percée
+  if (prog > 0.55) {
+    const dp = (prog - 0.55) / 0.45;
+    ctx.fillStyle = `rgba(212,255,80,${0.8 * (1 - dp * 0.4)})`;
+    for (let i = 0; i < 5; i++) {
+      const a = i * TAU / 5 + 0.4;
+      const dx = Math.cos(a) * (R * 0.7 + dp * 70);
+      const dy = Math.sin(a) * (R * 0.6 + dp * 55);
+      ctx.beginPath(); ctx.arc(dx, dy, 3.5 * (1 - dp * 0.5), 0, TAU); ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
+// capsule de stase dont le héros sort (Espace) : dalle violette, rayon
+// d'énergie montant, le héros matérialisé sous le faisceau
+function drawSpaceSpawn(x, y, prog) {
+  const p = G.player;
+  // rayon d'énergie vertical
+  const beamH = p.r * 6;
+  const bg = ctx.createLinearGradient(x, y - beamH, x, y);
+  bg.addColorStop(0, 'rgba(179,157,219,0)');
+  bg.addColorStop(0.7, `rgba(179,157,219,${0.4 * (1 - prog * 0.5)})`);
+  bg.addColorStop(1, `rgba(227,190,231,${0.55 * (1 - prog * 0.3)})`);
+  ctx.fillStyle = bg;
+  ctx.fillRect(x - 30, y - beamH, 60, beamH);
+  // points d'énergie qui montent dans le rayon
+  for (let i = 0; i < 8; i++) {
+    const ph = (prog * 0.9 + i * 0.13) % 1;
+    const yy = y - ph * beamH;
+    const xx = x + Math.sin(i * 3.7 + prog * 8) * 18 * (1 - ph * 0.5);
+    ctx.globalAlpha = (1 - prog * 0.4) * 0.8;
+    ctx.fillStyle = i % 2 ? '#e1bee7' : '#80d8ff';
+    ctx.beginPath(); ctx.arc(xx, yy, 2.4 - ph, 0, TAU); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  // dalle de la capsule (s'estompe)
+  let alpha = 0.9;
+  if (prog > 0.4) alpha *= Math.max(0, 1 - (prog - 0.4) / 0.5);
+  if (alpha <= 0.01) return;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.globalAlpha = alpha;
+  const R = p.r * 1.35;
+  // dalle octogonale
+  ctx.fillStyle = '#1a1033';
+  ctx.beginPath();
+  for (let i = 0; i < 8; i++) {
+    const a = i * TAU / 8 + TAU / 16;
+    const rr = R * (i % 2 ? 0.82 : 1);
+    const px = Math.cos(a) * rr, py = Math.sin(a) * rr * 0.9;
+    i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+  }
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#b388ff'; ctx.lineWidth = 3; ctx.stroke();
+  // fenêtre lumineuse centrale
+  const wg = ctx.createRadialGradient(0, 0, 2, 0, 0, R * 0.5);
+  wg.addColorStop(0, '#e1bee7'); wg.addColorStop(0.6, '#7e57c2'); wg.addColorStop(1, 'rgba(74,20,140,0)');
+  ctx.fillStyle = wg;
+  ctx.beginPath(); ctx.arc(0, 0, R * 0.5, 0, TAU); ctx.fill();
+  // joints de la dalle
+  ctx.strokeStyle = 'rgba(179,157,219,0.6)'; ctx.lineWidth = 1.5;
+  for (let i = 0; i < 4; i++) {
+    const a = i * TAU / 4 + TAU / 8;
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a) * R * 0.8, Math.sin(a) * R * 0.72); ctx.stroke();
+  }
+  ctx.restore();
+}
+
 export function drawPlayer() {
   const p = G.player;
   // cinématique de mort : le héros bascule puis s'effondre en s'estompant
@@ -1016,6 +1503,14 @@ export function drawPlayer() {
       fall = -Math.sin(prog * Math.PI) * 170;
       drawVolcanoSpawn(p.x, p.y, prog);
       G.screenShake = Math.max(G.screenShake, 3 + Math.sin(prog * 40) * 2);
+    } else if (camp === 3) {
+      // LA BULLE DE VASE : le héros sort d'une poche de vase toxique
+      introScale = 0.45 + 0.55 * e;
+      drawSewerSpawn(p.x, p.y, prog);
+    } else if (camp === 4) {
+      // LA CAPSULE DE STASE : le héros descend sous un rayon d'énergie
+      fall = -(1 - e) * 130;
+      drawSpaceSpawn(p.x, p.y + fall, prog);
     } else {
       fall = -(1 - e) * (H * 0.95);
     // colonne de lumière dorée reliant le ciel au héros

@@ -76,8 +76,8 @@ export function startGame() {
   G.wavePause = 0;
   // applique les bonus de l'équipement (forge)
   G.equip = equipBonuses(G.inv, G.stats.bestLevel || 1);
-  // PV de départ selon la campagne : 100 / 200 (Terre Gelée) / 300 (Enfers)
-  G.player.maxHp = (G.campaign === 2 ? 300 : G.campaign === 1 ? 200 : 100) + G.equip.hp;
+  // PV de départ selon la campagne : 100 / 200 (Terre Gelée) / 300 (Enfers) / 400 (Égouts) / 500 (Espace)
+  G.player.maxHp = (G.campaign === 4 ? 500 : G.campaign === 3 ? 400 : G.campaign === 2 ? 300 : G.campaign === 1 ? 200 : 100) + G.equip.hp;
   G.player.hp = G.player.maxHp;
   G.player.speed += G.equip.speed;
   G.player.maxPotions = 3 + G.equip.potions; // base 3 + gourde équipée (pas d'accumulation entre parties)
@@ -310,7 +310,9 @@ export function drawMenu() {
   // nom de l'ultime selon la sélection du héros (même logique que le HUD)
   const _us = G.stats.ultSel || 'nuke';
   const ultName = _us === 'glace' && G.stats.iceUlt ? 'Pluie de glace'
-    : _us === 'hell' && G.stats.hellUlt ? 'Titan de feu' : 'Bombe atomique';
+    : _us === 'hell' && G.stats.hellUlt ? 'Titan de feu'
+    : _us === 'sewer' && G.stats.sewerUlt ? 'Déluge acide'
+    : _us === 'space' && G.stats.spaceUlt ? 'Trou noir' : 'Bombe atomique';
   const controls = [
     ['ZQSD', 'Se déplacer'],
     ['Clic gauche', 'Attaque principale'],
@@ -451,15 +453,15 @@ function drawStatsCard() {
 // grille des succès (partagée dessin / clic) — avec scroll et fiche détail
 let achScroll = 0;
 let achDetail = null;
-let achTab = 0; // 0 = Terres Oubliées, 1 = Terre Gelée, 2 = Enfers // id du succès ouvert en grand format
+let achTab = 0; // 0 = Terres Oubliées, 1 = Terre Gelée, 2 = Enfers, 3 = Égouts, 4 = Espace // id du succès ouvert en grand format
 const ACH_COLS = 3, ACH_CELL_H = 44, ACH_GAP = 5;
-const ACH_TAB_NAMES = ['🗺️ TERRES OUBLIÉES', '❄️ TERRE GELÉE', '🔥 ENFERS'];
+const ACH_TAB_NAMES = ['🗺️ TERRES', '❄️ GLACÉE', '🔥 ENFERS', '🗑️ ÉGOUTS', '🛸 ESPACE'];
 
 function achTabBtns() {
   const cw = 880, ch = 590, cx = W / 2 - cw / 2, cy = H / 2 - ch / 2;
-  const bw = 264, gap = 14, y = cy + 80;
-  const x0 = cx + (cw - (bw * 3 + gap * 2)) / 2;
-  return [0, 1, 2].map(i => ({ i, x: x0 + i * (bw + gap), y, w: bw, h: 34 }));
+  const bw = 160, gap = 12, y = cy + 80;
+  const x0 = cx + (cw - (bw * 5 + gap * 4)) / 2;
+  return [0, 1, 2, 3, 4].map(i => ({ i, x: x0 + i * (bw + gap), y, w: bw, h: 34 }));
 }
 
 function achCells() {
@@ -948,6 +950,8 @@ export function forgeClickAt(x, y) {
     if (inR(ub.nuke, x, y)) { G.stats.ultSel = 'nuke'; saveStats(); return 'ult'; }
     if (inR(ub.glace, x, y) && G.stats.iceUlt) { G.stats.ultSel = 'glace'; saveStats(); return 'ult'; }
     if (inR(ub.hell, x, y) && G.stats.hellUlt) { G.stats.ultSel = 'hell'; saveStats(); return 'ult'; }
+    if (inR(ub.sewer, x, y) && G.stats.sewerUlt) { G.stats.ultSel = 'sewer'; saveStats(); return 'ult'; }
+    if (inR(ub.space, x, y) && G.stats.spaceUlt) { G.stats.ultSel = 'space'; saveStats(); return 'ult'; }
     // clic sur une embase du personnage -> fiche de l'objet équipé (ou rien)
     for (const slot of ['weapon', 'armor', 'charm', 'boots']) {
       const r = heroSlots(L)[slot];
@@ -1456,13 +1460,17 @@ function ultBtns(L) {
   return {
     nuke:  { x, y, w: 232, h: 40 },
     glace: { x, y: y + 48, w: 232, h: 40 },
-    hell:  { x, y: y + 96, w: 232, h: 40 }
+    hell:  { x, y: y + 96, w: 232, h: 40 },
+    sewer: { x, y: y + 144, w: 232, h: 40 },
+    space: { x, y: y + 192, w: 232, h: 40 }
   };
 }
 function drawUltSelect(L) {
   const sel = G.stats.ultSel || 'nuke';
   const iceOk = !!G.stats.iceUlt;
   const hellOk = !!G.stats.hellUlt;
+  const sewerOk = !!G.stats.sewerUlt;
+  const spaceOk = !!G.stats.spaceUlt;
   const ub = ultBtns(L);
   ctx.textAlign = 'center';
   ctx.fillStyle = '#ffd740'; ctx.font = 'bold 11px Inter, sans-serif';
@@ -1488,6 +1496,8 @@ function drawUltSelect(L) {
   drawOne('nuke', '💣', 'BOMBE ATOMIQUE', 'B-2 + explosion nucléaire', '#ffd740', false);
   drawOne('glace', '❄️', 'PLUIE DE GLACE', iceOk ? 'pics gelés : ralenti + -50% dégâts ennemis' : 'coffre du Souverain de Glace', '#80d8ff', !iceOk);
   drawOne('hell', '🔥', 'TITAN DE FEU', hellOk ? 'titan 10 s : laser de feu dévastateur · charge lente' : 'trône du Baron de l\'Enfer', '#ff7043', !hellOk);
+  drawOne('sewer', '☣️', 'DÉLUGE ACIDE', sewerOk ? 'geyser + pluie de vase : zones toxiques' : 'trône du Tyran des Profondeurs', '#aeea00', !sewerOk);
+  drawOne('space', '🕳️', 'TROU NOIR', spaceOk ? 'puits gravitationnel : aspiration + effondrement' : 'observatoire de l\'Abomination', '#b388ff', !spaceOk);
 }
 
 // carte de progression d'un type d'arme (épée / lance)
@@ -1752,10 +1762,14 @@ export function resetToMenu() {
   G.hellStorm = null; G.ashRain = 0; G.hellEruption = null; G.lasers.length = 0;
   G.hands.length = 0; G.volcanoes.length = 0;
   G.blizzard = 0; G.avalanche = null; G.eventT = 30; G.hellEventT = 26;
+  G.sewerEventT = 24; G.spaceEventT = 24; G.acidRain = 0; G.voidStorm = 0;
+  G.sewerGeyser = null; G.voidHole = null;
+  G.acidZones.length = 0; G.blackHoles.length = 0;
   G.tutorial = null; G.lastInteract = null;
   G.deathT = 0; G.deathDir = 1;
   G.dmgDealt = 0; G.dmgTaken = 0; G.potionsUsed = 0; G.bossesKilled = 0; G.runTime = 0;
   G.nightTime = 0; G.typeKills = {}; G.ultsUsed = 0; G.nukeUlts = 0; G.iceUlts = 0; G.hellUlts = 0;
+  G.sewerUlts = 0; G.spaceUlts = 0;
   G.achToast = null; G.achT = 0;
   G.menuView = 'main';
   G.state = 'menu';
@@ -1770,7 +1784,7 @@ export function playAgain() {
 // écran de victoire : enchaîne directement sur la campagne suivante
 export function nextWorld() {
   resetToMenu();
-  G.campaign = Math.min(2, G.campaign + 1);
+  G.campaign = Math.min(4, G.campaign + 1);
   startGame();
 }
 
@@ -1800,7 +1814,9 @@ export function drawVictory() {
   ctx.fillStyle = '#ffe9a3';
   const vicNames = ['Le Seigneur Oublié est vaincu — les Terres Oubliées sont libérées !',
     'Le Souverain de Glace est vaincu — la Terre Gelée est libérée !',
-    'Le Baron de l\'Enfer est vaincu — les Enfers sont libérés !'];
+    'Le Baron de l\'Enfer est vaincu — les Enfers sont libérés !',
+    'Le Tyran des Profondeurs est vaincu — les Égouts sont libérés !',
+    'L\'Abomination Cosmique est vaincue — l\'Espace est libéré !'];
   ctx.fillText(vicNames[G.campaign] || vicNames[0], W / 2, H / 2 - 128);
   if (G.campaign === 1) {
     ctx.save();
@@ -1814,6 +1830,20 @@ export function drawVictory() {
     ctx.shadowColor = 'rgba(255,112,67,0.9)'; ctx.shadowBlur = 16;
     ctx.fillStyle = '#ffab91'; ctx.font = 'bold 19px Inter, sans-serif';
     ctx.fillText('🔥 TRÔNE CONQUIS : ULTIME « TITAN DE FEU » — choisis-la dans la forge (onglet Héros)', W / 2, H / 2 - 100);
+    ctx.restore();
+  }
+  if (G.campaign === 3) {
+    ctx.save();
+    ctx.shadowColor = 'rgba(174,234,0,0.9)'; ctx.shadowBlur = 16;
+    ctx.fillStyle = '#dce775'; ctx.font = 'bold 19px Inter, sans-serif';
+    ctx.fillText('☣ TRÔNE DES ÉGOUTS : ULTIME « DÉLUGE ACIDE » — choisis-la dans la forge (onglet Héros)', W / 2, H / 2 - 100);
+    ctx.restore();
+  }
+  if (G.campaign === 4) {
+    ctx.save();
+    ctx.shadowColor = 'rgba(179,157,219,0.9)'; ctx.shadowBlur = 16;
+    ctx.fillStyle = '#e1bee7'; ctx.font = 'bold 19px Inter, sans-serif';
+    ctx.fillText('🕳 OBSERVATOIRE CONQUIS : ULTIME « TROU NOIR » — choisis-la dans la forge (onglet Héros)', W / 2, H / 2 - 100);
     ctx.restore();
   }
 
@@ -1847,7 +1877,7 @@ export function drawVictory() {
   // boutons REJOUER / MENU (même géométrie que le game over)
   // sur la victoire, le bouton devient « MONDE SUIVANT » s'il reste une campagne
   const b = goButtons();
-  const hasNext = G.campaign < 2;
+  const hasNext = G.campaign < 4;
   drawMenuButton(b.replay, hasNext ? '▶  MONDE SUIVANT' : '↻  REJOUER',
     hasNext ? '#1565c0' : '#4caf50', hasNext ? '#64b5f6' : '#69f0ae', true);
   drawMenuButton(b.menu, '⌂  MENU', '#455a64', '#90a4ae', false);
@@ -2376,8 +2406,28 @@ const SPAWN_C2 = [
   ['spawn_priest',   '🧛 Prêtre des Enfers',  'spawn'],
   ['spawn_final',    '🔥 LE BARON DE L\'ENFER','spawn']
 ];
+const SPAWN_C3 = [
+  ['spawn_rat',      '🐀 Rat Géant',          'spawn'],
+  ['spawn_crapaud',  '🐸 Crapaud',            'spawn'],
+  ['spawn_ver',      '🪱 Ver des Profondeurs','spawn'],
+  ['spawn_vase',     '🫙 Vase Toxique',       'spawn'],
+  ['spawn_chanter',  '🎵 Chanteur',           'spawn'],
+  ['spawn_matr',     '👑 Matriarche',         'spawn'],
+  ['spawn_bossegout','👑 Roi des Rats',       'spawn'],
+  ['spawn_final',    '☣️ LE TYRAN DES PROFONDEURS','spawn']
+];
+const SPAWN_C4 = [
+  ['spawn_alien',    '👽 Alien Rampant',      'spawn'],
+  ['spawn_drone',    '🛸 Drone de Chasse',    'spawn'],
+  ['spawn_tentacule','🦑 Tentacule',          'spawn'],
+  ['spawn_cristal',  '💎 Cristal Vivant',     'spawn'],
+  ['spawn_overlord', '👑 Dominator',          'spawn'],
+  ['spawn_bossvoid', '🛸 Seigneur Stellaire', 'spawn'],
+  ['spawn_bossv2',   '👾 Overlord',           'spawn'],
+  ['spawn_final',    '🕳️ L\'ABOMINATION COSMIQUE','spawn']
+];
 function adminCheats() {
-  return [...ADMIN_BASE, ...(G.campaign === 2 ? SPAWN_C2 : G.campaign === 1 ? SPAWN_C1 : SPAWN_C0)];
+  return [...ADMIN_BASE, ...(G.campaign === 4 ? SPAWN_C4 : G.campaign === 3 ? SPAWN_C3 : G.campaign === 2 ? SPAWN_C2 : G.campaign === 1 ? SPAWN_C1 : SPAWN_C0)];
 }
 const SPAWN_TYPES = {
   spawn_slime: 'slime', spawn_bat: 'bat', spawn_spider: 'spider',
@@ -2387,7 +2437,13 @@ const SPAWN_TYPES = {
   spawn_bossglace: 'bossGlace', spawn_bosscryo: 'bossCryo',
   spawn_imp: 'imp', spawn_hound: 'hound', spawn_cultist: 'cultist',
   spawn_demon: 'demon', spawn_golem_enf: 'golemEnf',
-  spawn_boss_enf: 'bossEnf', spawn_priest: 'priest'
+  spawn_boss_enf: 'bossEnf', spawn_priest: 'priest',
+  spawn_rat: 'rat', spawn_crapaud: 'crapaud', spawn_ver: 'ver',
+  spawn_vase: 'vase', spawn_chanter: 'chanter', spawn_matr: 'matriarche',
+  spawn_bossegout: 'bossEgout',
+  spawn_alien: 'alien', spawn_drone: 'drone', spawn_tentacule: 'tentacule',
+  spawn_cristal: 'cristal', spawn_overlord: 'overlord',
+  spawn_bossvoid: 'bossVoid', spawn_bossv2: 'overlord'
 };
 
 function adminCheatRects() {
@@ -2448,7 +2504,7 @@ function applyAdminCheat(id) {
       if (SPAWN_TYPES[id]) {
         for (let i = 0; i < 3; i++) spawnEnemy(SPAWN_TYPES[id]);
       } else if (id === 'spawn_boss') {
-        spawnEnemy(G.campaign === 2 ? 'bossEnf' : G.campaign === 1 ? 'bossGlace' : 'boss'); // boss adapté à la campagne
+        spawnEnemy(G.campaign === 4 ? 'bossVoid' : G.campaign === 3 ? 'bossEgout' : G.campaign === 2 ? 'bossEnf' : G.campaign === 1 ? 'bossGlace' : 'boss'); // boss adapté à la campagne
       } else if (id === 'spawn_final') {
         spawnFinalBoss(); // le vrai boss final de la campagne
       }
@@ -2552,7 +2608,7 @@ export function drawAdminMenu() {
   ctx.fillStyle = '#ef5350'; ctx.font = 'bold 22px Inter, sans-serif';
   ctx.fillText('🛠 MENU ADMIN', W / 2, L.py + 36);
   ctx.fillStyle = '#78909c'; ctx.font = '12px Inter, sans-serif';
-  ctx.fillText(`Triche — ${G.campaign === 2 ? 'LES ENFERS 🔥' : G.campaign === 1 ? 'LA TERRE GELÉE ❄️' : 'LES TERRES OUBLIÉES 🌿'} • jeu en pause • \` pour fermer`, W / 2, L.py + 56);
+  ctx.fillText(`Triche — ${G.campaign === 4 ? 'L\'ESPACE 🛸' : G.campaign === 3 ? 'LES ÉGOUTS 🗑️' : G.campaign === 2 ? 'LES ENFERS 🔥' : G.campaign === 1 ? 'LA TERRE GELÉE ❄️' : 'LES TERRES OUBLIÉES 🌿'} • jeu en pause • \` pour fermer`, W / 2, L.py + 56);
 
   // titres de colonnes (le premier bouton 'spawn' varie selon la campagne)
   const catTitles = { ress: '⚡ RESSOURCES', monde: '🌍 MONDE', spawn: '👾 APPARAÎTRE' };
@@ -2615,19 +2671,32 @@ const CAMPAIGN_INFO = {
     icon: '🔥', diff: '★★★ DIFFICILE', diffColor: '#ff7043',
     desc: 'Les Enfers : un royaume de braise et de damnation. Diablotins, mâtifs enragés, acolytes, démons et golems de lave. Le Baron de l\'Enfer vous attend sur son trône de cendres — et un pouvoir infernal vous attend après lui.',
     boss: 'Le Baron de l\'Enfer', worlds: '2 mondes · 30 vagues · boss dès la vague 20'
+  },
+  3: {
+    icon: '🗑️', diff: '★★★★ TRÈS DIFFICILE', diffColor: '#aeea00',
+    desc: 'Les Égouts : les profondeurs putrides sous la ville. Rats géants, crapauds, vers des profondeurs, vases toxiques et chanters démoniaques. Le Tyran des Profondeurs règne sur les flots d\'acide — et la Déluge Acide vous attend après lui.',
+    boss: 'Le Tyran des Profondeurs', worlds: '2 mondes · 35 vagues · boss dès la vague 25'
+  },
+  4: {
+    icon: '🛸', diff: '★★★★★ EXPERT', diffColor: '#b388ff',
+    desc: 'L\'Espace : un avant-poste perdu à des années-lumière de la Terre. Aliens rampants, drones de chasse, tentacules stellaires et cristaux vivants. L\'Abomination Cosmique dévore les étoiles — et le Trou Noir vous attend après elle.',
+    boss: 'L\'Abomination Cosmique', worlds: '2 mondes · 40 vagues · boss dès la vague 30'
   }
 };
 
-const CAMP_NAMES = ['LES TERRES OUBLIÉES', 'LA TERRE GELÉE', 'LES ENFERS'];
-const CAMP_COLORS = ['76,175,80', '79,195,247', '255,87,34'];
-const CAMP_TINTS = ['#1b3a24', '#123047', '#3a1408'];
-const CAMP_TEXT = ['#a5d6a7', '#b3e5fc', '#ffab91'];
+const CAMP_NAMES = ['LES TERRES OUBLIÉES', 'LA TERRE GELÉE', 'LES ENFERS', 'LES ÉGOUTS', 'L\'ESPACE'];
+const CAMP_COLORS = ['76,175,80', '79,195,247', '255,87,34', '174,234,0', '179,157,219'];
+const CAMP_TINTS = ['#1b3a24', '#123047', '#3a1408', '#1a2e00', '#170a2e'];
+const CAMP_TEXT = ['#a5d6a7', '#b3e5fc', '#ffab91', '#dce775', '#e1bee7'];
 
 function campaignNodes() {
+  // 5 campagnes en zigzag : la carte s'élargit vers la droite
   return {
-    0: { x: W / 2 - 400, y: 268, r: 66 },
-    1: { x: W / 2,      y: 208, r: 66 },
-    2: { x: W / 2 + 400, y: 268, r: 66 }
+    0: { x: W / 2 - 520, y: 280, r: 58 },
+    1: { x: W / 2 - 260, y: 205, r: 58 },
+    2: { x: W / 2,      y: 280, r: 58 },
+    3: { x: W / 2 + 260, y: 205, r: 58 },
+    4: { x: W / 2 + 520, y: 280, r: 58 }
   };
 }
 // fiche détaillée + bouton jouer (géométrie partagée dessin / clic)
@@ -2651,7 +2720,7 @@ export function campaignClickAt(x, y) {
     }
     return 'locked';
   }
-  for (const c of [0, 1, 2]) {
+  for (const c of [0, 1, 2, 3, 4]) {
     const n = N[c];
     if (Math.hypot(x - n.x, y - n.y) < n.r + 26) { G.campaignSel = c; return 'select'; }
   }
@@ -2685,7 +2754,7 @@ function drawCampaign() {
   const N = campaignNodes();
   const sel = G.campaignSel === undefined ? null : G.campaignSel;
 
-  // chemin pointillé animé reliant les trois îles en chaîne
+  // chemin pointillé animé reliant les cinq îles en chaîne
   const seg = (a, b) => {
     const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2 - 55;
     ctx.save();
@@ -2696,11 +2765,15 @@ function drawCampaign() {
     ctx.restore();
     return { mx, my };
   };
-  const s01 = seg(N[0], N[1]), s12 = seg(N[1], N[2]);
-  if (campaignUnlocked(1)) { ctx.fillStyle = '#ffd740'; ctx.font = 'bold 22px Inter, sans-serif'; ctx.fillText('✓', s01.mx, s01.my + 8); }
-  if (campaignUnlocked(2)) { ctx.fillStyle = '#ffd740'; ctx.font = 'bold 22px Inter, sans-serif'; ctx.fillText('✓', s12.mx, s12.my + 8); }
+  for (let i = 0; i < 4; i++) {
+    const s = seg(N[i], N[i + 1]);
+    if (campaignUnlocked(i + 1)) {
+      ctx.fillStyle = '#ffd740'; ctx.font = 'bold 22px Inter, sans-serif';
+      ctx.fillText('✓', s.mx, s.my + 8);
+    }
+  }
 
-  for (const c of [0, 1, 2]) {
+  for (const c of [0, 1, 2, 3, 4]) {
     const n = N[c], info = CAMPAIGN_INFO[c], unlocked = campaignUnlocked(c);
     const isSel = sel === c;
     const hc = CAMP_COLORS[c];

@@ -1,0 +1,35 @@
+<!DOCTYPE html><html><body><canvas id="game" width="1200" height="640"></canvas><pre id="o">RUN</pre>
+<script>
+window.addEventListener('error', e => { document.getElementById('o').textContent = 'ERR: ' + e.message + ' @' + e.filename.split('/').pop() + ':' + e.lineno; });
+window.addEventListener('unhandledrejection', e => { document.getElementById('o').textContent = 'REJ: ' + e.reason; });
+</script>
+<script type="module">
+try {
+  const { G } = await import('./js/state.js');
+  const { startGame } = await import('./js/menu.js');
+  const { spawnEnemy } = await import('./js/enemies.js');
+  const { doUlt } = await import('./js/attacks.js');
+  const { createChar } = await import('./js/chars.js');
+  const out = [];
+  createChar(0, 'Test');
+  for (const c of [3, 4]) {
+    G.state = 'menu'; G.cloudT = 0;
+    G.stats.campaignDone = { ...(G.stats.campaignDone || {}), [c - 1]: true };
+    G.stats.ultSel = c === 3 ? 'sewer' : 'space';
+    G.stats.sewerUlt = true; G.stats.spaceUlt = true;
+    G.campaign = c;
+    startGame();
+    // passer en jeu + quelques ennemis + ultime
+    G.state = 'playing'; G.cloudT = 0; G.wave = 10;
+    const p = G.player;
+    spawnEnemy(c === 3 ? 'rat' : 'alien'); spawnEnemy(c === 3 ? 'vase' : 'drone');
+    spawnEnemy(c === 3 ? 'bossEgout' : 'bossVoid');
+    p.ultCharge = 100; doUlt();
+    // laisser tourner quelques frames (rAF) pour rendre ult + events
+    await new Promise(r => setTimeout(r, 2500));
+    out.push(`camp${c}: state=${G.state} acidZones=${G.acidZones.length} blackHoles=${G.blackHoles.length} acidRain=${G.acidRain} voidStorm=${G.voidStorm} enemies=${G.enemies.length} proj=${G.projectiles.length}`);
+    G.state = 'menu';
+  }
+  document.getElementById('o').textContent = 'OK ' + out.join(' | ');
+} catch(e) { document.getElementById('o').textContent = 'CATCH: ' + e.message + ' ' + e.stack; }
+</script></body></html>

@@ -40,6 +40,23 @@ export const MATERIAL_DROPS = {
   bossEnf:  { or: 0.20, essence: 0.18, cristal: 0.12, fer: 0.24 },
   priest:   { essence: 0.18, or: 0.08, cristal: 0.06 },
   finalBossEnfer:{ or: 0.75, cristal: 0.65, essence: 0.8, fer: 0.7, cuir: 0.6 },
+  // Les Égouts
+  rat:      { cuir: 0.10, essence: 0.04 },
+  vase:     { essence: 0.14, cristal: 0.05, fer: 0.06 },
+  crapaud:  { cuir: 0.12, fer: 0.08, essence: 0.05 },
+  ver:      { essence: 0.16, cristal: 0.08, or: 0.04 },
+  chanter:  { essence: 0.15, or: 0.06, cristal: 0.05 },
+  matriarche:{ essence: 0.20, cristal: 0.12, or: 0.08, fer: 0.12 },
+  bossEgout:{ or: 0.22, essence: 0.20, cristal: 0.15, fer: 0.26 },
+  finalBossEgout:{ or: 0.8, cristal: 0.7, essence: 0.9, fer: 0.8, cuir: 0.7 },
+  // L'Espace
+  alien:    { essence: 0.16, cristal: 0.08, or: 0.05 },
+  drone:    { cristal: 0.10, fer: 0.08, essence: 0.05 },
+  tentacule:{ essence: 0.18, cristal: 0.10, or: 0.06 },
+  cristal:  { cristal: 0.18, essence: 0.12, fer: 0.10 },
+  overlord: { cristal: 0.20, essence: 0.18, or: 0.10, fer: 0.14 },
+  bossVoid: { or: 0.25, cristal: 0.25, essence: 0.22, fer: 0.30 },
+  finalBossSpace:{ or: 0.9, cristal: 0.9, essence: 1.0, fer: 0.9, cuir: 0.8 },
 };
 
 // objets craftables : 3 par emplacement (arme / armure / talisman)

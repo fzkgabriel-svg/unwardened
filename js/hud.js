@@ -97,7 +97,11 @@ export function drawHUD() {
     ? { name: 'PLUIE DE GLACE', col: '#b3e5fc', ready: '#81d4fa', barA: '#e1f5fe', barB: '#0277bd', glow: '#0288d1' }
     : ultSel === 'hell' && G.stats.hellUlt
       ? { name: 'TITAN DE FEU', col: '#ffab91', ready: '#ff7043', barA: '#ffe0b2', barB: '#bf360c', glow: '#e64a19' }
-      : { name: 'BOMBE ATOMIQUE', col: '#b0a488', ready: '#ff8a65', barA: '#ffcc80', barB: '#7a2e0e', glow: '#ff5722' };
+      : ultSel === 'sewer' && G.stats.sewerUlt
+        ? { name: 'DÉLUGE ACIDE', col: '#dce775', ready: '#aeea00', barA: '#f4ff81', barB: '#33691e', glow: '#76ff03' }
+        : ultSel === 'space' && G.stats.spaceUlt
+          ? { name: 'TROU NOIR', col: '#e1bee7', ready: '#b388ff', barA: '#e1bee7', barB: '#4a148c', glow: '#7e57c2' }
+          : { name: 'BOMBE ATOMIQUE', col: '#b0a488', ready: '#ff8a65', barA: '#ffcc80', barB: '#7a2e0e', glow: '#ff5722' };
   const ultName = ultInfo.name, ultCol = ultInfo.col;
   ctx.textAlign = 'left'; ctx.font = '12px Georgia, serif';
   const ultReady = p.ultCharge >= 100;
@@ -226,15 +230,19 @@ export function drawHUD() {
 
 // ---------- Barre de vie du boss final (grand bandeau centré) ----------
 function drawBossBar() {
-  const e = G.enemies.find(en => en.type === 'finalBoss' || en.type === 'finalBossGlace' || en.type === 'finalBossEnfer');
+  const e = G.enemies.find(en => en.type === 'finalBoss' || en.type === 'finalBossGlace' || en.type === 'finalBossEnfer'
+    || en.type === 'finalBossEgout' || en.type === 'finalBossSpace');
   if (!e) return;
   const frozen = e.type === 'finalBossGlace';
   const hell = e.type === 'finalBossEnfer';
-  const name = hell ? '☠ BOSS FINAL — LE BARON DE L\'ENFER ☠' : frozen ? '☠ BOSS FINAL — SOUVERAIN DE GLACE ☠' : '☠ BOSS FINAL — SEIGNEUR OUBLIÉ ☠';
-  const tint = hell ? '255,112,67' : frozen ? '129,212,250' : '224,64,251';
+  const sewer = e.type === 'finalBossEgout';
+  const space = e.type === 'finalBossSpace';
+  const name = hell ? '☠ BOSS FINAL — LE BARON DE L\'ENFER ☠' : frozen ? '☠ BOSS FINAL — SOUVERAIN DE GLACE ☠'
+    : sewer ? '☠ BOSS FINAL — LE TYRAN DES PROFONDEURS ☠' : space ? '☠ BOSS FINAL — L\'ABOMINATION COSMIQUE ☠' : '☠ BOSS FINAL — SEIGNEUR OUBLIÉ ☠';
+  const tint = hell ? '255,112,67' : frozen ? '129,212,250' : sewer ? '174,234,0' : space ? '179,157,219' : '224,64,251';
   const bw = 640, bh = 24, bx = W / 2 - bw / 2, by = 46;
   ctx.textAlign = 'center';
-  ctx.font = 'bold 14px Georgia, serif'; ctx.fillStyle = hell ? '#ffab91' : frozen ? '#81d4fa' : '#e040fb';
+  ctx.font = 'bold 14px Georgia, serif'; ctx.fillStyle = hell ? '#ffab91' : frozen ? '#81d4fa' : sewer ? '#dce775' : space ? '#e1bee7' : '#e040fb';
   ctx.shadowColor = `rgba(${tint},0.8)`; ctx.shadowBlur = 10;
   ctx.fillText(name, W / 2, by - 8);
   ctx.shadowBlur = 0;
@@ -249,6 +257,8 @@ function drawBossBar() {
     const g = ctx.createLinearGradient(bx, 0, bx + bw, 0);
     if (frozen) { g.addColorStop(0, '#01579b'); g.addColorStop(0.6, '#0288d1'); g.addColorStop(1, '#81d4fa'); }
     else if (hell) { g.addColorStop(0, '#4a0d0d'); g.addColorStop(0.6, '#c62828'); g.addColorStop(1, '#ff7043'); }
+    else if (sewer) { g.addColorStop(0, '#1b3a00'); g.addColorStop(0.6, '#558b2f'); g.addColorStop(1, '#dce775'); }
+    else if (space) { g.addColorStop(0, '#1a0033'); g.addColorStop(0.6, '#6a1b9a'); g.addColorStop(1, '#e1bee7'); }
     else { g.addColorStop(0, '#4a148c'); g.addColorStop(0.6, '#8e24aa'); g.addColorStop(1, '#e040fb'); }
     ctx.fillStyle = g;
     ctx.save();
@@ -270,10 +280,12 @@ function drawBossBar() {
   const ph = (e.phase || 0) + 1;
   const phNames = hell ? ['', 'FUREUR DU BARON', 'RAGE DE L\'ENFER']
     : frozen ? ['', 'GLACIATION', 'FUREUR GLACIALE']
+    : sewer ? ['', 'FURIE TOXIQUE', 'FUREUR DU TYRAN']
+    : space ? ['', 'FUREUR COSMIQUE', 'ABOMINATION']
     : ['', 'COLÈRE ANCESTRALE', 'FUREUR DU ROI OUBLIÉ'];
   if (e.phase) {
     ctx.font = 'bold 12px Inter, sans-serif';
-    ctx.fillStyle = hell ? '#ffab91' : frozen ? '#b3e5fc' : '#ce93d8';
+    ctx.fillStyle = hell ? '#ffab91' : frozen ? '#b3e5fc' : sewer ? '#dce775' : space ? '#e1bee7' : '#ce93d8';
     ctx.fillText(`PHASE ${ph} — ${phNames[e.phase]}`, W / 2, by - 22);
   }
 }
@@ -340,7 +352,11 @@ function drawMinimap() {
   roundRect(mx, my, mw, mh, 5); ctx.clip();
   const hellMap = (w.def && w.def.biome === 'hell') || G.campaign === 2;
   const frozenMap = (w.def && w.def.biome === 'ice') || G.campaign === 1;
-  ctx.fillStyle = hellMap ? 'rgba(52,16,10,0.92)' : frozenMap ? 'rgba(214,232,244,0.92)' : 'rgba(60,84,46,0.9)';
+  const sewerMap = (w.def && w.def.biome === 'sewer') || G.campaign === 3;
+  const spaceMap = (w.def && w.def.biome === 'space') || G.campaign === 4;
+  ctx.fillStyle = hellMap ? 'rgba(52,16,10,0.92)' : frozenMap ? 'rgba(214,232,244,0.92)'
+    : sewerMap ? 'rgba(38,42,26,0.92)' : spaceMap ? 'rgba(10,8,30,0.95)'
+    : 'rgba(60,84,46,0.9)';
   ctx.fillRect(mx, my, mw, mh);
   const sx = wx => mx + (wx / w.w) * mw;
   const sy = wy => my + (wy / w.h) * mh;
@@ -374,18 +390,21 @@ function drawMinimap() {
   }
   // boss final : gros point pulsant (violet / orange infernal selon la campagne)
   for (const en of G.enemies) {
-    if (en.type !== 'finalBoss' && en.type !== 'finalBossGlace' && en.type !== 'finalBossEnfer') continue;
+    if (en.type !== 'finalBoss' && en.type !== 'finalBossGlace' && en.type !== 'finalBossEnfer'
+      && en.type !== 'finalBossEgout' && en.type !== 'finalBossSpace') continue;
     const bx = sx(en.x), by = sy(en.y);
     const pulse = 4 + Math.sin(G.time * 6) * 1.6;
     const hellBoss = en.type === 'finalBossEnfer';
-    const c0 = hellBoss ? '255,112,67' : '224,64,251';
+    const sewerBoss = en.type === 'finalBossEgout';
+    const spaceBoss = en.type === 'finalBossSpace';
+    const c0 = hellBoss ? '255,112,67' : sewerBoss ? '174,234,0' : spaceBoss ? '179,157,219' : '224,64,251';
     const g = ctx.createRadialGradient(bx, by, 0, bx, by, pulse * 3);
     g.addColorStop(0, `rgba(${c0},0.95)`); g.addColorStop(0.5, `rgba(${c0},0.55)`); g.addColorStop(1, `rgba(${c0},0)`);
     ctx.fillStyle = g;
     ctx.beginPath(); ctx.arc(bx, by, pulse * 3, 0, TAU); ctx.fill();
-    ctx.fillStyle = hellBoss ? '#fff3e0' : '#f3e5f5';
+    ctx.fillStyle = hellBoss ? '#fff3e0' : sewerBoss ? '#f9fbe7' : spaceBoss ? '#ede7f6' : '#f3e5f5';
     ctx.beginPath(); ctx.arc(bx, by, pulse * 0.9, 0, TAU); ctx.fill();
-    ctx.strokeStyle = hellBoss ? '#ff7043' : '#e040fb'; ctx.lineWidth = 1.5;
+    ctx.strokeStyle = hellBoss ? '#ff7043' : sewerBoss ? '#aeea00' : spaceBoss ? '#b388ff' : '#e040fb'; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.arc(bx, by, pulse + 2.5, 0, TAU); ctx.stroke();
   }
   // rectangle de la zone visible (caméra)

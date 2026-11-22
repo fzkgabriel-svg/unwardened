@@ -35,11 +35,30 @@ export const enemyTypes = {
   bossEnf:  { name: 'Démon Seigneur',       hp: 800, speed: 0.55, damage: 40, xp: 280, r: 34, aggro: Infinity, range: 0,  color: '#b71c1c', glow: '#ff7043', isBoss: true, attack: 'fire' },
   priest:   { name: 'Prêtre des Enfers',   hp: 240, speed: 0.8,  damage: 26, xp: 75,  r: 18, aggro: Infinity, range: 0,  color: '#4a148c', glow: '#e040fb', isMini: true, attack: 'hex' },
   finalBossEnfer:{ name: 'Le Baron de l\'Enfer', hp: 1, speed: 0.52, damage: 72, xp: 1800, r: 54, aggro: Infinity, range: 64, color: '#7f0000', glow: '#ffab00', isBoss: true, attack: 'fire' },
+  // ---------- LES ÉGOUTS : créatures souterraines (campagne 4) ----------
+  rat:      { name: 'Rat Géant',           hp: 55,  speed: 2.1,  damage: 12, xp: 16,  r: 10, aggro: Infinity, range: 15, color: '#6d5a48', glow: '#a1887f' },
+  vase:     { name: 'Vase Toxique',        hp: 110, speed: 0.55, damage: 18, xp: 32,  r: 16, aggro: Infinity, range: 0,  color: '#558b2f', glow: '#aeea00', attack: 'acid' },
+  crapaud:  { name: 'Crapaud des Égoûts',  hp: 150, speed: 1.0,  damage: 24, xp: 38,  r: 15, aggro: Infinity, range: 19, color: '#4e6b3a', glow: '#aed581' },
+  ver:      { name: 'Ver des Profondeurs', hp: 190, speed: 0.8,  damage: 26, xp: 46,  r: 17, aggro: Infinity, range: 0,  color: '#7a6a52', glow: '#d7ccc8', attack: 'acid' },
+  chanter:  { name: 'Chanteur des Égoûts',  hp: 130, speed: 0.85, damage: 20, xp: 42,  r: 14, aggro: Infinity, range: 0,  color: '#5d4037', glow: '#bcaaa4', attack: 'hex' },
+  matriarche:{ name: 'Matriarche',          hp: 300, speed: 0.9,  damage: 30, xp: 90,  r: 22, aggro: Infinity, range: 26, color: '#6d4c41', glow: '#ffab91', isMini: true },
+  bossEgout:{ name: 'Roi des Rats',        hp: 950, speed: 0.5,  damage: 44, xp: 320, r: 34, aggro: Infinity, range: 0,  color: '#5d4037', glow: '#aed581', isBoss: true, attack: 'acid' },
+  finalBossEgout:{ name: 'Le Tyran des Profondeurs', hp: 1, speed: 0.5, damage: 80, xp: 2200, r: 56, aggro: Infinity, range: 66, color: '#3e2723', glow: '#aeea00', isBoss: true, attack: 'acid' },
+  // ---------- L'ESPACE : créatures extraterrestres (campagne 5) ----------
+  alien:    { name: 'Alien Rampant',       hp: 140, speed: 1.45, damage: 26, xp: 40,  r: 14, aggro: Infinity, range: 19, color: '#7b1fa2', glow: '#ce93d8' },
+  drone:    { name: 'Drone de Chasse',     hp: 100, speed: 1.9,  damage: 22, xp: 32,  r: 12, aggro: Infinity, range: 0,  color: '#455a64', glow: '#80d8ff', attack: 'bolt' },
+  tentacule:{ name: 'Tentacule Stellaire', hp: 220, speed: 0.7,  damage: 34, xp: 58,  r: 19, aggro: Infinity, range: 0,  color: '#311b92', glow: '#b388ff', attack: 'bolt' },
+  cristal:  { name: 'Cristal Vivant',      hp: 170, speed: 0.85, damage: 30, xp: 50,  r: 16, aggro: Infinity, range: 23, color: '#00838f', glow: '#80deea' },
+  overlord: { name: 'Dominator',           hp: 340, speed: 1.0,  damage: 38, xp: 110, r: 24, aggro: Infinity, range: 28, color: '#1a237e', glow: '#64b5f6', isMini: true },
+  bossVoid: { name: 'Seigneur Stellaire',  hp: 1100,speed: 0.5,  damage: 52, xp: 400, r: 36, aggro: Infinity, range: 0,  color: '#283593', glow: '#82b1ff', isBoss: true, attack: 'bolt' },
+  finalBossSpace:{ name: 'L\'Abomination Cosmique', hp: 1, speed: 0.5, damage: 95, xp: 3000, r: 58, aggro: Infinity, range: 68, color: '#0d0a1f', glow: '#b388ff', isBoss: true, attack: 'bolt' },
 };
 
 function difficultyScale() {
   const base = 1 + (G.wave - 1) * 0.5;
-  if (G.campaign === 2) return base * 2.6;   // Les Enfers : le plus dur
+  if (G.campaign === 4) return base * 4.4;   // L'Espace : le plus dur
+  if (G.campaign === 3) return base * 3.6;   // Les Égouts
+  if (G.campaign === 2) return base * 2.6;   // Les Enfers
   return G.campaign === 1 ? base * 1.8 : base; // The Frozen Land est plus rude
 }
 
@@ -66,6 +85,23 @@ export function spawnEnemy(forceType = null, bigPortal = false, px = null, py = 
       else if (G.wave >= 2 && roll < 0.50) type = 'hunter';
       else if (G.wave >= 4 && roll < 0.72) type = 'yeti';
       else type = 'yeti'; // jamais de monstre de la campagne 1 en Frozen Land
+    } else if (camp === 3) {
+      // faune des égouts : rats rapides, crapauds, vers, vases toxiques
+      const minisAlive = G.enemies.filter(e => e.type === 'matriarche').length;
+      if (G.wave % 3 === 0 && minisAlive < 2 && roll < 0.5) type = 'matriarche';
+      else if (G.wave >= 3 && roll < 0.14) type = 'ver';
+      else if (G.wave >= 4 && roll < 0.30) type = 'vase';
+      else if (G.wave >= 2 && roll < 0.50) type = 'crapaud';
+      else if (G.wave >= 5 && roll < 0.68) type = 'chanter';
+      else type = 'rat'; // jamais de monstre d'une autre campagne dans les égouts
+    } else if (camp === 4) {
+      // faune extraterrestre : aliens rapides, drones, tentacules, cristaux
+      const minisAlive = G.enemies.filter(e => e.type === 'overlord').length;
+      if (G.wave % 3 === 0 && minisAlive < 2 && roll < 0.5) type = 'overlord';
+      else if (G.wave >= 3 && roll < 0.14) type = 'tentacule';
+      else if (G.wave >= 3 && roll < 0.30) type = 'cristal';
+      else if (G.wave >= 2 && roll < 0.52) type = 'drone';
+      else type = 'alien'; // jamais de monstre d'une autre campagne dans l'espace
     } else {
     // Mini-boss aléatoire en cours de vague (les boss n'apparaissent qu'au début des vagues ×5)
     const minisAlive = G.enemies.filter(e => e.type === 'miniboss').length;
@@ -98,9 +134,9 @@ export function spawnEnemy(forceType = null, bigPortal = false, px = null, py = 
   }
 
   const extraScale = t.isBoss ? 1 + Math.floor(G.wave / 5) * 0.5
-                   : (type === 'miniboss' || type === 'alpha' || type === 'priest') ? 1 + Math.floor(G.wave / 3) * 0.3 : 1;
-  // Les Enfers : dégâts de base encore plus majorés
-  const dmgMult = G.campaign === 2 ? 2.3 : G.campaign === 1 ? 1.5 : 1;
+                   : (type === 'miniboss' || type === 'alpha' || type === 'priest' || type === 'matriarche' || type === 'overlord') ? 1 + Math.floor(G.wave / 3) * 0.3 : 1;
+  // Les Enfers et au-delà : dégâts de base encore plus majorés
+  const dmgMult = G.campaign === 4 ? 3.4 : G.campaign === 3 ? 2.8 : G.campaign === 2 ? 2.3 : G.campaign === 1 ? 1.5 : 1;
 
   // portail d'apparition (surdimensionné et rougeoyant pour l'événement des brutes)
   const portalLife = portalTime !== null ? portalTime : bigPortal ? 1.3 : 0.8;
@@ -108,7 +144,7 @@ export function spawnEnemy(forceType = null, bigPortal = false, px = null, py = 
     x, y,
     r: t.r * (bigPortal ? 4.2 : 2.8),
     life: portalLife, maxLife: portalLife,
-    color: G.campaign === 2 ? '#ff5722' : bigPortal ? '#ff5722' : '#a855f7'
+    color: G.campaign === 4 ? '#82b1ff' : G.campaign === 3 ? '#aeea00' : G.campaign === 2 ? '#ff5722' : bigPortal ? '#ff5722' : '#a855f7'
   });
 
   G.enemies.push({
@@ -154,7 +190,8 @@ export function damageEnemy(e, dmg, angle) {
   const idx = G.enemies.indexOf(e);
   if (e.hp <= 0) {
     // boss final : cinématique de mort (effondrement au ralenti) avant la victoire
-    if ((e.type === 'finalBoss' || e.type === 'finalBossGlace' || e.type === 'finalBossEnfer') && !e.bossDying) {
+    if ((e.type === 'finalBoss' || e.type === 'finalBossGlace' || e.type === 'finalBossEnfer'
+      || e.type === 'finalBossEgout' || e.type === 'finalBossSpace') && !e.bossDying) {
       e.bossDying = 2.4;
       e.hp = 0;
       sfxBossDie(); // long effondrement sonore pendant l'agonie
@@ -162,7 +199,8 @@ export function damageEnemy(e, dmg, angle) {
       G.screenFlash = Math.max(G.screenFlash, 0.55);
       G.rings.push({
         x: e.x, y: e.y, r: e.r, maxR: 240, life: 42, maxLife: 42,
-        color: e.type === 'finalBossGlace' ? '#81d4fa' : e.type === 'finalBossEnfer' ? '#ff7043' : '#e040fb'
+        color: e.type === 'finalBossGlace' ? '#81d4fa' : e.type === 'finalBossEnfer' ? '#ff7043'
+          : e.type === 'finalBossEgout' ? '#aeea00' : e.type === 'finalBossSpace' ? '#b388ff' : '#e040fb'
       });
       spawnParticles(e.x, e.y, e.glow, 46, 10);
       spawnParticles(e.x, e.y, '#ffffff', 24, 8);
@@ -174,10 +212,12 @@ export function damageEnemy(e, dmg, angle) {
     spawnParticles(e.x, e.y, e.color, 18, 6);
     addDamageText(e.x, e.y - 16, `+${e.xp} XP`, '#40c4ff');
     gainXp(e.xp);
-    // charge de l'ultime selon la sélection : Titan de Feu très lent (×0,5),
-    // Pluie de Glace un peu plus simple (×1,4), les autres normales
+    // charge de l'ultime selon la sélection : Titan de Feu très lent (×0,22),
+    // Pluie de Glace un peu plus simple (×1,4), Déluge Acide ×0,8, Trou Noir ×0,55
     const sel = G.stats.ultSel || 'nuke';
     const ultMult = sel === 'hell' && G.stats.hellUlt ? 0.22
+      : sel === 'space' && G.stats.spaceUlt ? 0.55
+      : sel === 'sewer' && G.stats.sewerUlt ? 0.8
       : sel === 'glace' && G.stats.iceUlt ? 1.4 : 1;
     const gain = e.isBoss ? 30 : e.isMini ? 15 : 4;
     G.player.ultCharge = Math.min(100, G.player.ultCharge + gain * ultMult);
@@ -209,7 +249,8 @@ export function damageEnemy(e, dmg, angle) {
     G.typeKills[e.type] = (G.typeKills[e.type] || 0) + 1; // stats par type (succès)
     // le boss final ne déclenche la victoire qu'à la vague finale :
     // en Enfer il surgit dès la vague 20 comme boss intermédiaire
-    const isFinalType = e.type === 'finalBoss' || e.type === 'finalBossGlace' || e.type === 'finalBossEnfer';
+    const isFinalType = e.type === 'finalBoss' || e.type === 'finalBossGlace' || e.type === 'finalBossEnfer'
+      || e.type === 'finalBossEgout' || e.type === 'finalBossSpace';
     if (isFinalType && G.wave >= finalWave()) G.pendingVictory = true;
   }
 }
@@ -225,12 +266,15 @@ export function spawnFinalBoss() {
   const y = Math.max(60, Math.min(worldH() - 60, p.y + Math.sin(a) * d));
   const frozen = G.campaign === 1;
   const hell = G.campaign === 2;
-  const hp = (hell ? 11500 : frozen ? 7500 : 4000) + p.level * (hell ? 550 : frozen ? 450 : 300);
+  const sewer = G.campaign === 3;
+  const space = G.campaign === 4;
+  const type = hell ? 'finalBossEnfer' : frozen ? 'finalBossGlace'
+    : sewer ? 'finalBossEgout' : space ? 'finalBossSpace' : 'finalBoss';
+  const hp = (hell ? 11500 : space ? 17000 : sewer ? 14000 : frozen ? 7500 : 4000)
+    + p.level * (space ? 800 : sewer ? 650 : hell ? 550 : frozen ? 450 : 300);
   const e = {
-    ...(hell ? enemyTypes.finalBossEnfer : frozen ? enemyTypes.finalBossGlace : enemyTypes.finalBoss),
-    type: hell ? 'finalBossEnfer' : frozen ? 'finalBossGlace' : 'finalBoss',
-    hp, maxHp: hp,
-    damage: (hell ? 78 : frozen ? 60 : 38) + p.level * (hell ? 5 : frozen ? 4 : 2.5),
+    ...enemyTypes[type], type, hp, maxHp: hp,
+    damage: (space ? 105 : sewer ? 90 : hell ? 78 : frozen ? 60 : 38) + p.level * (space ? 6 : sewer ? 5 : hell ? 5 : frozen ? 4 : 2.5),
     x, y,
     attackCooldown: 0, wobble: 0, slow: 0,
     spawnT: 0, spawnMax: 0,
@@ -244,8 +288,8 @@ export function spawnFinalBoss() {
   spawnParticles(x, y, '#b388ff', 55, 11);
   spawnParticles(x, y, '#ff7043', 35, 9);
   spawnParticles(x, y, '#5d4037', 30, 7);
-  spawnParticles(x, y, hell ? '#ffab00' : '#e040fb', 20, 13);
-  G.rings.push({ x, y, r: 10, maxR: 300, life: 45, maxLife: 45, color: '#e040fb' });
+  spawnParticles(x, y, hell ? '#ffab00' : space ? '#b388ff' : sewer ? '#aeea00' : '#e040fb', 20, 13);
+  G.rings.push({ x, y, r: 10, maxR: 300, life: 45, maxLife: 45, color: space ? '#b388ff' : sewer ? '#aeea00' : '#e040fb' });
   G.rings.push({ x, y, r: 5, maxR: 170, life: 30, maxLife: 30, color: '#ff7043' });
   G.screenShake = 20; G.screenFlash = 0.7;
   // l'explosion blesse le joueur s'il est trop proche
@@ -256,13 +300,14 @@ export function spawnFinalBoss() {
     addDamageText(p.x, p.y - 24, `-${Math.round(dmg)}`, '#ff1744');
     spawnParticles(p.x, p.y, '#ff1744', 12, 6);
   }
-  addDamageText(p.x, p.y - 90, hell ? 'LE BARON DE L\'ENFER ÉMERGE !' : frozen ? 'LE SOUVERAIN DE GLACE ÉMERGE !' : 'LE SEIGNEUR OUBLIÉ ÉMERGE !', hell ? '#ffab00' : frozen ? '#80d8ff' : '#e040fb');
+  addDamageText(p.x, p.y - 90, hell ? 'LE BARON DE L\'ENFER ÉMERGE !' : space ? 'L\'ABOMINATION COSMIQUE ÉMERGE !' : sewer ? 'LE TYRAN DES PROFONDEURS ÉMERGE !' : frozen ? 'LE SOUVERAIN DE GLACE ÉMERGE !' : 'LE SEIGNEUR OUBLIÉ ÉMERGE !',
+    hell ? '#ffab00' : space ? '#b388ff' : sewer ? '#aeea00' : frozen ? '#80d8ff' : '#e040fb');
 }
 
 // Fait apparaître 1 à 3 mini-boss d'un coup (début des vagues ×3)
 export function spawnMinibossWave() {
   const n = 1 + Math.floor(Math.random() * 3);
-  const type = G.campaign === 2 ? 'priest' : G.campaign === 1 ? 'alpha' : 'miniboss'; // mini-boss propre à chaque campagne
+  const type = G.campaign === 4 ? 'overlord' : G.campaign === 3 ? 'matriarche' : G.campaign === 2 ? 'priest' : G.campaign === 1 ? 'alpha' : 'miniboss'; // mini-boss propre à chaque campagne
   for (let i = 0; i < n; i++) spawnEnemy(type);
 }
 

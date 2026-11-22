@@ -35,8 +35,9 @@ export function usePotion() {
   const waveBonus = Math.min(n, 9) * 10
     + Math.max(0, Math.min(n, 19) - 9) * 15
     + Math.max(0, n - 19) * 20;
-  // bonus de soin selon le monde : +75 en Terre Gelée, +100 en Enfer
-  const campBonus = G.campaign === 2 ? 100 : G.campaign === 1 ? 75 : 0;
+  // bonus de soin selon le monde : +75 en Terre Gelée, +100 en Enfer,
+  // +125 en Égouts, +150 dans l'Espace
+  const campBonus = G.campaign === 4 ? 150 : G.campaign === 3 ? 125 : G.campaign === 2 ? 100 : G.campaign === 1 ? 75 : 0;
   const heal = Math.round((50 + waveBonus + campBonus) * (G.equip ? G.equip.potionMult : 1));
   p.potions--;
   G.potionsUsed++;

@@ -95,6 +95,44 @@ export const WORLDS = [
     wall: '#3a1c1a', wallDark: '#241010', roof: '#5c1818', roofAlt: '#7a2418', trim: '#ff5252',
     window: '#ff8a65', door: '#140a09',
   },
+  // ---------- CAMPAGNE 4 : LES ÉGOUTS (mondes 6 et 7) ----------
+  {
+    name: 'Les Égouts',
+    biome: 'sewer',
+    ground: '#2e3b2a', groundDark: '#1d2718', field: '#37452f',
+    blobA: 'rgba(90,140,60,0.22)', blobB: 'rgba(60,110,50,0.18)', blobC: 'rgba(140,170,70,0.14)',
+    decor: ['slime', 'slime', 'bones', 'bones', 'pipe', 'grate', 'mush', 'rock', 'rat', 'water'],
+    wall: '#4a5a3a', wallDark: '#2e3a24', roof: '#5a6a42', roofAlt: '#6e7f52', trim: '#9ccc65',
+    window: '#c5e1a5', door: '#26301c',
+  },
+  {
+    name: 'Les Profondeurs',
+    biome: 'sewer',
+    ground: '#26301f', groundDark: '#161e12', field: '#2f3a28',
+    blobA: 'rgba(80,130,55,0.24)', blobB: 'rgba(50,100,45,0.20)', blobC: 'rgba(120,160,60,0.15)',
+    decor: ['slime', 'slime', 'slime', 'bones', 'pipe', 'grate', 'grate', 'mush', 'rat', 'water'],
+    wall: '#3d4c2f', wallDark: '#24301c', roof: '#4a5a36', roofAlt: '#5d6d45', trim: '#8bc34a',
+    window: '#aed581', door: '#1c2415',
+  },
+  // ---------- CAMPAGNE 5 : L'ESPACE (mondes 8 et 9) ----------
+  {
+    name: 'La Lune',
+    biome: 'space',
+    ground: '#3a3f4a', groundDark: '#262a33', field: '#454b58',
+    blobA: 'rgba(90,110,160,0.22)', blobB: 'rgba(60,80,140,0.18)', blobC: 'rgba(140,150,190,0.14)',
+    decor: ['crater', 'crater', 'rock', 'debris', 'meteor', 'star', 'shard', 'crystal'],
+    wall: '#5a6272', wallDark: '#3a4150', roof: '#6e7688', roofAlt: '#4a5162', trim: '#90caf9',
+    window: '#bbdefb', door: '#232833',
+  },
+  {
+    name: 'La Station Perdue',
+    biome: 'space',
+    ground: '#2e3340', groundDark: '#1d212c', field: '#3a4050',
+    blobA: 'rgba(80,90,150,0.24)', blobB: 'rgba(50,60,120,0.20)', blobC: 'rgba(130,140,200,0.15)',
+    decor: ['crater', 'debris', 'debris', 'meteor', 'star', 'shard', 'crystal', 'rock', 'crystal'],
+    wall: '#4e5566', wallDark: '#2e3444', roof: '#6a7b95', roofAlt: '#3d4a63', trim: '#64b5f6',
+    window: '#90caf9', door: '#1c2030',
+  },
 ];
 
 // ---------- CAMPAGNES : chaque campagne possède 2 mondes (portails internes) ----------
@@ -102,10 +140,12 @@ export const CAMPAIGNS = [
   { id: 0, name: 'Les Terres Oubliées', worlds: [0, 1], diff: 'NORMAL' },
   { id: 1, name: 'The Frozen Land',    worlds: [2, 3], diff: 'MOYEN' },
   { id: 2, name: 'Les Enfers',         worlds: [4, 5], diff: 'IMPOSSIBLE' },
+  { id: 3, name: 'Les Égouts',         worlds: [6, 7], diff: 'TERRIFIANT' },
+  { id: 4, name: 'L\'Espace',          worlds: [8, 9], diff: 'CATASTROPHIQUE' },
 ];
-export function campaignOf(idx) { return idx >= 4 ? 2 : idx >= 2 ? 1 : 0; }
-export function campaignStart(c) { return c === 2 ? 4 : c ? 2 : 0; }
-export function campaignEnd(c) { return c === 2 ? 6 : c ? 4 : 2; } // borne exclusive
+export function campaignOf(idx) { return idx >= 8 ? 4 : idx >= 6 ? 3 : idx >= 4 ? 2 : idx >= 2 ? 1 : 0; }
+export function campaignStart(c) { return [0, 2, 4, 6, 8][c] || 0; }
+export function campaignEnd(c) { return [2, 4, 6, 8, 10][c] || 2; } // borne exclusive
 
 // ---------- BIBLIOTHÈQUE DE BÂTIMENTS ----------
 const BUILDING_TYPES = [
@@ -136,6 +176,24 @@ const BUILDING_TYPES = [
   { id: 'bastion',   name: 'Bastion de Cendres',  cat: 'industriel', rarity: 'epique',     w: 230, h: 150, weight: 9,  loot: 'warehouse', camp: 2, drawAs: 'warehouse' },
   { id: 'helltower', name: 'Tour du Trône',       cat: 'industriel', rarity: 'rare',       w: 75,  h: 200, weight: 10, loot: 'factory',  camp: 2, drawAs: 'factory' },
   { id: 'hellcastle',name: 'Château des Enfers',  cat: 'rare',       rarity: 'legendaire', w: 320, h: 210, weight: 3,  loot: 'shrine',   camp: 2, drawAs: 'castle' },
+  // ---------- structures des ÉGOUTS (campagne 4 uniquement) ----------
+  { id: 'culvert',   name: 'Buse effondrée',      cat: 'ruine',      rarity: 'commun',     w: 170, h: 120, weight: 24, loot: 'ruins',     camp: 3, drawAs: 'ruins' },
+  { id: 'pump',      name: 'Station de pompage',  cat: 'industriel', rarity: 'commun',     w: 200, h: 140, weight: 20, loot: 'warehouse', camp: 3, drawAs: 'warehouse' },
+  { id: 'nest',      name: 'Terrier de rats',     cat: 'petite',     rarity: 'commun',     w: 110, h: 85,  weight: 22, loot: 'cabin',     camp: 3, drawAs: 'cabin' },
+  { id: 'grotto',    name: 'Grotte à champignons',cat: 'rare',       rarity: 'rare',       w: 160, h: 110, weight: 15, loot: 'house',     camp: 3, drawAs: 'house' },
+  { id: 'cistern',   name: 'Citerne',             cat: 'industriel', rarity: 'rare',       w: 220, h: 150, weight: 11, loot: 'factory',   camp: 3, drawAs: 'factory' },
+  { id: 'canal',     name: 'Écluse abandonnée',   cat: 'industriel', rarity: 'epique',     w: 240, h: 160, weight: 9,  loot: 'gas',       camp: 3, drawAs: 'gas' },
+  { id: 'hive',      name: 'Rucher des Profondeurs', cat: 'rare',    rarity: 'epique',     w: 130, h: 130, weight: 10, loot: 'shrine',    camp: 3, drawAs: 'shrine' },
+  { id: 'sewcastle', name: 'Forteresse des Égoûts',cat: 'rare',      rarity: 'legendaire', w: 320, h: 210, weight: 3,  loot: 'shrine',    camp: 3, drawAs: 'castle' },
+  // ---------- structures de L'ESPACE (campagne 5 uniquement) ----------
+  { id: 'domes',     name: 'Dôme lunaire',        cat: 'rare',       rarity: 'commun',     w: 180, h: 120, weight: 22, loot: 'house',     camp: 4, drawAs: 'house' },
+  { id: 'lander',    name: 'Épave d\'atterrisseur',cat:'industriel',rarity: 'commun',     w: 190, h: 130, weight: 20, loot: 'warehouse', camp: 4, drawAs: 'warehouse' },
+  { id: 'relay',     name: 'Relais orbital',      cat: 'industriel', rarity: 'rare',       w: 90,  h: 220, weight: 12, loot: 'factory',   camp: 4, drawAs: 'factory' },
+  { id: 'greenhouse',name: 'Serre abandonnée',    cat: 'maison',     rarity: 'rare',       w: 160, h: 110, weight: 14, loot: 'cabin',     camp: 4, drawAs: 'cabin' },
+  { id: 'lab',       name: 'Laboratoire spatial', cat: 'industriel', rarity: 'epique',     w: 230, h: 155, weight: 10, loot: 'factory',   camp: 4, drawAs: 'warehouse' },
+  { id: 'reactor',   name: 'Réacteur désaffecté', cat: 'industriel', rarity: 'epique',     w: 200, h: 200, weight: 8,  loot: 'gas',       camp: 4, drawAs: 'gas' },
+  { id: 'monolith',  name: 'Monolithe',           cat: 'ruine',      rarity: 'epique',     w: 120, h: 190, weight: 9,  loot: 'shrine',    camp: 4, drawAs: 'shrine' },
+  { id: 'station',   name: 'Grande Station',      cat: 'rare',       rarity: 'legendaire', w: 330, h: 200, weight: 3,  loot: 'shrine',    camp: 4, drawAs: 'castle' },
 ];
 // bonus de fouille : XP garanti + fiole selon la rareté du bâtiment
 const LOOT_BONUS = {
@@ -166,6 +224,16 @@ const LOOT_BONUS_HELL = {
   factory:   { xp: [80, 120], xpCh: 1, potionCh: 0.70 },
   gas:       { xp: [90, 140], xpCh: 1, potionCh: 0.80 },
   shrine:    { xp: [160, 260],xpCh: 1, potionCh: 1.0 },
+};
+// butin des Égouts et de l'Espace : encore plus généreux
+const LOOT_BONUS_DEEP = {
+  cabin:     { xp: [40, 65],  xpCh: 1, potionCh: 0.35 },
+  house:     { xp: [55, 85],  xpCh: 1, potionCh: 0.45 },
+  ruins:     { xp: [60, 105], xpCh: 1, potionCh: 0.50 },
+  warehouse: { xp: [85, 130], xpCh: 1, potionCh: 0.70 },
+  factory:   { xp: [110, 165],xpCh: 1, potionCh: 0.80 },
+  gas:       { xp: [120, 185],xpCh: 1, potionCh: 0.90 },
+  shrine:    { xp: [200, 340],xpCh: 1, potionCh: 1.0 },
 };
 
 export const RARITY_COLOR = { commun: '#9e9e9e', rare: '#4fc3f7', epique: '#ba68c4', legendaire: '#ffd740' };
@@ -441,7 +509,7 @@ function genWorld(idx) {
       }
       if (!pos) continue;
       // récompenses rares : XP et fiole selon la rareté du bâtiment
-      const bonus = (camp === 2 ? LOOT_BONUS_HELL : camp === 1 ? LOOT_BONUS_FROZEN : LOOT_BONUS)[type.loot] || { xp: [0, 0], xpCh: 0, potionCh: 0 };
+      const bonus = (camp >= 3 ? LOOT_BONUS_DEEP : camp === 2 ? LOOT_BONUS_HELL : camp === 1 ? LOOT_BONUS_FROZEN : LOOT_BONUS)[type.loot] || { xp: [0, 0], xpCh: 0, potionCh: 0 };
       const xpReward = rng() < bonus.xpCh ? ri(rng, bonus.xp[0], bonus.xp[1]) : 0;
       const potionReward = rng() < bonus.potionCh;
       const b = {

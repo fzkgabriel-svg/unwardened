@@ -35,6 +35,14 @@ const MUSIC_THEMES = {
   2: { // Les Enfers : phrygien sombre et rapide (Em7 – F – G7 – E majeur, ~136 BPM)
     chords: [[40, 52, 55, 59], [41, 53, 57, 60], [43, 55, 59, 62], [40, 52, 56, 59]],
     beat: 0.44, pad: 'sawtooth'
+  },
+  3: { // Les Égouts : mineur boueux et visqueux (Dm – Bb – F – C, ~100 BPM)
+    chords: [[38, 50, 53, 57], [34, 46, 50, 53], [41, 53, 57, 60], [48, 60, 64, 67]],
+    beat: 0.60, pad: 'triangle'
+  },
+  4: { // L'Espace : planant et mystérieux (Am9 – Fmaj7 – Cmaj7 – G, ~90 BPM)
+    chords: [[45, 57, 60, 64, 67], [41, 53, 57, 60, 64], [48, 60, 64, 67, 71], [43, 55, 59, 62, 67]],
+    beat: 0.66, pad: 'sine'
   }
 };
 const theme = () => MUSIC_THEMES[G.campaign] || MUSIC_THEMES[0];
@@ -456,6 +464,18 @@ export function sfxBossAtk(kind) {
     nz(t, 0.7, 0.3, 'lowpass', 260);
     osc('sine', 85, 30, t, 0.7, 0.3);
     nz(t + 0.08, 0.5, 0.16, 'bandpass', 350, 1.2);
+  } else if (kind === 'acid') {
+    // vase : bouillonnement grave + gouttes acides aiguës
+    nz(t, 0.6, 0.22, 'bandpass', 500, 1.4);
+    osc('sine', 140, 60, t, 0.6, 0.14);
+    osc('sine', 900, 1400, t + 0.12, 0.3, 0.05);
+    nz(t + 0.2, 0.4, 0.1, 'highpass', 2400);
+  } else if (kind === 'void') {
+    // trou noir : sirène descendante + claquement de marée
+    osc('sine', 800, 90, t, 0.7, 0.16);
+    osc('sine', 1200, 150, t + 0.05, 0.5, 0.08);
+    nz(t, 0.55, 0.18, 'bandpass', 900, 2.5);
+    nz(t + 0.15, 0.3, 0.1, 'highpass', 4200);
   } else { // shadow / défaut
     nz(t, 0.5, 0.2, 'bandpass', 380, 1);
     osc('square', 150, 55, t, 0.5, 0.11);

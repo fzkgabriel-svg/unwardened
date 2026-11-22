@@ -65,7 +65,7 @@ export function initInput() {
     }
     if (k === 'w' && G.state === 'playing') usePotion();
     if (k === 'e' && G.state === 'playing') tryInteract(); // fouiller un bâtiment / entrer dans un portail
-    if ((k === 'r') && G.state === 'victory' && G.campaign < 2) nextWorld();
+    if ((k === 'r') && G.state === 'victory' && G.campaign < 4) nextWorld();
     else if ((k === 'r') && (G.state === 'gameover' || G.state === 'victory')) playAgain();
     if (k === 'escape') {
       if (G.adminMenu) { G.adminMenu = false; sfxClick(); return; }
@@ -166,7 +166,7 @@ export function initInput() {
     if (G.state === 'gameover' || G.state === 'victory') {
       const btn = gameOverButtonAt(G.mouse.x, G.mouse.y);
       if (btn === 'replay') {
-        if (G.state === 'victory' && G.campaign < 2) nextWorld();
+        if (G.state === 'victory' && G.campaign < 4) nextWorld();
         else playAgain();
         sfxConfirm();
       }

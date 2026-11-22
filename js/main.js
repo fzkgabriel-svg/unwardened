@@ -1,9 +1,9 @@
 import { G, ctx, W, H, TAU, VERSION, finalWave, saveStats } from './state.js';
 import { initInput } from './input.js';
 import { spawnEnemy, spawnMinibossWave, spawnBossWave, spawnFinalBoss, damageEnemy, enemyTypes } from './enemies.js';
-import { doSlash, doSpin, doThrust, doUlt, doShield, doFireLaser, doFireHand, updateNuke, updateIceUlt, updateLasers, updateHands, updateVolcanoes } from './attacks.js';
+import { doSlash, doSpin, doThrust, doUlt, doShield, doFireLaser, doFireHand, updateNuke, updateIceUlt, updateLasers, updateHands, updateVolcanoes, updateSewerUlt, updateSpaceUlt } from './attacks.js';
 import { updateEffects, addDamageText, spawnParticles } from './effects.js';
-import { drawBackground, drawEnemy, drawDrops, drawPlayer, drawSlashArc, drawUltFlash, drawMushroom, drawBomber, drawEffects, drawFireZones, drawCraters, drawPortals, drawProjectiles, drawLightnings, drawGrain, drawClouds, dayNight, drawTerrain, drawBuildings, drawWorldPortals, drawObstacle, drawIceStorm, drawLasers, drawHands, drawVolcanoes } from './graphics.js';
+import { drawBackground, drawEnemy, drawDrops, drawPlayer, drawSlashArc, drawUltFlash, drawMushroom, drawBomber, drawEffects, drawFireZones, drawCraters, drawPortals, drawProjectiles, drawLightnings, drawGrain, drawClouds, dayNight, drawTerrain, drawBuildings, drawWorldPortals, drawObstacle, drawIceStorm, drawLasers, drawHands, drawVolcanoes, drawAcidZones, drawBlackHoles, drawVoidHole } from './graphics.js';
 import { checkAchievements } from './achievements.js';
 import { wearEquipment, addMaterial } from './inventory.js';
 import { drawHUD, drawAchToast, drawWarnToast } from './hud.js';
@@ -20,6 +20,10 @@ let lastTime = performance.now();
 
 // rotation des types de boss toutes les 5 vagues
 const bossCycle = ['boss', 'bossFoudre', 'bossGivre'];
+const bossCycleEgout = ['bossEgout', 'matriarche', 'bossEgout'];
+const bossCycleEspace = ['bossVoid', 'overlord', 'bossVoid'];
+// vagues intermédiaires des boss finaux (campagne -> vague du boss intermédiaire)
+const MID_BOSS_WAVE = { 2: 20, 3: 25, 4: 30 };
 
 // inflige des dégâts au joueur (contact, foudre, projectile de glace)
 function damagePlayer(dmg, slow = 1.0) {
@@ -230,7 +234,9 @@ function update(dt) {
     // vagues ×5 : un seul boss garanti, type en rotation
     if (G.wave % 5 === 0) {
       const camp = G.campaign;
-      const cycle = camp === 1 ? ['bossGlace', 'bossCryo', 'bossGlace']
+      const cycle = camp === 4 ? bossCycleEspace
+        : camp === 3 ? bossCycleEgout
+        : camp === 1 ? ['bossGlace', 'bossCryo', 'bossGlace']
         : camp === 2 ? ['bossEnf', 'demon', 'bossEnf']
         : bossCycle;
       const btype = cycle[(G.wave / 5 - 1) % cycle.length];
@@ -243,20 +249,24 @@ function update(dt) {
       const n = 2 + Math.floor(Math.random() * 3); // 2 à 4
       for (let i = 0; i < n; i++) {
         const a = Math.random() * TAU, d = 30 + Math.random() * 110;
-        const et = camp === 1 ? 'alpha'
+        const et = camp === 4 ? ['alien', 'alien', 'drone', 'tentacule'][Math.floor(Math.random() * 4)]
+          : camp === 3 ? ['rat', 'rat', 'crapaud', 'vase'][Math.floor(Math.random() * 4)]
+          : camp === 1 ? 'alpha'
           : camp === 2 ? ['imp', 'imp', 'hound', 'demon'][Math.floor(Math.random() * 4)]
           : 'brute';
         spawnEnemy(et, true, p.x + Math.cos(a) * d, p.y + Math.sin(a) * d, 2 + Math.random()); // portail visible 2-3s
       }
       addDamageText(p.x, p.y - 85,
-        camp === 1 ? 'ÉVÉNEMENT : MEUTE DES NEIGES !' : camp === 2 ? 'ÉVÉNEMENT : ESSAIM INFERNAL !' : 'ÉVÉNEMENT : BRUTES !',
-        camp === 1 ? '#4fc3f7' : camp === 2 ? '#ff7043' : '#ff7043');
+        camp === 4 ? 'ÉVÉNEMENT : ESSAIM ALIEN !' : camp === 3 ? 'ÉVÉNEMENT : ESSAIM D\'ÉGOUT !' : camp === 1 ? 'ÉVÉNEMENT : MEUTE DES NEIGES !' : camp === 2 ? 'ÉVÉNEMENT : ESSAIM INFERNAL !' : 'ÉVÉNEMENT : BRUTES !',
+        camp >= 1 ? (camp === 4 ? '#82b1ff' : camp === 3 ? '#aeea00' : camp === 1 ? '#4fc3f7' : '#ff7043') : '#ff7043');
     }
     // Enfers : le Baron surgit dès la vague 20 (boss intermédiaire,
-    // sans vider le champ — la vague finale reste à la vague 30)
-    if (G.campaign === 2 && G.wave === 20 &&
-        !G.enemies.some(e => e.type === 'finalBossEnfer')) {
-      spawnFinalBoss();
+    // sans vider le champ — la vague finale reste à la vague 30).
+    // Égouts : le Tyran dès la vague 25 (sur 35) · Espace : l'Abomination dès la vague 30 (sur 40)
+    const midWave = MID_BOSS_WAVE[G.campaign];
+    if (midWave && G.wave === midWave) {
+      const midType = G.campaign === 4 ? 'finalBossSpace' : G.campaign === 3 ? 'finalBossEgout' : 'finalBossEnfer';
+      if (!G.enemies.some(e => e.type === midType)) spawnFinalBoss();
     }
     // fin de la vague 50 : le portail dimensionnel apparaît
     checkWavePortal();
@@ -268,7 +278,8 @@ function update(dt) {
   // sécurité vague finale : le boss final (et sa barre de vie) doit être
   // présent pendant toute la vague — il apparaît dès son début
   if (G.state === 'playing' && G.wave >= finalWave() && !G.pendingVictory &&
-      !G.enemies.some(en => en.type === 'finalBoss' || en.type === 'finalBossGlace' || en.type === 'finalBossEnfer')) {
+      !G.enemies.some(en => en.type === 'finalBoss' || en.type === 'finalBossGlace' || en.type === 'finalBossEnfer'
+        || en.type === 'finalBossEgout' || en.type === 'finalBossSpace')) {
     spawnFinalBoss();
   }
 
@@ -284,11 +295,11 @@ function update(dt) {
     if (e.hitFlash > 0) e.hitFlash = Math.max(0, e.hitFlash - dt);
     // ambiance : boss et mini-boss dégagent des particules de leur élément
     if ((e.isBoss || e.isMini) && !e.bossDying && Math.random() < dt * 7) {
-      const hell = G.campaign === 2, frozen = G.campaign === 1;
+      const hell = G.campaign === 2, frozen = G.campaign === 1, sewer = G.campaign === 3, space = G.campaign === 4;
       spawnParticles(
         e.x + (Math.random() - 0.5) * e.r * 1.8,
         e.y - e.r * 0.4 - Math.random() * e.r * 0.8,
-        hell ? '#ff7043' : frozen ? '#b3e5fc' : e.isBoss ? '#ff5252' : '#ffb74d',
+        hell ? '#ff7043' : frozen ? '#b3e5fc' : sewer ? '#aeea00' : space ? '#b388ff' : e.isBoss ? '#ff5252' : '#ffb74d',
         1, 2
       );
     }
@@ -393,11 +404,30 @@ function update(dt) {
             life: 2.4, r: 9, dmg: e.damage * 0.85, color: '#ff7043', fire: true
           });
           spawnParticles(e.x, e.y - 6, '#ffab40', 5, 4);
+        } else if (e.attack === 'acid' && e.specialCd <= 0 && dist < 540) {
+          e.specialCd = 2.5 + Math.random() * 0.6;
+          const a = Math.atan2(p.y - e.y, p.x - e.x);
+          // bille de vase : projectiles verts lents, poison au contact
+          G.projectiles.push({
+            x: e.x, y: e.y, vx: Math.cos(a) * 4.2, vy: Math.sin(a) * 4.2,
+            life: 2.8, r: 8, dmg: e.damage * 0.8, color: '#aeea00', acid: true
+          });
+          spawnParticles(e.x, e.y - 6, '#aeea00', 5, 4);
+        } else if (e.attack === 'bolt' && e.specialCd <= 0 && dist < 560) {
+          e.specialCd = 2.2 + Math.random() * 0.5;
+          const a = Math.atan2(p.y - e.y, p.x - e.x);
+          // rayon stellaire : projectile violet très rapide
+          G.projectiles.push({
+            x: e.x, y: e.y, vx: Math.cos(a) * 6.2, vy: Math.sin(a) * 6.2,
+            life: 2.0, r: 7, dmg: e.damage * 0.9, color: '#b388ff', bolt: true
+          });
+          spawnParticles(e.x, e.y - 6, '#b388ff', 5, 4);
         }
       }
 
       // mouvements signature des boss finaux (hors attaques de base)
-      if (e.type === 'finalBoss' || e.type === 'finalBossGlace' || e.type === 'finalBossEnfer') updateFinalBoss(e, dt, p);
+      if (e.type === 'finalBoss' || e.type === 'finalBossGlace' || e.type === 'finalBossEnfer'
+        || e.type === 'finalBossEgout' || e.type === 'finalBossSpace') updateFinalBoss(e, dt, p);
     }
   }
 
@@ -524,16 +554,36 @@ function update(dt) {
   // Projectiles de glace du Boss Givre
   for (let i = G.projectiles.length - 1; i >= 0; i--) {
     const pr = G.projectiles[i];
+    // rayon de void : homing vers sa cible, explose à l'impact (dégâts ennemis)
+    if (pr.voidBolt) {
+      pr.life -= dt;
+      const tgt = pr.tx && G.enemies.includes(pr.tx) ? pr.tx : null;
+      if (tgt) {
+        const a = Math.atan2(tgt.y - pr.y, tgt.x - pr.x);
+        const sp = Math.min(9, Math.hypot(pr.vx, pr.vy) + 4 * dt);
+        pr.vx = Math.cos(a) * sp; pr.vy = Math.sin(a) * sp;
+        if (Math.hypot(tgt.x - pr.x, tgt.y - pr.y) < tgt.r + pr.r + 4) {
+          damageEnemy(tgt, pr.dmg, a);
+          spawnParticles(pr.x, pr.y, '#b388ff', 12, 5);
+          G.projectiles.splice(i, 1); continue;
+        }
+      }
+      pr.x += pr.vx; pr.y += pr.vy;
+      if (pr.life <= 0 || pr.x < -30 || pr.x > worldW() + 30 || pr.y < -30 || pr.y > worldH() + 30) {
+        G.projectiles.splice(i, 1);
+      }
+      continue;
+    }
     pr.x += pr.vx; pr.y += pr.vy; pr.life -= dt;
     if (pr.life <= 0 || pr.x < -30 || pr.x > worldW() + 30 || pr.y < -30 || pr.y > worldH() + 30) {
       G.projectiles.splice(i, 1); continue;
     }
     if (Math.hypot(p.x - pr.x, p.y - pr.y) < p.r + pr.r) {
       damagePlayer(pr.dmg, 1.5); // la glace ralentit bien le joueur
-      if (pr.hex) { // sort de la sorcière : applique le poison (3s, plancher 15%)
+      if (pr.hex || pr.acid) { // sort de la sorcière / bille de vase : poison (3s, plancher 15%)
         p.poisonT = 3;
         p.poisonDps = Math.max(p.poisonDps, pr.dmg * 0.5);
-        spawnParticles(p.x, p.y, '#76ff03', 12, 4);
+        spawnParticles(p.x, p.y, pr.acid ? '#aeea00' : '#76ff03', 12, 4);
       }
       spawnParticles(pr.x, pr.y, pr.hex ? '#e1bee7' : (pr.color || '#b3e5fc'), 10, 4);
       G.projectiles.splice(i, 1);
@@ -556,7 +606,7 @@ function update(dt) {
 
   // Régénération hors combat (3s sans dégâts) : le montant dépend de la
   // campagne — 15 PV/3s (Terres), 30 PV/3s (Terre Gelée), 50 PV/3s (Enfers)
-  const REGEN_PS = [15 / 3, 30 / 3, 50 / 3]; // PV par seconde
+  const REGEN_PS = [15 / 3, 30 / 3, 50 / 3, 65 / 3, 80 / 3]; // PV par seconde
   if (G.time - p.lastHurt > 3 && p.hp < p.maxHp) {
     p.hp = Math.min(p.maxHp, p.hp + REGEN_PS[G.campaign || 0] * dt);
   }
@@ -571,11 +621,15 @@ function update(dt) {
     G.stats.campaignDone[G.campaign] = true;
     if (G.campaign === 1) G.stats.iceUlt = true; // coffre : débloque la Pluie de Glace
     if (G.campaign === 2) G.stats.hellUlt = true; // trône : débloque la Colère Infernale
+    if (G.campaign === 3) G.stats.sewerUlt = true; // égoût royal : débloque la Déluge Acide
+    if (G.campaign === 4) G.stats.spaceUlt = true; // observatoire : débloque le Trou Noir
     saveStats();
     G.enemies.length = 0; G.drops.length = 0; G.fireZones.length = 0;
     G.portals.length = 0; G.projectiles.length = 0; G.lightnings.length = 0;
     G.iceWalls.length = 0; G.shockwaves.length = 0; G.iceSpikes.length = 0; G.skyIcicles.length = 0; G.snowPatches.length = 0; G.iceStorm = null;
     G.lasers.length = 0; G.hands.length = 0; G.volcanoes.length = 0; G.hellStorm = null;
+    G.acidZones.length = 0; G.blackHoles.length = 0;
+    G.acidRain = 0; G.voidStorm = 0;
     // salve de fête : or, violet, vert
     const cols = ['#ffd740', '#e040fb', '#69f0ae', '#40c4ff', '#ff8a65'];
     for (let i = 0; i < 6; i++) {
@@ -591,12 +645,16 @@ function update(dt) {
 
   updateFrozenEvents(rawDt); // tempêtes, avalanches et événements de la campagne 2
   updateHellEvents(rawDt);   // braises, essaims et événements des Enfers
+  updateSewerEvents(rawDt);  // vase, rats et événements des Égouts
+  updateSpaceEvents(rawDt);  // void, essaims et événements de l'Espace
   updateTutorial(dt); // étapes guidées du tutoriel (si actif)
   updateNuke(rawDt); // bombardier B-2 + bombe : cinématique en temps réel
   updateIceUlt(rawDt); // pluie de pics de glace (ultime campagne 2)
   updateLasers(rawDt); // faisceaux de feu du Titan de Feu
-  updateHands(rawDt);  // mains de feu en vol
   updateVolcanoes(rawDt); // volcans éruptifs
+  updateSewerUlt(rawDt);  // Déluge Acide (ultime campagne 3)
+  updateSpaceUlt(rawDt);  // Trou Noir (ultime campagne 4)
+  updateHands(rawDt);  // mains de feu en vol
   updateEffects(dt);
 }
 
@@ -748,6 +806,156 @@ function updateFrozenEvents(dt) {
   }
 }
 
+// ---------- ÉVÉNEMENTS DES ÉGOUTS ----------
+// dripping toxique, invasion de rats, geyser, cache de vase
+function updateSewerEvents(dt) {
+  if (G.campaign !== 3 || G.state !== 'playing' || G.tutorial) return;
+  const p = G.player;
+  // ambiance permanente : gouttes de vase qui tombent
+  if (Math.random() < dt * 10) {
+    spawnParticles(p.x + (Math.random() - 0.5) * 1200, p.y - 280 - Math.random() * 160,
+      Math.random() < 0.6 ? '#aeea00' : '#558b2f', 1, 3);
+  }
+  // pluie de vase en cours : décrément + gerbes vertes
+  if (G.acidRain > 0 && !G.sewerUltFlag) {
+    // (la pluie de l'ultime gère déjà son propre compteur ; ici rien)
+  }
+  // geyser : télégraphe 1,1 s puis zone acide au sol
+  if (G.sewerGeyser) {
+    const g = G.sewerGeyser;
+    g.t -= dt;
+    if (Math.random() < dt * 22) spawnParticles(g.x + (Math.random() - 0.5) * 70, g.y - 60 - Math.random() * 70, '#aeea00', 2, 4);
+    if (g.t <= 0) {
+      G.sewerGeyser = null;
+      G.acidZones.push({ x: g.x, y: g.y, r: 105, life: 8, maxLife: 8, tick: 0 });
+      G.rings.push({ x: g.x, y: g.y, r: 10, maxR: 140, life: 26, maxLife: 26, color: '#aeea00' });
+      G.screenShake = Math.max(G.screenShake, 12);
+      spawnParticles(g.x, g.y, '#aeea00', 34, 9);
+      spawnParticles(g.x, g.y, '#33691e', 20, 7);
+      addDamageText(p.x, p.y - 70, '☣ GÉYSER D\'ACIDE !', '#dce775');
+    }
+  }
+  // déclencheur périodique
+  G.sewerEventT -= dt;
+  if (G.sewerEventT > 0) return;
+  G.sewerEventT = 34 + Math.random() * 26;
+  const roll = Math.random();
+  if (roll < 0.25) {
+    // INVASION DE RATS : 4-6 rats géants sortent des grilles
+    const n = 4 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * TAU, d = 80 + Math.random() * 160;
+      spawnEnemy('rat', true, p.x + Math.cos(a) * d, p.y + Math.sin(a) * d, 1.5 + Math.random());
+    }
+    addDamageText(p.x, p.y - 60, '🐀 INVASION DE RATS !', '#ff8a80');
+    sfxBoss();
+  } else if (roll < 0.5) {
+    // GÉYSER : zone d'acide toxique sous le joueur
+    G.sewerGeyser = { x: p.x, y: p.y, t: 1.1 };
+    addDamageText(p.x, p.y - 60, '⚠ GÉYSER D\'ACIDE !', '#aeea00');
+    sfxWarn();
+  } else if (roll < 0.72) {
+    // NUAGE DE VASE : 8 s de gouttes acides toxiques
+    G.acidRain = 8;
+    addDamageText(p.x, p.y - 60, '☣ NUAGE DE VASE !', '#dce775');
+    G.warnToast = { name: 'Le plafond suinte — reste mobile', t: 4 };
+  } else {
+    // CACHE DES ÉGOUTS : matériaux + fiole au fond de l'égout
+    const loot = {};
+    const n = 3 + Math.floor(Math.random() * 4);
+    for (let i = 0; i < n; i++) {
+      const m = ['fer', 'cristal', 'or', 'essence'][Math.floor(Math.random() * 4)];
+      loot[m] = (loot[m] || 0) + (2 + Math.floor(Math.random() * 5));
+    }
+    for (const m in loot) { addMaterial(G.inv, m, loot[m]); G.runMats[m] = (G.runMats[m] || 0) + loot[m]; }
+    if (Math.random() < 0.5) { p.potions = Math.min(p.maxPotions, p.potions + 1); }
+    addDamageText(p.x, p.y - 60, '🗑 CACHE DES ÉGOUTS !', '#ffd740');
+    spawnParticles(p.x, p.y, '#aeea00', 20, 6);
+  }
+}
+
+// ---------- ÉVÉNEMENTS DE L'ESPACE ----------
+// débris, essaims aliens, micro-trou noir, cache spatial
+function updateSpaceEvents(dt) {
+  if (G.campaign !== 4 || G.state !== 'playing' || G.tutorial) return;
+  const p = G.player;
+  // ambiance permanente : poussière d'étoiles qui dérive
+  if (Math.random() < dt * 12) {
+    spawnParticles(p.x + (Math.random() - 0.5) * 1300, p.y + (Math.random() - 0.5) * 800,
+      Math.random() < 0.5 ? '#b388ff' : '#80d8ff', 1, 1.2);
+  }
+  // tempête de void en cours : décrément
+  if (G.voidStorm > 0) {
+    G.voidStorm -= dt;
+    if (G.voidStorm <= 0) addDamageText(p.x, p.y - 70, '✨ FIN DE LA TEMPÊTE DE VOID ✨', '#b388ff');
+  }
+  // micro-trou noir : télégraphe 1,3 s puis implosion
+  if (G.voidHole) {
+    const h = G.voidHole;
+    h.t -= dt;
+    if (Math.random() < dt * 24) {
+      const a = Math.random() * TAU, d = 90 + Math.random() * 60;
+      spawnParticles(h.x + Math.cos(a) * d, h.y + Math.sin(a) * d, '#b388ff', 1, 2);
+    }
+    if (h.t <= 0) {
+      G.voidHole = null;
+      G.blackHoles.push({ x: h.x, y: h.y, r: 90, life: 6, maxLife: 6, tick: 0, pull: 0.5 });
+      G.rings.push({ x: h.x, y: h.y, r: 10, maxR: 240, life: 24, maxLife: 24, color: '#b388ff' });
+      G.screenShake = Math.max(G.screenShake, 14);
+      spawnParticles(h.x, h.y, '#b388ff', 30, 9);
+      spawnParticles(h.x, h.y, '#e1bee7', 20, 8);
+      addDamageText(p.x, p.y - 70, '🕳 MICRO-TROU NOIR !', '#e1bee7');
+    }
+  }
+  // déclencheur périodique
+  G.spaceEventT -= dt;
+  if (G.spaceEventT > 0) return;
+  G.spaceEventT = 34 + Math.random() * 26;
+  const roll = Math.random();
+  if (roll < 0.25) {
+    // ESSAIM ALIEN : 3-5 créatures extraterrestres surgissent
+    const n = 3 + Math.floor(Math.random() * 3);
+    const types = ['alien', 'alien', 'drone', 'tentacule', 'cristal'];
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * TAU, d = 80 + Math.random() * 160;
+      spawnEnemy(types[Math.floor(Math.random() * types.length)], true,
+        p.x + Math.cos(a) * d, p.y + Math.sin(a) * d, 1.5 + Math.random());
+    }
+    addDamageText(p.x, p.y - 60, '👽 ESSAIM ALIEN !', '#ce93d8');
+    sfxBoss();
+  } else if (roll < 0.5) {
+    // MICRO-TROU NOIR : puits de gravité sous le joueur
+    G.voidHole = { x: p.x, y: p.y, t: 1.3 };
+    addDamageText(p.x, p.y - 60, '⚠ ANOMALIE GRAVITATIONNELLE !', '#b388ff');
+    sfxWarn();
+  } else if (roll < 0.72) {
+    // PLUIE DE MÉTÉORES : projectiles de void sur toute la zone
+    for (let i = 0; i < 10; i++) {
+      const a = Math.random() * TAU, d = Math.sqrt(Math.random()) * 320;
+      const x = clampW(p.x + Math.cos(a) * d), y = clampH(p.y + Math.sin(a) * d);
+      G.projectiles.push({
+        x, y, vx: (Math.random() - 0.5) * 2, vy: 5.5 + Math.random() * 2,
+        life: 2.6, r: 8, dmg: 30 * waveBonusLocal(), color: '#b388ff', bolt: true, fromUlt: true
+      });
+    }
+    addDamageText(p.x, p.y - 60, '☄ PLUIE DE MÉTÉORES !', '#80d8ff');
+    G.warnToast = { name: 'Les débris spatiaux pleuvent — reste mobile', t: 4 };
+  } else {
+    // CACHE ORBITAL : matériaux + fiole largués en orbite basse
+    const loot = {};
+    const n = 3 + Math.floor(Math.random() * 4);
+    for (let i = 0; i < n; i++) {
+      const m = ['cristal', 'essence', 'or', 'fer'][Math.floor(Math.random() * 4)];
+      loot[m] = (loot[m] || 0) + (2 + Math.floor(Math.random() * 5));
+    }
+    for (const m in loot) { addMaterial(G.inv, m, loot[m]); G.runMats[m] = (G.runMats[m] || 0) + loot[m]; }
+    if (Math.random() < 0.5) { p.potions = Math.min(p.maxPotions, p.potions + 1); }
+    addDamageText(p.x, p.y - 60, '🛰 CACHE ORBITAL !', '#ffd740');
+    spawnParticles(p.x, p.y, '#80d8ff', 20, 6);
+  }
+}
+function waveBonusLocal() { return 1 + (G.wave - 1) * 0.06; }
+
 // ---------- DESSIN ----------
 function draw() {
   ctx.save();
@@ -783,6 +991,9 @@ function draw() {
     drawIceStorm(); // pluie de pics de glace (coords monde)
     drawLasers();   // faisceaux de feu du Titan de Feu (coords monde)
     drawVolcanoes(); // volcans en éruption (coords monde)
+    drawAcidZones(); // flaques de la Déluge Acide
+    drawBlackHoles(); // trous noirs de l'ultime spatiale + événements
+    drawVoidHole();  // télégraphe du micro-trou noir
     drawHands();    // mains de feu en vol (coords monde, par-dessus tout)
   }
   ctx.restore();
@@ -819,7 +1030,7 @@ function draw() {
     ctx.shadowBlur = 0;
     ctx.font = 'italic 18px Georgia, serif';
     ctx.fillStyle = 'rgba(232,217,176,0.85)';
-    ctx.fillText(G.wave >= finalWave() ? (G.campaign === 1 ? 'Le Souverain de Glace émerge du blizzard...' : 'Le Seigneur Oublié émerge des profondeurs...') : 'La horde approche...', W / 2, H / 2 + 8);
+    ctx.fillText(G.wave >= finalWave() ? (G.campaign === 4 ? 'L\'Abomination Cosmique déchire le vide...' : G.campaign === 3 ? 'Le Tyran des Profondeurs sort de l\'acide...' : G.campaign === 2 ? 'Le Baron de l\'Enfer s\'élève des braises...' : G.campaign === 1 ? 'Le Souverain de Glace émerge du blizzard...' : 'Le Seigneur Oublié émerge des profondeurs...') : 'La horde approche...', W / 2, H / 2 + 8);
   }
   drawClouds(); // ouverture par les nuages au lancement
   drawBomber(); // B-2 + bombe en chute (coords écran, au-dessus du monde)
@@ -873,12 +1084,18 @@ function advanceBossPhase(e, phase) {
   e.phase = phase;
   const hell = e.type === 'finalBossEnfer';
   const frozen = e.type === 'finalBossGlace';
+  const ephase = e.type === 'finalBossEgout';
+  const esac = e.type === 'finalBossSpace';
   const names = hell
     ? ['', '🔥 FUREUR DU BARON', '☠️ RAGE DE L\'ENFER']
     : frozen
       ? ['', '❄ GLACIATION', '🔥 FUREUR GLACIALE']
-      : ['', '😡 COLÈRE ANCESTRALE', '💀 FUREUR DU ROI OUBLIÉ'];
-  const col = hell ? '#ffab00' : frozen ? '#80d8ff' : '#e040fb';
+      : ephase
+        ? ['', '☣ FURIE TOXIQUE', '👑 FUREUR DU TYRAN']
+        : esac
+          ? ['', '🌀 FUREUR COSMIQUE', '💀 ABOMINATION']
+          : ['', '😡 COLÈRE ANCESTRALE', '💀 FUREUR DU ROI OUBLIÉ'];
+  const col = hell ? '#ffab00' : frozen ? '#80d8ff' : ephase ? '#aeea00' : esac ? '#b388ff' : '#e040fb';
   addDamageText(G.player.x, G.player.y - 90, names[phase], col);
   addDamageText(e.x, e.y - e.r - 40, names[phase], col);
   // enragé : plus rapide, plus douloureux, attaque plus souvent
@@ -903,7 +1120,53 @@ function bossSuperAttack(e, phase) {
   const p = G.player;
   const hell = e.type === 'finalBossEnfer';
   const frozen = e.type === 'finalBossGlace';
+  const ephase = e.type === 'finalBossEgout';
+  const esac = e.type === 'finalBossSpace';
   const power = 1 + phase * 0.5; // plus mortel à la phase 3
+  if (ephase) {
+    // super attaque des égouts : geysers d'acide en cercle + gerbe de vases
+    const n = 8 + phase * 3;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * TAU + Math.random() * 0.4;
+      const d = 120 + Math.random() * 260;
+      const x = clampW(p.x + Math.cos(a) * d), y = clampH(p.y + Math.sin(a) * d);
+      G.acidZones.push({ x, y, r: 80 + Math.random() * 40, life: 8, maxLife: 8, tick: 0 });
+      G.rings.push({ x, y, r: 6, maxR: 60, life: 20, maxLife: 20, color: '#aeea00' });
+      spawnParticles(x, y, '#aeea00', 16, 7);
+    }
+    const base = Math.atan2(p.y - e.y, p.x - e.x);
+    for (let i = 0; i < 11; i++) {
+      const a = base + (i - 5) * 0.2;
+      G.projectiles.push({ x: e.x, y: e.y, vx: Math.cos(a) * 5.2, vy: Math.sin(a) * 5.2, life: 2.6, r: 8, dmg: e.damage * 0.75 * power, color: '#aeea00', acid: true });
+    }
+    G.shockwaves.push({ x: e.x, y: e.y, r: e.r, maxR: 420, speed: 13, dmg: e.damage * 1.35 * power, hit: false, color: '#aeea00', slow: 1.1 });
+    G.screenShake = Math.max(G.screenShake, 20);
+    G.screenFlash = Math.max(G.screenFlash, 0.6);
+    spawnParticles(e.x, e.y, '#aeea00', 50, 10);
+    spawnParticles(e.x, e.y, '#33691e', 30, 10);
+    return;
+  }
+  if (esac) {
+    // super attaque spatiale : mini-trous noirs + rayon de vide en spirale
+    for (let i = 0; i < 3 + phase; i++) {
+      const a = Math.random() * TAU, d = 100 + Math.random() * 240;
+      const x = clampW(p.x + Math.cos(a) * d), y = clampH(p.y + Math.sin(a) * d);
+      G.blackHoles.push({ x, y, r: 70, life: 5, maxLife: 5, tick: 0, pull: 0.6 });
+      spawnParticles(x, y, '#b388ff', 18, 8);
+    }
+    const base = Math.atan2(p.y - e.y, p.x - e.x);
+    for (let i = 0; i < 13; i++) {
+      const a = base + (i - 6) * 0.16;
+      G.projectiles.push({ x: e.x, y: e.y, vx: Math.cos(a) * 6.4, vy: Math.sin(a) * 6.4, life: 2.6, r: 9, dmg: e.damage * 0.8 * power, color: '#b388ff', bolt: true });
+    }
+    G.shockwaves.push({ x: e.x, y: e.y, r: e.r, maxR: 440, speed: 14, dmg: e.damage * 1.4 * power, hit: false, color: '#b388ff', slow: 0.9 });
+    G.rings.push({ x: e.x, y: e.y, r: e.r, maxR: 400, life: 36, maxLife: 36, color: '#b388ff' });
+    G.screenShake = Math.max(G.screenShake, 20);
+    G.screenFlash = Math.max(G.screenFlash, 0.65);
+    spawnParticles(e.x, e.y, '#7e57c2', 45, 10);
+    spawnParticles(e.x, e.y, '#e1bee7', 30, 11);
+    return;
+  }
   if (hell) {
     // super attaque : impacts de braise en cercle + rafale de boules de feu
     const n = 8 + phase * 3;
@@ -967,12 +1230,24 @@ function phasePace(e) {
 function startBossMove(e, p) {
   const hell = e.type === 'finalBossEnfer';
   const frozen = e.type === 'finalBossGlace';
+  const ephase = e.type === 'finalBossEgout';
+  const esac = e.type === 'finalBossSpace';
   const pace = phasePace(e);
   const roll = Math.random();
   const mk = (kind, t, extra = {}) => {
     e.bossMove = { kind, t: t * pace, dur: t * pace, tx: p.x, ty: p.y, ...extra };
   };
-  if (hell) {
+  if (ephase) {
+    if (roll < 0.30)      mk('acidrain', 1.1, { track: true }); // pluie de vases sur le joueur
+    else if (roll < 0.55) mk('acidgout', 0.9, { track: true }); // gerbe de projectiles acides
+    else if (roll < 0.80) mk('geysers', 1.0, { track: true });  // geysers autour du joueur
+    else                  mk('slam', 1.0, { track: true });     // onde de vase
+  } else if (esac) {
+    if (roll < 0.30)      mk('voidrain', 1.0, { track: true }); // pluies de bolts de void
+    else if (roll < 0.55) mk('blackhole', 1.0);                // mini-trou noir sous le boss
+    else if (roll < 0.80) mk('volley', 0.85, { track: true }); // éventail de bolts stellaires
+    else                  mk('slam', 0.95, { track: true });    // onde de choc gravitationnelle
+  } else if (hell) {
     if (roll < 0.30)      mk('meteor', 1.1, { track: true });  // pluie de météores sur le joueur
     else if (roll < 0.55) mk('volley', 0.9, { track: true });  // rafale de boules de feu
     else if (roll < 0.80) mk('slam', 1.0, { track: true });    // lame de braise
@@ -987,7 +1262,7 @@ function startBossMove(e, p) {
     else if (roll < 0.62) mk('slam', 1.0, { track: true });    // onde sismique
     else                  mk('volley', 0.8, { track: true });  // rafale d'ombres
   }
-  e.moveCd = (hell ? 4.2 : frozen ? 4.6 : 5.6) * pace;
+  e.moveCd = (ephase ? 4.4 : esac ? 4.8 : hell ? 4.2 : frozen ? 4.6 : 5.6) * pace;
 }
 
 function updateFinalBoss(e, dt, p) {
@@ -1003,7 +1278,8 @@ function updateFinalBoss(e, dt, p) {
   // fumée de préparation pendant le télégraphe
   if (m.t > 0 && Math.random() < dt * 22) {
     spawnParticles(m.tx + (Math.random() - 0.5) * 60, m.ty + (Math.random() - 0.5) * 40,
-      e.type === 'finalBossGlace' ? '#b3e5fc' : e.type === 'finalBossEnfer' ? '#ff7043' : '#8d6e63', 2, 3);
+      e.type === 'finalBossGlace' ? '#b3e5fc' : e.type === 'finalBossEnfer' ? '#ff7043'
+        : e.type === 'finalBossEgout' ? '#aeea00' : e.type === 'finalBossSpace' ? '#b388ff' : '#8d6e63', 2, 3);
   }
   if (m.t <= 0) { execBossMove(e, m, p); e.bossMove = null; }
 }
@@ -1011,9 +1287,70 @@ function updateFinalBoss(e, dt, p) {
 function execBossMove(e, m, p) {
   const hell = e.type === 'finalBossEnfer';
   const frozen = e.type === 'finalBossGlace';
-  // chaque mouvement signature a son timbre : feu, glace, ombres ou terre
-  sfxBossAtk(hell ? 'fire' : frozen ? 'ice' : 'shadow');
+  const ephase = e.type === 'finalBossEgout';
+  const esac = e.type === 'finalBossSpace';
+  // chaque mouvement signature a son timbre : feu, glace, ombres, terre, vase ou void
+  sfxBossAtk(ephase ? 'acid' : esac ? 'void' : hell ? 'fire' : frozen ? 'ice' : 'shadow');
   switch (m.kind) {
+    case 'acidrain': {
+      // pluie de vases acides autour du joueur
+      for (let i = 0; i < 12; i++) {
+        const a = Math.random() * TAU, d = Math.sqrt(Math.random()) * 300;
+        const x = clampW(m.tx + Math.cos(a) * d), y = clampH(m.ty + Math.sin(a) * d);
+        G.projectiles.push({
+          x, y: y - 420 - Math.random() * 160, vx: 0, vy: 7 + Math.random() * 3,
+          life: 2.6, r: 7, dmg: e.damage * 0.5, color: '#aeea00', acid: true
+        });
+      }
+      spawnParticles(m.tx, m.ty, '#aeea00', 20, 7);
+      G.screenShake = Math.max(G.screenShake, 8);
+      break;
+    }
+    case 'acidgout': {
+      // gerbe de 7 projectiles acides en éventail
+      const base = Math.atan2(m.ty - e.y, m.tx - e.x);
+      for (let i = -3; i <= 3; i++) {
+        const a = base + i * 0.2;
+        G.projectiles.push({
+          x: e.x, y: e.y, vx: Math.cos(a) * 5.0, vy: Math.sin(a) * 5.0,
+          life: 2.4, r: 8, dmg: e.damage * 0.7, color: '#aeea00', acid: true
+        });
+      }
+      spawnParticles(e.x, e.y - e.r * 0.4, '#aeea00', 14, 6);
+      break;
+    }
+    case 'geysers': {
+      // 5 geysers d'acide surgissent autour du joueur
+      for (let i = 0; i < 5; i++) {
+        const a = Math.random() * TAU, d = 80 + Math.random() * 220;
+        const x = clampW(m.tx + Math.cos(a) * d), y = clampH(m.ty + Math.sin(a) * d);
+        G.acidZones.push({ x, y, r: 75 + Math.random() * 35, life: 7, maxLife: 7, tick: 0 });
+        spawnParticles(x, y, '#aeea00', 14, 7);
+      }
+      G.screenShake = Math.max(G.screenShake, 10);
+      break;
+    }
+    case 'voidrain': {
+      // pluie de bolts de void depuis le ciel
+      for (let i = 0; i < 12; i++) {
+        const a = Math.random() * TAU, d = Math.sqrt(Math.random()) * 300;
+        const x = clampW(m.tx + Math.cos(a) * d), y = clampH(m.ty + Math.sin(a) * d);
+        G.projectiles.push({
+          x, y: y - 460 - Math.random() * 140, vx: 0, vy: 8.5 + Math.random() * 2.5,
+          life: 2.2, r: 7, dmg: e.damage * 0.55, color: '#b388ff', bolt: true
+        });
+      }
+      spawnParticles(m.tx, m.ty, '#b388ff', 18, 7);
+      G.screenShake = Math.max(G.screenShake, 9);
+      break;
+    }
+    case 'blackhole': {
+      // mini-trou noir sous le boss : aspire et déchire
+      G.blackHoles.push({ x: e.x, y: e.y, r: 85, life: 6, maxLife: 6, tick: 0, pull: 0.7 });
+      G.rings.push({ x: e.x, y: e.y, r: e.r, maxR: 200, life: 22, maxLife: 22, color: '#b388ff' });
+      spawnParticles(e.x, e.y, '#b388ff', 26, 8);
+      break;
+    }
     case 'meteor': {
       // pluie de météores : impacts de braise autour du joueur (choc = dégâts joueur)
       for (let i = 0; i < 10; i++) {

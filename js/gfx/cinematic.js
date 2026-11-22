@@ -14,6 +14,8 @@ export function drawClouds() {
   const camp = G.campaign || 0;
   if (camp === 1) { drawIceVeil(prog, ease); return; }
   if (camp === 2) { drawHellVeil(prog, ease); return; }
+  if (camp === 3) { drawSewerVeil(prog, ease); return; }
+  if (camp === 4) { drawSpaceVeil(prog, ease); return; }
 
   // voile assombrissant le monde pendant l'ouverture
   ctx.fillStyle = `rgba(5,8,15,${0.45 * (1 - prog)})`;
@@ -156,6 +158,102 @@ function drawHellVeil(prog, ease) {
     ctx.globalAlpha = (1 - prog * 0.55) * flick * 0.9;
     ctx.fillStyle = i % 4 === 0 ? '#ffd740' : '#ff7043';
     ctx.beginPath(); ctx.arc(fx, fy, 1.3 + ((i * 5) % 3) * 0.6, 0, TAU); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// campagne 4 (Les Égouts) : brume visqueuse sombre + bulles de vase
+function drawSewerVeil(prog, ease) {
+  ctx.fillStyle = `rgba(14,20,8,${0.62 * (1 - prog)})`;
+  ctx.fillRect(0, 0, W, H);
+  // halo central verdâtre
+  const glowR = 140 + prog * 480;
+  const gg = ctx.createRadialGradient(W / 2, H / 2, 10, W / 2, H / 2, glowR);
+  gg.addColorStop(0, `rgba(174,234,0,${0.4 * prog + 0.1})`);
+  gg.addColorStop(1, 'rgba(120,160,20,0)');
+  ctx.fillStyle = gg;
+  ctx.beginPath(); ctx.arc(W / 2, H / 2, glowR, 0, TAU); ctx.fill();
+  // nappes de vase qui s'écartent (bas vers haut, comme une eau qui se retire)
+  for (let i = 0; i < 9; i++) {
+    const depth = i % 3;
+    const stagger = depth * 0.12 + (i % 3) * 0.03;
+    const t = Math.max(0, Math.min(1, (prog - stagger) / (1 - stagger)));
+    if (t <= 0) continue;
+    const e2 = ease(t);
+    const dir = (i % 2 === 0 ? -1 : 1) * (depth === 2 ? 0.6 : 1);
+    const cx = W / 2 + dir * e2 * (500 + depth * 110) + Math.sin(i * 3.4) * 45 * (1 - e2);
+    const cy = H * 1.05 - ((i * 31) % 60) / 100 - e2 * (H * 0.5 + depth * 60);
+    const s = (0.7 + depth * 0.35) * (1 + e2 * 0.3);
+    const alpha = Math.sin(Math.min(1, t * 1.4) * Math.PI * 0.5) * (0.5 + prog * 0.3);
+    ctx.save();
+    ctx.translate(cx, cy); ctx.scale(s, s); ctx.globalAlpha = alpha * 0.85;
+    const ng = ctx.createRadialGradient(0, 0, 10, 0, 0, 115);
+    ng.addColorStop(0, 'rgba(60,80,20,0.95)');
+    ng.addColorStop(0.6, 'rgba(45,62,16,0.8)');
+    ng.addColorStop(1, 'rgba(25,35,8,0)');
+    ctx.fillStyle = ng;
+    ctx.beginPath(); ctx.ellipse(0, 0, 95, 44, 0, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(-50, 10, 48, 25, 0, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(50, 10, 48, 25, 0, 0, TAU); ctx.fill();
+    ctx.restore();
+  }
+  // bulles de vase qui montent
+  for (let i = 0; i < 45; i++) {
+    const fx = (i * 197.3) % W;
+    const rise = prog * H * 1.15 * (0.6 + ((i * 13) % 10) / 12);
+    const fy = H + 20 - ((i * 71.7 + rise) % (H + 80));
+    const flick = 0.4 + Math.sin(prog * 34 + i * 1.7) * 0.6;
+    ctx.globalAlpha = (1 - prog * 0.55) * flick * 0.85;
+    ctx.fillStyle = i % 3 === 0 ? '#dce775' : '#7cb342';
+    ctx.beginPath(); ctx.arc(fx, fy, 1.6 + ((i * 7) % 3) * 0.7, 0, TAU); ctx.fill();
+    ctx.strokeStyle = `rgba(220,231,117,${0.5 * flick})`; ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.arc(fx, fy, 3 + ((i * 3) % 3), 0, TAU); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// campagne 5 (L'Espace) : champ d'étoiles + nébuleuse qui se dissipe
+function drawSpaceVeil(prog, ease) {
+  ctx.fillStyle = `rgba(6,4,20,${0.6 * (1 - prog)})`;
+  ctx.fillRect(0, 0, W, H);
+  // nébuleuse centrale violette qui s'estompe
+  const glowR = 160 + prog * 520;
+  const gg = ctx.createRadialGradient(W / 2, H / 2, 10, W / 2, H / 2, glowR);
+  gg.addColorStop(0, `rgba(123,77,160,${0.4 * prog + 0.08})`);
+  gg.addColorStop(0.6, `rgba(60,30,110,${0.18 * prog})`);
+  gg.addColorStop(1, 'rgba(20,8,50,0)');
+  ctx.fillStyle = gg;
+  ctx.beginPath(); ctx.arc(W / 2, H / 2, glowR, 0, TAU); ctx.fill();
+  // champ d'étoiles scintillant (fixe, s'atténue avec prog)
+  for (let i = 0; i < 130; i++) {
+    const fx = (i * 137.5) % W;
+    const fy = (i * 89.3) % H;
+    const tw = 0.4 + Math.sin(prog * 6 + i * 2.1) * 0.6;
+    ctx.globalAlpha = (1 - prog * 0.7) * Math.max(0.1, tw);
+    ctx.fillStyle = i % 5 === 0 ? '#e1bee7' : i % 3 === 0 ? '#80d8ff' : '#ffffff';
+    ctx.beginPath(); ctx.arc(fx, fy, 0.8 + ((i * 7) % 4) * 0.4, 0, TAU); ctx.fill();
+  }
+  // poussière spatiale qui dérive vers les bords
+  for (let i = 0; i < 10; i++) {
+    const depth = i % 3;
+    const stagger = depth * 0.12 + (i % 3) * 0.03;
+    const t = Math.max(0, Math.min(1, (prog - stagger) / (1 - stagger)));
+    if (t <= 0) continue;
+    const e2 = ease(t);
+    const dir = (i % 2 === 0 ? -1 : 1) * (depth === 2 ? 0.6 : 1);
+    const cx = W / 2 + dir * e2 * (500 + depth * 100) + Math.sin(i * 2.9) * 40 * (1 - e2);
+    const cy = H * (0.15 + ((i * 43) % 70) / 100) + (depth - 1) * 40;
+    const s = (0.6 + depth * 0.4) * (1 + e2 * 0.25);
+    const alpha = Math.sin(Math.min(1, t * 1.4) * Math.PI * 0.5) * (0.4 + prog * 0.25);
+    ctx.save();
+    ctx.translate(cx, cy); ctx.scale(s, s); ctx.globalAlpha = alpha;
+    const ng = ctx.createRadialGradient(0, 0, 8, 0, 0, 90);
+    ng.addColorStop(0, 'rgba(179,157,219,0.5)');
+    ng.addColorStop(0.6, 'rgba(100,60,180,0.35)');
+    ng.addColorStop(1, 'rgba(60,30,110,0)');
+    ctx.fillStyle = ng;
+    ctx.beginPath(); ctx.ellipse(0, 0, 85, 36, i * 0.7, 0, TAU); ctx.fill();
+    ctx.restore();
   }
   ctx.globalAlpha = 1;
 }

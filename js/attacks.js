@@ -6,6 +6,8 @@ import { sfxSlash, sfxThrust, sfxSpin, sfxShield, sfxNuke, sfxBossAtk } from './
 
 // les attaques gagnent en efficacité avec la vague : +6% de dégâts par vague
 function waveBonus() { return 1 + (G.wave - 1) * 0.06; }
+const clampW = (v) => Math.max(40, Math.min(worldW() - 40, v));
+const clampH = (v) => Math.max(40, Math.min(worldH() - 40, v));
 
 export function playerAngle() {
   // la souris est en coords écran : on la repasse en coords monde via la caméra
@@ -124,6 +126,10 @@ export function doUlt() {
   if ((G.stats.ultSel || 'nuke') === 'glace' && G.stats.iceUlt) { doIceUlt(); return; }
   // Colère Infernale : ultime débloquée en finissant Les Enfers
   if ((G.stats.ultSel || 'nuke') === 'hell' && G.stats.hellUlt) { doHellUlt(); return; }
+  // Déluge Acide : ultime débloquée en finissant Les Égouts
+  if ((G.stats.ultSel || 'nuke') === 'sewer' && G.stats.sewerUlt) { doSewerUlt(); return; }
+  // Trou Noir : ultime débloquée en finissant L'Espace
+  if ((G.stats.ultSel || 'nuke') === 'space' && G.stats.spaceUlt) { doSpaceUlt(); return; }
   // BOMBE ATOMIQUE : un B-2 Spirit traverse l'écran et largue la bombe
   // au-dessus du joueur ; elle explose quand l'avion a quitté la carte
   if (G.bomber) return; // une frappe est déjà en cours
@@ -613,4 +619,189 @@ function explodeNuke(x, y) {
     }
   }
   addDamageText(x, y - 60, '☢ ARMAGEDDON', '#ffd740');
+}
+
+// ---------- ULTIME : DÉLUGE ACIDE (trône du Tyran des Profondeurs) ----------
+// Les égouts se vident sur le monde : geysers d'acide jaillissent autour du
+// joueur, la pluie de vase tombe du plafond et des flaques toxiques persistent.
+export function doSewerUlt() {
+  const p = G.player;
+  p.ultCharge = 0;
+  G.ultsUsed++;
+  G.sewerUlts = (G.sewerUlts || 0) + 1;
+  // gerbe initiale : geysers d'acide en couronne autour du joueur
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * TAU + Math.random() * 0.3;
+    const d = 70 + Math.random() * 170;
+    const x = Math.max(50, Math.min(worldW() - 50, p.x + Math.cos(a) * d));
+    const y = Math.max(50, Math.min(worldH() - 50, p.y + Math.sin(a) * d));
+    G.acidZones.push({ x, y, r: 85 + Math.random() * 45, life: 14, maxLife: 14, tick: Math.random() * 0.4 });
+    G.rings.push({ x, y, r: 6, maxR: 70, life: 22, maxLife: 22, color: '#aeea00' });
+    spawnParticles(x, y, '#aeea00', 22, 8);
+    spawnParticles(x, y, '#33691e', 14, 7); // vase sombre
+  }
+  G.acidRain = 12; // 12 s de pluie de vase
+  G.screenShake = Math.max(G.screenShake, 14);
+  G.screenFlash = Math.max(G.screenFlash, 0.4);
+  addDamageText(p.x, p.y - 90, '☣️ DÉLUGE ACIDE ☣️', '#dce775');
+}
+
+export function updateSewerUlt(dt) {
+  const p = G.player;
+  // pluie de vase : gouttelettes acides tombent du plafond
+  if (G.acidRain > 0) {
+    G.acidRain -= dt;
+    if (Math.random() < dt * 22) {
+      const x = p.x + (Math.random() - 0.5) * 1200;
+      const y = p.y - 320 - Math.random() * 200;
+      G.projectiles.push({
+        x, y, vx: (Math.random() - 0.5) * 0.8, vy: 7.5 + Math.random() * 2.5,
+        life: 2.4, r: 7, dmg: p.attackDamage * 0.9 * waveBonus(),
+        color: '#aeea00', acid: true, fromUlt: true
+      });
+    }
+    // nouveaux geysers sporadiques pendant la pluie
+    if (Math.random() < dt * 2.2) {
+      const a = Math.random() * TAU, d = 120 + Math.random() * 240;
+      const x = Math.max(50, Math.min(worldW() - 50, p.x + Math.cos(a) * d));
+      const y = Math.max(50, Math.min(worldH() - 50, p.y + Math.sin(a) * d));
+      G.acidZones.push({ x, y, r: 70 + Math.random() * 50, life: 11, maxLife: 11, tick: 0 });
+      spawnParticles(x, y, '#aeea00', 18, 8);
+    }
+    if (G.acidRain <= 0) addDamageText(p.x, p.y - 70, '🧪 FIN DE LA PLUIE DE VASE', '#dce775');
+  }
+  // flaques d'acide : dégâts continus + poison, puis résorption
+  for (let i = G.acidZones.length - 1; i >= 0; i--) {
+    const z = G.acidZones[i];
+    z.life -= dt; z.tick -= dt;
+    if (Math.random() < dt * 14) {
+      G.particles.push({
+        x: z.x + (Math.random() - 0.5) * z.r * 1.4, y: z.y + (Math.random() - 0.5) * z.r * 0.6,
+        vx: (Math.random() - 0.5) * 0.6, vy: -0.8 - Math.random() * 1.4,
+        life: 26, maxLife: 26,
+        color: Math.random() < 0.6 ? '#aeea00' : '#558b2f',
+        r: 2 + Math.random() * 2.6
+      });
+    }
+    if (z.tick <= 0) {
+      z.tick = 0.35;
+      const dmg = p.attackDamage * 1.5 * waveBonus();
+      for (const e of [...G.enemies]) {
+        if (Math.hypot(e.x - z.x, e.y - z.y) < z.r + e.r) {
+          const red = e.type === 'finalBossEgout' ? 0.3 : e.type === 'finalBoss' || e.type === 'finalBossGlace' || e.type === 'finalBossEnfer' || e.type === 'finalBossSpace' ? 0.5 : 1;
+          damageEnemy(e, dmg * red, Math.atan2(e.y - z.y, e.x - z.x));
+          e.slow = Math.max(e.slow || 0, 0.45); // dissolution
+          e.poisonT = Math.max(e.poisonT || 0, 2); // le vase empoisonne
+        }
+      }
+    }
+    if (z.life <= 0) G.acidZones.splice(i, 1);
+  }
+}
+
+// ---------- ULTIME : TROU NOIR (trône de l'Abomination Cosmique) ----------
+// Un puits de gravité s'ouvre sur le joueur : les ennemis sont aspirés vers
+// lui, déchirés par les forces de marée, puis le trou s'effondre en explosion.
+export function doSpaceUlt() {
+  const p = G.player;
+  p.ultCharge = 0;
+  G.ultsUsed++;
+  G.spaceUlts = (G.spaceUlts || 0) + 1;
+  G.voidStorm = 10; // 10 s de tempête de void
+  G.blackHoles.push({ x: p.x, y: p.y, r: 120, life: 10, maxLife: 10, tick: 0, pull: 0 });
+  G.screenShake = Math.max(G.screenShake, 16);
+  G.screenFlash = Math.max(G.screenFlash, 0.45);
+  addDamageText(p.x, p.y - 90, '🕳️ TROU NOIR 🕳️', '#b388ff');
+}
+
+export function updateSpaceUlt(dt) {
+  const p = G.player;
+  // tempête de void : micro-trous noirs orbitaux qui tirent des rayons
+  if (G.voidStorm > 0) {
+    G.voidStorm -= dt;
+    if (Math.random() < dt * 16) {
+      // rayon de vide : projectile violet homing vers un ennemi proche
+      const foes = G.enemies.filter(e => !e.bossDying);
+      if (foes.length) {
+        const e = foes[Math.floor(Math.random() * foes.length)];
+        const a = Math.random() * TAU;
+        G.projectiles.push({
+          x: p.x + Math.cos(a) * 320, y: p.y + Math.sin(a) * 320,
+          vx: 0, vy: 0, life: 1.4, r: 8,
+          dmg: p.attackDamage * 1.1 * waveBonus(), color: '#b388ff',
+          voidBolt: true, tx: e, home: 5.5
+        });
+      }
+    }
+    if (Math.random() < dt * 5) spawnParticles(p.x + (Math.random() - 0.5) * 700, p.y + (Math.random() - 0.5) * 500, '#7e57c2', 2, 3);
+    if (G.voidStorm <= 0) addDamageText(p.x, p.y - 70, '✨ FIN DE LA TEMPÊTE DE VOID ✨', '#b388ff');
+  }
+  // trous noirs : aspiration + dégâts de marée, puis implosion
+  for (let i = G.blackHoles.length - 1; i >= 0; i--) {
+    const h = G.blackHoles[i];
+    h.life -= dt; h.tick -= dt; h.pull = Math.min(1, h.pull + dt * 0.5);
+    // disque d'accrétion : particules spiralées aspirées
+    if (Math.random() < dt * 40) {
+      const a = Math.random() * TAU, d = 150 + Math.random() * 90;
+      G.particles.push({
+        x: h.x + Math.cos(a) * d, y: h.y + Math.sin(a) * d,
+        vx: -Math.cos(a) * (2 + h.pull * 4) + Math.sin(a) * 1.5,
+        vy: -Math.sin(a) * (2 + h.pull * 4) - Math.cos(a) * 1.5,
+        life: 30, maxLife: 30,
+        color: Math.random() < 0.6 ? '#b388ff' : '#80d8ff',
+        r: 1.5 + Math.random() * 2.2
+      });
+    }
+    // aspiration des ennemis (les boss finaux résistent)
+    for (const e of [...G.enemies]) {
+      if (e.bossDying || e.graceT > 0) continue;
+      const dx = h.x - e.x, dy = h.y - e.y;
+      const d = Math.hypot(dx, dy);
+      if (d > 30 && d < 420) {
+        const f = (e.isBoss || e.isMini ? 0.15 : 1) * (1 - d / 460) * 6 * h.pull;
+        e.x = clampW(e.x + (dx / d) * f * dt * 60 * 0.16);
+        e.y = clampH(e.y + (dy / d) * f * dt * 60 * 0.16);
+      }
+    }
+    // dégâts de marée : tout ce qui est aspiré se fait déchirer
+    if (h.tick <= 0) {
+      h.tick = 0.3;
+      const dmg = p.attackDamage * 2.4 * waveBonus();
+      for (const e of [...G.enemies]) {
+        const d = Math.hypot(e.x - h.x, e.y - h.y);
+        if (d < 130 + e.r) {
+          const red = e.type === 'finalBossSpace' ? 0.22 : e.type === 'finalBoss' || e.type === 'finalBossGlace' || e.type === 'finalBossEnfer' || e.type === 'finalBossEgout' ? 0.45 : 1;
+          damageEnemy(e, dmg * red, Math.atan2(e.y - h.y, e.x - h.x));
+        }
+      }
+    }
+    // implosion : le trou s'effondre en déflagration
+    if (h.life <= 0) {
+      G.blackHoles.splice(i, 1);
+      const R = 380;
+      G.rings.push({ x: h.x, y: h.y, r: 20, maxR: R, life: 30, maxLife: 30, color: '#b388ff' });
+      G.rings.push({ x: h.x, y: h.y, r: 10, maxR: R * 0.65, life: 24, maxLife: 24, color: '#e1bee7' });
+      G.screenShake = Math.max(G.screenShake, 24);
+      G.screenFlash = Math.max(G.screenFlash, 0.6);
+      const cols = ['#b388ff', '#7e57c2', '#e1bee7', '#ffffff', '#80d8ff'];
+      for (let k = 0; k < 90; k++) {
+        const a = Math.random() * TAU, s = 5 + Math.random() * 16;
+        G.particles.push({
+          x: h.x, y: h.y, vx: Math.cos(a) * s, vy: Math.sin(a) * s,
+          life: 36 + Math.random() * 26, maxLife: 62,
+          color: cols[k % cols.length], r: 2 + Math.random() * 3.4
+        });
+      }
+      sfxBossAtk('void');
+      const dmg = p.attackDamage * 5 * waveBonus();
+      for (const e of [...G.enemies]) {
+        const d = Math.hypot(e.x - h.x, e.y - h.y);
+        if (d < R + e.r) {
+          const red = e.type === 'finalBossSpace' ? 0.3 : e.type.startsWith('finalBoss') ? 0.5 : 1;
+          damageEnemy(e, dmg * red, Math.atan2(e.y - h.y, e.x - h.x));
+        }
+      }
+      addDamageText(h.x, h.y - 50, '💥 EFFONDREMENT !', '#e1bee7');
+    }
+  }
 }

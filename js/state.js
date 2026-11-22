@@ -12,10 +12,12 @@ export const ctx = canvas.getContext('2d');
 ctx.scale(SS, SS);
 export const W = 1200, H = 640;
 export const TAU = Math.PI * 2;
-export const VERSION = '3.1.0';
+export const VERSION = '3.2.0';
 export const FINAL_WAVE = 20; // vague du boss final (campagne 1) // incrémenter à chaque mise à jour du jeu
-// campagne 2 (The Frozen Land) -> 25 vagues, campagne 3 (Les Enfers) -> 30 vagues
-export function finalWave() { return G.campaign === 2 ? 30 : G.campaign === 1 ? 25 : FINAL_WAVE; }
+// vagues finales : campagne 2 -> 25, 3 -> 30, 4 (Égouts) -> 35, 5 (Espace) -> 40
+export function finalWave() {
+  return G.campaign === 4 ? 40 : G.campaign === 3 ? 35 : G.campaign === 2 ? 30 : G.campaign === 1 ? 25 : FINAL_WAVE;
+}
 
 export const G = {
   state: 'menu', // menu | intro | playing | paused | dying | gameover | victory
@@ -73,6 +75,8 @@ export const G = {
   lasers: [],      // faisceaux de feu du Titan de Feu {x, y, angle, len, w, life, tick}
   hands: [],       // mains de feu en vol vers leur cible {x, y, tx, ty, t, dur}
   volcanoes: [],   // volcans éruptifs créés par les mains de feu {x, y, r, life, tick, eruptT, burst}
+  acidZones: [],   // flaques d'acide de la Déluge Acide {x, y, r, life, maxLife, tick}
+  blackHoles: [],  // trous noirs de l'ultime spatiale {x, y, r, life, maxLife, tick}
   iceWalls: [],    // murs de glace du Souverain {x, y, r, life} : obstacles temporaires
   shockwaves: [],  // ondes de choc au sol {x, y, r, maxR, speed, dmg, hit, color, slow}
 
@@ -101,7 +105,7 @@ export const G = {
   nightTime: 0,      // temps passé la nuit (succès)
   typeKills: {},     // ennemis tués par type (succès)
   ultsUsed: 0,       // bombes atomiques utilisées (succès)
-  nukeUlts: 0, iceUlts: 0, hellUlts: 0, // compteurs par type d'ultime (succès par monde)
+  nukeUlts: 0, iceUlts: 0, hellUlts: 0, sewerUlts: 0, spaceUlts: 0, // compteurs par type d'ultime (succès par monde)
   spinUsed: 0,       // attaques rotatives effectuées (tutoriel)
   shieldUsed: 0,     // dômes de bouclier utilisés (tutoriel)
   achToast: null,    // notification de succès débloqué
@@ -128,11 +132,17 @@ export const G = {
   ashRain: 0,      // pluie de cendres active (secondes restantes, campagne 2)
   hellEruption: null, // éruption en cours {x, y, t, done} : télégraphe puis zone de feu
   hellEventT: 26,  // compte à rebours du prochain événement infernal
+  sewerEventT: 24, // compte à rebours du prochain événement des égouts
+  spaceEventT: 24, // compte à rebours du prochain événement spatial
+  sewerGeyser: null, // geyser d'acide en télégraphe (campagne 3)
+  voidHole: null,    // micro-trou noir en télégraphe (campagne 4)
+  acidRain: 0,     // pluie acide active (secondes restantes, campagne 3)
+  voidStorm: 0,    // tempête de void active (secondes restantes, campagne 4)
   charInput: null,   // saisie du nom d'un nouveau personnage {slot, text}
   adminInput: null,  // saisie du mot de passe admin {text}
   resetConfirm: -1,  // slot en attente de confirmation de reset (-1 = aucune)
   durWarn: null,    // popup pré-partie : équipement <20% de durabilité [noms]
-  campaignSel: 0,   // campagne sélectionnée sur la carte (0, 1 ou 2)
+  campaignSel: 0,   // campagne sélectionnée sur la carte (0 à 4)
 
   // statistiques (persistées en localStorage, par personnage)
   stats: (() => {
