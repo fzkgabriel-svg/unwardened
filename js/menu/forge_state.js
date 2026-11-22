@@ -587,7 +587,7 @@ export function heroEquipRows(L) {
   const CL = heroColLayout(L);
   const col = CL.left;
   const x = col.x + 10, w = col.w - 20;
-  const y0 = col.y + 56, rh = 46, gap = 4;
+  const y0 = col.y + 56, rh = 38, gap = 4; // hauteur réduite pour éviter empilement
   return ['weapon', 'armor', 'helm', 'gloves', 'charm', 'boots'].map((slot, i) => ({
     slot, x, y: y0 + i * (rh + gap), w, h: rh
   }));

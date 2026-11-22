@@ -17,10 +17,13 @@ import { invCells, invUI, invVisible, INV_CATS, forgeScroll, forgeScrollMax, ite
 // bandeau bas : sélecteur d'ULTIME (gauche) + PROGRESSION (droite)
 
 // en-tête de section : surtitre doré + filet
-function secHead(text, x, y, w) {
+function secHead(text, x, y, w, align = 'left') {
+  const prevAlign = ctx.textAlign;
+  ctx.textAlign = align;
   overline(text, x, y, C_GOLD);
   ctx.strokeStyle = 'rgba(212,176,98,0.28)'; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(x, y + 7); ctx.lineTo(x + w, y + 7); ctx.stroke();
+  ctx.textAlign = prevAlign;
 }
 
 // petit chip de sous-onglet (partagé dessin)
@@ -53,7 +56,7 @@ export function drawHeroPaperdoll(L) {
 function drawEquipList(L, col) {
   const rows = heroEquipRows(L);
   panel(col.x + 4, col.y, col.w - 8, col.h);
-  secHead('ÉQUIPEMENT', col.x + 14, col.y + 16, col.w - 28);
+  secHead('ÉQUIPEMENT', col.x + col.w / 2, col.y + 16, col.w - 28, 'center');
   rows.forEach(r => {
     const id = G.inv.equip[r.slot], it = id && ITEMS[id];
     const eq = !!it;
