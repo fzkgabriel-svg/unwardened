@@ -21,5 +21,5 @@ Jeu HTML5 Canvas / JavaScript ES modules. Servi en HTTP (ES modules incompatible
 - `js/inventory.js` : mats, items, craft, équipement, durabilité (`getDur`, `wearEquipment`, `repairItem`).
 - `js/achievements.js` : 34 succès, raretés, récompenses.
 - `js/tutorial.js` : tutoriel 12 étapes (retour menu, Entrée = étape suivante, cooldown 2,5 s).
-- `js/hud.js` : HUD, minimap (bâtiments = brouillard de guerre, lacs, obstacles).
+- `js/hud.js` : orchestrateur HUD ; sous-modules `js/hud/` (frame, profile, skills, boss, map, equip, toasts) — HUD médiéval fantastique. Minimap : bâtiments = brouillard de guerre, lacs, obstacles.
 - `js/main.js` : game loop, collisions, update.
