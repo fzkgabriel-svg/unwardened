@@ -611,8 +611,8 @@ function drawDetail(L, inv, t) {
   // coût total de la sélection (colonne de gauche, sous le prix unitaire)
   ctx.fillStyle = afford ? '#69f0ae' : '#ff8a80'; ctx.font = 'bold 12.5px Consolas, monospace';
   ctx.fillText(`×${qty} = ${cost} ◆`, d.x + 118, d.y + 112);
-  // sélecteur quantité
-  const qy = d.y + d.h / 2 + 8;
+  // sélecteur quantité (texte centré verticalement dans la casse)
+  const qy = d.y + d.h / 2 + 24;
   ctx.fillStyle = 'rgba(0,0,0,0.35)'; roundRect(L.minus.x - 8, L.minus.y - 4, L.plus.x + L.plus.w - L.minus.x + 16, L.minus.h + 8, 9); ctx.fill();
   const mq = inR(L.minus, G.mouse.x, G.mouse.y), pq = inR(L.plus, G.mouse.x, G.mouse.y);
   ctx.fillStyle = mq ? '#fff' : C_MUT; ctx.font = 'bold 15px Inter, sans-serif'; ctx.textAlign = 'center';
