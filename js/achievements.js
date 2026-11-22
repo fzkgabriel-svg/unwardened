@@ -1,5 +1,5 @@
 import { G, saveStats } from './state.js';
-import { addMaterial } from './inventory.js';
+import { addMaterial, loadInv } from './inventory.js';
 import { storeKey } from './chars.js';
 
 // Succès persistés par personnage (localStorage 'rpg2d_c{slot}_achievements')
@@ -261,14 +261,19 @@ export function unclaimedInTab(tab = -1) {
 // admin : débloque TOUT — toutes les campagnes, les ultimes et les succès
 // (avec leurs récompenses en matériaux réclamées d'office)
 export function adminUnlockAll() {
-  for (const a of ACHIEVEMENTS) {
-    if (!unlocked[a.id]) unlocked[a.id] = { claimed: false };
-    claimReward(a.id);
-  }
-  save(unlocked);
+  // campagnes + ultimes d'abord : sauvegardés même si une récompense échoue
   G.stats = G.stats || {};
   G.stats.campaignDone = { 0: true, 1: true, 2: true, 3: true, 4: true };
   G.stats.iceUlt = true;
   G.stats.hellUlt = true;
   saveStats();
+  // succès + matériaux : chaque bloc est isolé pour qu'un échec n'annule pas le reste
+  if (!G.inv) { try { G.inv = loadInv(); } catch (e) {} }
+  for (const a of ACHIEVEMENTS) {
+    try {
+      if (!unlocked[a.id]) unlocked[a.id] = { claimed: false };
+      claimReward(a.id);
+    } catch (e) {}
+  }
+  save(unlocked);
 }

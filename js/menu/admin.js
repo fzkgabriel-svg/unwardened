@@ -25,7 +25,7 @@ export function adminClickAt(x, y) {
   }
   // boutons « tout débloquer » et « sans cooldowns »
   const ub = { x: W / 2 - 280, y: H - 112, w: 270, h: 44 };
-  if (inR(ub, x, y)) { adminUnlockAll(); return 'unlockall'; }
+  if (inR(ub, x, y)) { adminUnlockAll(); G.adminMsg = { text: 'TOUT DÉBLOQUÉ !', t: G.time }; return 'unlockall'; }
   const nb = { x: W / 2 + 10, y: H - 112, w: 270, h: 44 };
   if (inR(nb, x, y)) { G.adminNoCd = !G.adminNoCd; return 'nocd'; }
   // reset individuel d'un slot
@@ -139,6 +139,18 @@ export function drawAdmin() {
   drawUtilBtn({ x: W / 2 + 10, y: H - 112, w: 270, h: 44 },
     G.adminNoCd ? '⚡ COOLDOWNS : ON' : '⚡ COOLDOWNS : OFF',
     'clic = activer / désactiver', G.adminNoCd ? '#69f0ae' : '#78909c', G.adminNoCd);
+  // toast de confirmation (ex. « TOUT DÉBLOQUÉ ! »)
+  if (G.adminMsg && G.time - G.adminMsg.t < 3) {
+    const fade = Math.min(1, (3 - (G.time - G.adminMsg.t)) / 0.4);
+    ctx.globalAlpha = fade;
+    ctx.fillStyle = 'rgba(20,16,4,0.92)';
+    roundRect(W / 2 - 200, H - 178, 400, 46, 10); ctx.fill();
+    ctx.strokeStyle = '#ffd740'; ctx.lineWidth = 2;
+    roundRect(W / 2 - 200, H - 178, 400, 46, 10); ctx.stroke();
+    ctx.fillStyle = '#ffd740'; ctx.font = 'bold 16px Inter, sans-serif';
+    ctx.fillText(G.adminMsg.text, W / 2, H - 149);
+    ctx.globalAlpha = 1;
+  }
   drawPadlockAnim(); // cadenas qui s'ouvre si le mot de passe vient d'être validé
 }
 function slots_playtime_total() {
