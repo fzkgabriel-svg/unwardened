@@ -100,7 +100,7 @@ function itemDetailLayout(dur) {
   };
 }
 
-const SLOT_LABEL = { weapon: '⚔️ ARME', armor: '🛡️ ARMURE', charm: '🧿 TALISMAN', boots: '👢 BOTTES' };
+export const SLOT_LABEL = { weapon: '⚔️ ARME', armor: '🛡️ ARMURE', charm: '🧿 TALISMAN', boots: '👢 BOTTES' };
 
 export function drawItemDetail() {
   const id = itemDetail;

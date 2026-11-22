@@ -10,7 +10,7 @@ import { sfxCraft, sfxRepair, sfxEquip, sfxConfirm, sfxClick } from '../audio.js
 import { MAX_SLOTS, activeSlot, allSlots, slotMeta, slotSummary, createChar, selectChar, deselectChar, resetChar, fmtPlaytime, fmtDate, checkAdminPass, adminOK as _adminOK, adminList, adminWipeAll, adminLock } from '../chars.js';
 import { inR, fitText, wrapLines, hexA, fmtTime, overline, panel, overlineCentered, drawMenuButton, drawAdminPwInput, menuButtons, menuButtonAt, adminUnlocked, campaignUnlocked, UI, SERIF, C_TEXT, C_MUTED, C_GOLD, MENU_X, MENU_W, MENU_ITEMS } from './common.js';
 
-import { craftCells, forgeScroll, forgeScrollMax, itemDetail, forgeTab, invItems, heroSlots, ultBtns } from './forge_state.js';
+import { craftCells, forgeScroll, forgeScrollMax, itemDetail, forgeTab, invItems, heroSlots, ultBtns, SLOT_LABEL } from './forge_state.js';
 
 // ---------- PAPERDOLL : le héros vêtu de ses équipements ----------
 // emplacements cliquables autour de la silhouette (partagé dessin / clic)

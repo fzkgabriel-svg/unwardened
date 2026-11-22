@@ -264,9 +264,18 @@ export function drawForgeCraft(L) {
   ctx.translate(0, -forgeScroll);
   for (const c of craftCells(L)) {
     const it = ITEMS[c.id], ok = canCraft(G.inv, c.id), owned = !!G.inv.items[c.id];
+    // halo doré respirant sur les objets actuellement fabricables
+    if (ok && !owned) {
+      const pulse = 0.5 + Math.sin(G.time * 3 + c.x * 0.01) * 0.5;
+      const hg = ctx.createRadialGradient(c.x + c.w / 2, c.y + c.h / 2, 8, c.x + c.w / 2, c.y + c.h / 2, c.w * 0.75);
+      hg.addColorStop(0, `rgba(255,200,80,${0.05 + pulse * 0.05})`);
+      hg.addColorStop(1, 'rgba(255,180,40,0)');
+      ctx.fillStyle = hg;
+      roundRect(c.x, c.y, c.w, c.h, 10); ctx.fill();
+    }
     ctx.fillStyle = owned ? 'rgba(105,240,174,0.08)' : 'rgba(255,255,255,0.04)';
     roundRect(c.x, c.y, c.w, c.h, 10); ctx.fill();
-    ctx.strokeStyle = owned ? 'rgba(105,240,174,0.5)' : 'rgba(255,255,255,0.14)';
+    ctx.strokeStyle = owned ? 'rgba(105,240,174,0.5)' : ok ? `rgba(255,215,64,${0.22 + 0.18 * (0.5 + Math.sin(G.time * 3 + c.x * 0.01) * 0.5)})` : 'rgba(255,255,255,0.14)';
     ctx.lineWidth = 1.5;
     roundRect(c.x, c.y, c.w, c.h, 10); ctx.stroke();
     // icône + nom + desc (tuile d'équipement stylée)
