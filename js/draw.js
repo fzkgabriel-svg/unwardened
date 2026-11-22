@@ -85,7 +85,7 @@ export function draw() {
     ctx.font = '11px Consolas, monospace';
     ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(232,217,176,0.45)';
     ctx.fillText(`v${VERSION}`, W - 14, H - 12);
-    drawMusicButton();
+    drawMusicButton(); drawShopBtn();
     ctx.restore();
     return;
   }

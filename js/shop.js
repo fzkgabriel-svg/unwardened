@@ -22,10 +22,12 @@ export const SHOP = {
 // bouton 💰 à côté des pastilles MUSIQUE / EFFETS (coin haut-droit)
 export const SHOP_BTN = { x: W * 0.77 - 96, y: 8, w: 88, h: 30 };
 export function shopButtonAt(x, y) {
+  if (G.state !== 'menu' || G.menuView !== 'main') return false;
   const r = SHOP_BTN;
   return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
 }
 export function drawShopBtn() {
+  if (G.state !== 'menu' || G.menuView !== 'main') return;
   const r = SHOP_BTN;
   const hov = G.mouse.x >= r.x && G.mouse.x <= r.x + r.w && G.mouse.y >= r.y && G.mouse.y <= r.y + r.h;
   ctx.save();

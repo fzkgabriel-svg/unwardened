@@ -130,6 +130,23 @@ export function drawCharacters() {
       ctx.fillStyle = '#7ed9a8'; ctx.fillText('EN COURS', mx + 1, c.y + 176);
       ctx.restore();
     }
+    // stats
+    const rows = [
+      ['Temps de jeu', fmtPlaytime(s.playtime)],
+      ['Dernière connexion', fmtDate(s.lastPlayed)],
+      ['Meilleure vague', s.bestWave || '—'],
+      ['Ennemis vaincus', s.totalKills || '—'],
+      ['Niveau max', s.bestLevel || '—'],
+      ['Parties jouées', s.totalRuns || '—']
+    ];
+    rows.forEach((r, j) => {
+      const ry = c.y + 214 + j * 25;
+      if (j) { ctx.fillStyle = 'rgba(255,255,255,0.05)'; ctx.fillRect(c.x + 30, ry - 17, c.w - 60, 1); }
+      ctx.textAlign = 'left'; ctx.font = `13px ${UI}`; ctx.fillStyle = C_MUTED;
+      ctx.fillText(r[0], c.x + 30, ry);
+      ctx.textAlign = 'right'; ctx.font = `600 13px ${UI}`; ctx.fillStyle = C_TEXT;
+      ctx.fillText(fitText(String(r[1]), 150), c.x + c.w - 30, ry);
+    });
     ctx.textAlign = 'center';
     // boutons JOUER / MENU / RÉINITIALISER
     drawMiniButton(c.play, 'JOUER', C_GOLD, C_GOLD, true);

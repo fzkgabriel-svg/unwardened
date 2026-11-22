@@ -125,9 +125,10 @@ export function drawMenu() {
     ['Clic droit', 'Rotation (épée) · Dôme (lance)'],
     ['& / é', 'Changer de mode d\'arme'],
     ['F', `${ultName} (charge en tuant)`],
+    ['X', 'Module actif'],
     ['W', 'Boire une fiole (+50 PV)']
   ];
-  const cy = 196, ch = 300;
+  const cy = 196, ch = 318;
   panel(rx, cy, rw, ch);
   overline('CONTRÔLES', rx + 24, cy + 34, C_MUTED);
   controls.forEach((c, i) => {

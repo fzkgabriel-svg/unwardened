@@ -93,18 +93,6 @@ function drawEquipList(L, col) {
 // ---------- ZONE CENTRALE : mannequin + nom + niveau + records ----------
 function drawHeroCenter(L, CL) {
   const D = heroDoll(L);
-  const meta = slotMeta(activeSlot());
-  const s = slotSummary(activeSlot()) || {};
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#ffe9a3'; ctx.font = `bold 21px ${SERIF}`;
-  ctx.fillText(fitText(meta ? meta.name : 'Héros sans nom', 320), D.x, D.y - 126);
-  ctx.fillStyle = 'rgba(255,215,64,0.14)';
-  roundRect(D.x - 62, D.y - 116, 124, 22, 11); ctx.fill();
-  ctx.strokeStyle = 'rgba(255,215,64,0.45)'; ctx.lineWidth = 1;
-  roundRect(D.x - 62, D.y - 116, 124, 22, 11); ctx.stroke();
-  ctx.fillStyle = '#ffd740'; ctx.font = `bold 11px ${UI}`;
-  ctx.fillText(`NIV. RECORD ${s.bestLevel || 1}`, D.x, D.y - 101);
-
   ctx.save();
   const hg = ctx.createRadialGradient(D.x, D.y - 20, 10, D.x, D.y - 20, 130);
   hg.addColorStop(0, 'rgba(255,215,64,0.10)'); hg.addColorStop(1, 'rgba(255,215,64,0)');
@@ -112,29 +100,10 @@ function drawHeroCenter(L, CL) {
   ctx.beginPath(); ctx.arc(D.x, D.y - 20, 130, 0, TAU); ctx.fill();
   ctx.restore();
   drawDoll(D.x, D.y);
-
-  // records répartis sur les côtés du mannequin (2 gauche, 2 droite, empilés)
-  const recs = [
-    ['📦', `${s.totalRuns || 0} parties`], ['🌊', `vag. ${s.bestWave || 0}`],
-    ['💀', `${(s.totalKills || 0).toLocaleString('fr-FR')} kills`], ['⏱', fmtPlaytime(s.playtime || 0)]
-  ];
-  const rw = 110, rh = 22, gap = 6; // gap augmenté pour éviter superposition
-  const sideY = D.y + 10; // descendus pour éviter superposition avec le corps
-  const leftX = D.x - 180, rightX = D.x + 70;
-  recs.forEach((r, i) => {
-    const isLeft = i < 2;
-    const col = isLeft ? 0 : i - 2;
-    const rx = isLeft ? leftX : rightX;
-    const ry = sideY + col * (rh + gap);
-    ctx.fillStyle = 'rgba(255,255,255,0.05)';
-    roundRect(rx, ry, rw, rh, 7); ctx.fill();
-    ctx.strokeStyle = 'rgba(255,215,64,0.25)'; ctx.lineWidth = 1;
-    roundRect(rx, ry, rw, rh, 7); ctx.stroke();
-    ctx.fillStyle = '#d4b062'; ctx.font = `11px ${UI}`; ctx.textAlign = 'center';
-    ctx.fillText(r[0], rx + 18, ry + 18);
-    ctx.fillStyle = '#e8e0c8'; ctx.font = `bold 10px ${UI}`;
-    ctx.fillText(fitText(String(r[1]), rw - 40), rx + rw / 2 + 8, ry + 18);
-  });
+  // nom, niveau et records du personnage : affichés dans le menu principal, retirés d'ici
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(255,233,163,0.75)'; ctx.font = `italic 12px ${UI}`;
+  ctx.fillText('aperçu du héros équipé', D.x, D.y + 96);
 }
 
 // mannequin du héros (respiration discrète)
