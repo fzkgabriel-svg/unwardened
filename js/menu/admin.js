@@ -25,7 +25,7 @@ export function adminClickAt(x, y) {
   }
   // boutons « tout débloquer » et « sans cooldowns »
   const ub = { x: W / 2 - 280, y: H - 112, w: 270, h: 44 };
-  if (inR(ub, x, y)) { adminUnlockAll(); G.adminMsg = { text: 'TOUT DÉBLOQUÉ !', t: G.time }; return 'unlockall'; }
+  if (inR(ub, x, y)) { adminUnlockAll(); G.adminUnlockFx = G.time; G.adminMsg = { text: 'TOUT DÉBLOQUÉ !', t: G.time }; return 'unlockall'; }
   const nb = { x: W / 2 + 10, y: H - 112, w: 270, h: 44 };
   if (inR(nb, x, y)) { G.adminNoCd = !G.adminNoCd; return 'nocd'; }
   // reset individuel d'un slot
@@ -135,7 +135,17 @@ export function drawAdmin() {
     ctx.fillStyle = active ? color : '#90a4ae'; ctx.font = '11px Inter, sans-serif';
     ctx.fillText(sub, r.x + r.w / 2, r.y + 37);
   };
-  drawUtilBtn({ x: W / 2 - 280, y: H - 112, w: 270, h: 44 }, '🔓 TOUT DÉBLOQUER', 'mondes + armes + objets + succès', '#ffd740', false);
+  // bouton « tout débloqué » : VERT quand tout est débloqué (état persisté)
+  // ou pendant les 3 s qui suivent le clic (flash de confirmation)
+  const st = G.stats || {};
+  const allDone = !!(st.campaignDone && st.campaignDone[0] && st.campaignDone[1] && st.campaignDone[2]
+    && st.campaignDone[3] && st.campaignDone[4] && st.iceUlt && st.hellUlt && st.bowUnlocked);
+  const justClicked = G.adminUnlockFx !== undefined && G.time - G.adminUnlockFx < 3;
+  const unlockOn = allDone || justClicked;
+  drawUtilBtn({ x: W / 2 - 280, y: H - 112, w: 270, h: 44 },
+    unlockOn ? '✅ TOUT EST DÉBLOQUÉ' : '🔓 TOUT DÉBLOQUER',
+    unlockOn ? 'campagnes · armes · objets · succès' : 'mondes + armes + objets + succès',
+    unlockOn ? '#69f0ae' : '#ffd740', unlockOn);
   drawUtilBtn({ x: W / 2 + 10, y: H - 112, w: 270, h: 44 },
     G.adminNoCd ? '⚡ COOLDOWNS : ON' : '⚡ COOLDOWNS : OFF',
     'clic = activer / désactiver', G.adminNoCd ? '#69f0ae' : '#78909c', G.adminNoCd);
@@ -175,6 +185,7 @@ const ADMIN_BASE = [
   ['wave',      '🏰 +1 VAGUE',         'monde'],
   ['skip',      '⏩ PASSER LA VAGUE',   'monde'],
   ['killall',   '💀 TOUT TUER',        'monde'],
+  ['unlockall', '🔓 TOUT DÉBLOQUER',   'monde'],
   ['relock',    '🔒 REVERROUILLER',    'monde'],
 ];
 // apparitions adaptées à la campagne en cours
@@ -297,6 +308,10 @@ function applyAdminCheat(id) {
       break;
     case 'killall':
       for (const e of [...G.enemies]) { e.hp = 0; }
+      break;
+    case 'unlockall': // même effet que le bouton du panneau admin : tout débloqué + sauvegardé
+      adminUnlockAll();
+      G.warnToast = { name: '🔓 TOUT DÉBLOQUÉ !', t: 6 };
       break;
     case 'relock':
       adminLock(); // le mot de passe sera redemandé à la prochaine ouverture
