@@ -1,7 +1,7 @@
 // js/hud/profile.js — panneau personnage haut-gauche : portrait, niveau,
 // PV rouge, XP or, charge d'ultime. Barre de vie avec traînée de dégât
 // et flash de soin — tout est relié aux vraies stats de G.player.
-import { G, ctx, TAU, finalWave } from '../state.js';
+import { G, ctx, TAU } from '../state.js';
 import { roundRect } from '../utils.js';
 import { curWorld } from '../world.js';
 import { activeSlot, slotMeta } from '../chars.js';
@@ -100,15 +100,9 @@ export function drawProfile() {
   const t = Math.floor(G.runTime || 0);
   ctx.font = '10px Georgia, serif'; ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(216,196,154,0.8)';
   ctx.fillText(`${wdef ? wdef.name : 'MONDE'}  ·  ${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`, bx, PY + 38);
-  // ligne 2 : vague + progression des monstres + kills (bien visible)
-  const bossAlive = G.enemies.some(en => en.type && en.type.startsWith('finalBoss'));
-  const waveTxt = G.wave >= finalWave() ? 'VAGUE FINALE' : `Vague ${G.wave}`;
-  ctx.font = 'bold 12px Georgia, serif';
-  ctx.fillStyle = bossAlive ? '#ffb3a6' : HPAL.goldHi;
-  ctx.fillText(`${waveTxt}  ·  ${bossAlive ? 'BOSS' : `${G.waveKills}/${G.waveTarget}`}  ·  ${G.kills} kills`, bx, PY + 53);
 
   // ---- barre PV (rouge profond) : valeurs centrées sur la jauge ----
-  const barX = bx, barW = bw, barY = PY + 62, barH = 20;
+  const barX = bx, barW = bw, barY = PY + 56, barH = 20;
   medBar(barX, barY, barW, barH, hpFrac, hurtA > 0 ? G._hudGhost : null,
     lowHp ? '#e0606a' : HPAL.redHi, lowHp ? '#6e1420' : HPAL.red,
     { glow: lowHp && hpFrac > 0.02 ? '#ff5a6a' : null });

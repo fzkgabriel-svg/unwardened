@@ -1,7 +1,7 @@
 // js/hud/map.js — mini-carte CARRÉE : mêmes proportions que le monde
 // (échelle uniforme, aucun écrasement), cadre métallique, panneau
 // « objectif » sur parchemin (vraies données : vague, boss, portails).
-import { G, ctx, W, H, TAU, finalWave } from '../state.js';
+import { G, ctx, W, H, TAU } from '../state.js';
 import { roundRect } from '../utils.js';
 import { curWorld, RARITY_COLOR } from '../world.js';
 import { playerAngle } from '../attacks.js';
@@ -15,21 +15,26 @@ export function drawMinimap() {
   const mx = W - MS - 18, my = H - MS - 34; // cadre
   const t = G.time || 0;
 
-  // ---- panneau objectif (parchemin, à gauche de la carte) ----
-  const ow = 190, oh = 48, ox = mx - 12 - ow, oy = my + MS / 2 - oh / 2;
+  // ---- panneau objectif (parchemin, AU-DESSUS de la carte) ----
+  const ow = 210, oh = 54;
+  const ox = mx + MS / 2 - ow / 2, oy = my - 6 - oh - 8;
   parchment(ox, oy, ow, oh, 0.9);
   ctx.strokeStyle = HPAL.goldLo; ctx.lineWidth = 1;
   roundRect(ox + 2.5, oy + 2.5, ow - 5, oh - 5, 5); ctx.stroke();
   const bossAlive = G.enemies.some(en => en.type && en.type.startsWith('finalBoss'));
-  const waveTxt = G.wave >= finalWave() ? 'VAGUE FINALE' : `Vague ${G.wave} — ${G.waveKills}/${G.waveTarget} monstres`;
-  engraved(bossAlive ? 'DÉTRUIRE LE BOSS' : waveTxt, ox + 12, oy + oh / 2 + 4, 12, bossAlive ? '#8e2424' : '#3a2a14', 'left', 'Georgia, serif');
-  // progression de la vague en mini-jauge
-  if (!bossAlive && G.waveTarget > 0) {
-    const f = Math.min(1, G.waveKills / G.waveTarget);
+  // ligne 1 : vague à gauche, kills totaux à droite
+  engraved(bossAlive ? 'BOSS' : `VAGUE ${G.wave}`, ox + 12, oy + 20, 13, bossAlive ? '#8e2424' : '#3a2a14', 'left', 'Georgia, serif');
+  engraved(`${G.kills} kills`, ox + ow - 12, oy + 20, 10, '#6d5a3a', 'right', 'Consolas, monospace');
+  // ligne 2 : progression des monstres de la vague + mini-jauge
+  if (!bossAlive) {
+    engraved(`${G.waveKills}/${G.waveTarget} monstres`, ox + 12, oy + 37, 10.5, '#5a4526', 'left', 'Consolas, monospace');
+    const f = G.waveTarget > 0 ? Math.min(1, G.waveKills / G.waveTarget) : 0;
     ctx.fillStyle = 'rgba(0,0,0,0.25)';
-    roundRect(ox + 12, oy + oh - 9, ow - 24, 4, 2); ctx.fill();
+    roundRect(ox + 12, oy + oh - 10, ow - 24, 4, 2); ctx.fill();
     ctx.fillStyle = HPAL.green;
-    if (f > 0.01) { roundRect(ox + 12, oy + oh - 9, (ow - 24) * f, 4, 2); ctx.fill(); }
+    if (f > 0.01) { roundRect(ox + 12, oy + oh - 10, (ow - 24) * f, 4, 2); ctx.fill(); }
+  } else {
+    engraved('DÉTRUIRE LE BOSS', ox + 12, oy + 37, 10.5, '#8e2424', 'left', 'Georgia, serif');
   }
 
   // ---- cadre métallique carré ----
