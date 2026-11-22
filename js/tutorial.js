@@ -112,7 +112,7 @@ const STEPS = [
     check() { return false; } // étape lecture : avance par timeout
   },
   {
-    text: 'NIVEAU & XP : chaque ennemi tué et chaque bâtiment fouillé donne de l\'XP (barre en haut à gauche). Monter de niveau augmente tes PV, tes dégâts et la recharge de ta bombe !', max: 5, hold: 3, highlight: 'xp',
+    text: 'NIVEAU & XP : chaque ennemi tué et chaque bâtiment fouillé donne de l\'XP (barre en haut à gauche). Monter de niveau augmente tes PV, tes dégâts et la recharge de ta bombe !', max: 5, hold: 3,
     onStart() { clearAdds(); },
     check() { return false; } // étape lecture : avance par timeout
   },
@@ -238,8 +238,8 @@ export function updateTutorial(dt) {
 // ---------- rendu ----------
 // Zones du HUD mises en évidence (zoom + contour) pendant les étapes
 const HUD_SPOT = {
-  wave: { x: 14, y: 10, w: 330, h: 40 },  // ligne vague/monstres dans le profil
-  xp:   { x: 14, y: 98, w: 330, h: 20 },  // barre XP dans le profil
+  wave: { x: 14, y: 63, w: 330, h: 18 },  // ligne vague/monstres précise (y=53 dans panneau + PY=10)
+  xp:   { x: 14, y: 98, w: 330, h: 20 },  // barre XP (y=98 absolu)
 };
 
 // contour pointillé pulsé autour de l'élément HUD + bulle zoom en bas d'écran
