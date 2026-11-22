@@ -496,10 +496,10 @@ function drawSecretItem(s, def, g) {
 }
 
 // végétation animée par le vent : sous-ensemble du décor rendu par frame
-const SWAY_AMP = { grass: 0.22, flower: 0.2, fern: 0.16, bush: 0.07, frozenbush: 0.07,
-  firegrass: 0.24, alienflora: 0.18, glowshroom: 0.12, mush: 0.12, shroom: 0.1,
-  tree: 0.035, bigtree: 0.03, pine: 0.04, cosmictree: 0.05, crystal: 0.03,
-  energycrystal: 0.04 };
+const SWAY_AMP = { grass: 0.4, flower: 0.36, fern: 0.28, bush: 0.12, frozenbush: 0.12,
+  firegrass: 0.42, alienflora: 0.3, glowshroom: 0.2, mush: 0.2, shroom: 0.16,
+  tree: 0.06, bigtree: 0.055, pine: 0.07, cosmictree: 0.09, crystal: 0.05,
+  energycrystal: 0.07 };
 export function drawSwayDecor() {
   const w = curWorld();
   if (!w || !w.decor) return;
@@ -516,6 +516,48 @@ export function drawSwayDecor() {
     drawDecorItem(d, w.def, ctx);
     ctx.restore();
   }
+}
+
+// reflets animés sur les lacs : glints qui scintillent et dérivent (coords monde)
+export function drawLakeGlints() {
+  const w = curWorld();
+  if (!w || !w.lakes || !w.lakes.length) return;
+  const x0 = (G.camX || 0) - 100, y0 = (G.camY || 0) - 100, x1 = x0 + W + 200, y1 = y0 + H + 200;
+  const t = G.time;
+  const ice = w.def.biome === 'ice';
+  ctx.save();
+  for (const l of w.lakes) {
+    if (l.x < x0 || l.x > x1 || l.y < y0 || l.y > y1) continue;
+    const seed = l.seed * 1000;
+    ctx.save();
+    ctx.translate(l.x, l.y); ctx.rotate(l.rot);
+    // 5 reflets principaux qui pulsent et glissent lentement
+    for (let i = 0; i < 5; i++) {
+      const a = seed * 13 + i * 2.4;
+      const drift = Math.sin(t * 0.7 + i * 1.9 + seed) * l.rx * 0.25;
+      const gx = Math.cos(a) * l.rx * 0.55 + drift;
+      const gy = Math.sin(a) * l.ry * 0.5 + Math.cos(t * 0.5 + i) * 6;
+      const tw = 0.5 + 0.5 * Math.sin(t * 2.2 + i * 2.6 + seed * 3);
+      ctx.globalAlpha = 0.10 + tw * 0.30;
+      ctx.fillStyle = ice ? '#ffffff' : '#eaf7ff';
+      ctx.beginPath();
+      ctx.ellipse(gx, gy, (10 + (i % 3) * 7) * (0.7 + tw * 0.5), 2 + tw * 1.6, a * 0.4, 0, TAU);
+      ctx.fill();
+    }
+    // micro-étincelles à la surface
+    ctx.fillStyle = ice ? 'rgba(255,255,255,0.8)' : 'rgba(220,245,255,0.7)';
+    for (let i = 0; i < 14; i++) {
+      const a2 = seed * 29 + i * 1.71;
+      const rr3 = 0.25 + ((i * 37 + ((t * 8) | 0)) % 100) / 100 * 0.6;
+      const sx = Math.cos(a2 + t * 0.15) * l.rx * rr3;
+      const sy = Math.sin(a2 + t * 0.11) * l.ry * rr3;
+      const tw2 = 0.4 + 0.6 * Math.abs(Math.sin(t * 3 + i * 1.3));
+      ctx.globalAlpha = tw2 * 0.55;
+      ctx.beginPath(); ctx.arc(sx, sy, 1 + (i % 3) * 0.5, 0, TAU); ctx.fill();
+    }
+    ctx.restore();
+  }
+  ctx.restore();
 }
 
 // lumières dynamiques : halos vacillants autour des éléments luminescents du décor

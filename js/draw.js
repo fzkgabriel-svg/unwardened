@@ -2,11 +2,11 @@ import { G, ctx, W, H, TAU, VERSION, finalWave, saveStats } from './state.js';
 import { spawnEnemy, spawnMinibossWave, spawnBossWave, spawnFinalBoss, damageEnemy, enemyTypes } from './enemies.js';
 import { doSlash, doSpin, doThrust, doUlt, doShield, doFireLaser, doFireHand, updateNuke, updateIceUlt, updateLasers, updateHands, updateVolcanoes, updateSewerUlt, updateSpaceUlt } from './attacks.js';
 import { updateEffects, addDamageText, spawnParticles } from './effects.js';
-import { drawBackground, drawEnemy, drawDrops, drawPlayer, drawSlashArc, drawUltFlash, drawMushroom, drawBomber, drawEffects, drawFireZones, drawCraters, drawPortals, drawProjectiles, drawLightnings, drawGrain, drawClouds, dayNight, drawTerrain, drawBuildings, drawWorldPortals, drawObstacle, drawIceStorm, drawLasers, drawHands, drawVolcanoes, drawAcidZones, drawBlackHoles, drawVoidHole, drawBowShots, drawSingZones, drawBowReveal, drawAmbient, drawFalls, drawBiomeGrade } from './graphics.js';
+import { drawBackground, drawEnemy, drawDrops, drawPlayer, drawSlashArc, drawUltFlash, drawMushroom, drawBomber, drawEffects, drawFireZones, drawCraters, drawPortals, drawProjectiles, drawLightnings, drawGrain, drawClouds, dayNight, drawTerrain, drawBuildings, drawWorldPortals, drawObstacle, drawIceStorm, drawLasers, drawHands, drawVolcanoes, drawAcidZones, drawBlackHoles, drawVoidHole, drawBowShots, drawSingZones, drawBowReveal, drawAmbient, drawFalls, drawBiomeGrade, drawCloudShadows } from './graphics.js';
 import { checkAchievements } from './achievements.js';
 import { wearEquipment, addMaterial } from './inventory.js';
 import { drawHUD, drawAchToast, drawWarnToast } from './hud.js';
-import { drawSecrets, drawSwayDecor, drawDecorLights } from './gfx/terrain.js';
+import { drawSecrets, drawSwayDecor, drawDecorLights, drawLakeGlints } from './gfx/terrain.js';
 import { drawMenu, drawGameOver, drawPauseMenu, drawVictory, recordRun, drawAdminMenu, drawAdminButton, drawDurWarnPopup } from './menu.js';
 import { initWorlds, updateCamera, worldW, worldH, checkWavePortal, syncCamera, resolveObstacles, curWorld } from './world.js';
 import { drawMusicButton, sfxHurt, sfxWave, sfxPickup, sfxBreak, sfxBoss, sfxWarn, sfxPhase, sfxBossAtk } from './audio.js';
@@ -34,6 +34,7 @@ export function draw() {
   drawWorldPortals();
   drawFalls();      // cascades animées (eau, glace, lave) — coords monde
   drawSecrets();    // sites cachés animés (feu de camp, artefact, autel)
+  drawLakeGlints(); // reflets scintillants sur les lacs — coords monde
   if (G.state !== 'menu') {
     drawCraters(); // cratères au sol (sous les entités)
     drawFireZones(); // feux de la bombe atomique (sous les entités)
@@ -68,6 +69,7 @@ export function draw() {
   // ---- écran : atmosphère, HUD et overlays (coordonnées écran) ----
   drawBackground();
   drawBiomeGrade(); // voile teinté par biome (couleurs plus riches)
+  drawCloudShadows(); // nappes d'ombre de nuages dérivant sur le monde
   if (G.state === 'menu') {
     drawMenu();
     drawDurWarnPopup(); // popup durabilité par-dessus tous les écrans du menu

@@ -568,11 +568,11 @@ export function drawFalls() {
 
 // ---------- COLOR GRADING : voile teinté par biome (coordonnées écran) ----------
 const GRADE = {
-  plain:  ['rgba(255,236,170,0.10)', 'rgba(70,110,40,0.10)'],
-  ice:    ['rgba(190,225,255,0.12)', 'rgba(70,130,180,0.10)'],
-  hell:   ['rgba(255,130,60,0.09)',  'rgba(140,30,10,0.13)'],
-  sewer:  ['rgba(150,210,120,0.07)', 'rgba(15,35,15,0.15)'],
-  space:  ['rgba(150,120,255,0.11)', 'rgba(15,15,60,0.15)'],
+  plain:  ['rgba(255,230,150,0.16)', 'rgba(60,100,30,0.14)'],
+  ice:    ['rgba(185,225,255,0.18)', 'rgba(60,125,180,0.14)'],
+  hell:   ['rgba(255,120,50,0.15)',  'rgba(130,25,8,0.18)'],
+  sewer:  ['rgba(140,205,110,0.11)', 'rgba(10,30,10,0.20)'],
+  space:  ['rgba(150,115,255,0.17)', 'rgba(10,10,55,0.20)'],
 };
 export function drawBiomeGrade() {
   const w = curWorld();
@@ -583,11 +583,41 @@ export function drawBiomeGrade() {
   lg.addColorStop(0, g[0]); lg.addColorStop(1, g[1]);
   ctx.fillStyle = lg;
   ctx.fillRect(0, 0, W, H);
-  // léger halo chaud au centre pour la profondeur
+  // halo chaud central pour la profondeur
   const rg = ctx.createRadialGradient(W / 2, H * 0.45, H * 0.3, W / 2, H * 0.5, H * 0.9);
-  rg.addColorStop(0, 'rgba(255,255,255,0.03)'); rg.addColorStop(1, 'rgba(0,0,0,0.06)');
+  rg.addColorStop(0, 'rgba(255,255,255,0.05)'); rg.addColorStop(1, 'rgba(0,0,0,0.10)');
   ctx.fillStyle = rg;
   ctx.fillRect(0, 0, W, H);
+}
+
+// ---------- OMBRES DE NUAGES : gigantesques nappes d'ombre dérivant sur le monde ----------
+export function drawCloudShadows() {
+  const w = curWorld();
+  if (!w || G.state === 'menu') return;
+  const t = G.time;
+  const sky = w.def.biome;
+  const n = sky === 'space' ? 3 : 5;
+  ctx.save();
+  for (let i = 0; i < n; i++) {
+    const spanX = W + 900, spanY = H + 700;
+    const speed = 9 + (i % 3) * 5;
+    const mx = ((i * 613 + t * speed) % spanX) - 450;
+    const my = ((i * 389 + t * speed * 0.35) % spanY) - 350 + Math.sin(t * 0.1 + i * 2) * 60;
+    const mr = 260 + (i % 3) * 130;
+    // forme irrégulière : 3 ellipses fusionnées par nuage
+    for (let k = 0; k < 3; k++) {
+      const ox = (k - 1) * mr * 0.75, oy = (k % 2 ? 30 : -25) + Math.sin(t * 0.2 + i + k) * 15;
+      const ex = mr * (1.15 - k * 0.15), ey = mr * 0.42;
+      const cg = ctx.createRadialGradient(mx + ox, my + oy, mr * 0.15, mx + ox, my + oy, ex);
+      const a = sky === 'space' ? 0.10 : sky === 'hell' ? 0.07 : 0.085;
+      cg.addColorStop(0, `rgba(8,10,25,${a})`);
+      cg.addColorStop(0.7, `rgba(8,10,25,${a * 0.5})`);
+      cg.addColorStop(1, 'rgba(8,10,25,0)');
+      ctx.fillStyle = cg;
+      ctx.beginPath(); ctx.ellipse(mx + ox, my + oy, ex, ey, (i * 0.7 + k * 0.4) % 0.6 - 0.3, 0, TAU); ctx.fill();
+    }
+  }
+  ctx.restore();
 }
 
 // ---------- AMBIANCE PAR BIOME : particules d'ambiance dans le monde ----------

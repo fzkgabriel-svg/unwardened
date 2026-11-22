@@ -35,9 +35,16 @@ const lerpC = (a, b, t) => `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * t)
 // le sol et le décor sont désormais rendus en coordonnées monde par drawTerrain()
 export function drawBackground() {
   const dayF = dayNight(), nF = 1 - dayF;
-  // teinte nocturne globale
+  const w = curWorld();
+  // teinte nocturne globale — colorée par biome (identité de chaque monde)
   if (nF > 0.02) {
-    ctx.fillStyle = `rgba(8,12,48,${nF * 0.3})`;
+    const sky = w ? w.def.biome : 'plain';
+    const NIGHT = {
+      plain:  'rgba(10,16,50,',  ice:    'rgba(14,26,58,',
+      hell:   'rgba(48,8,6,',    sewer:  'rgba(8,26,14,',
+      space:  'rgba(24,10,60,',
+    };
+    ctx.fillStyle = (NIGHT[sky] || NIGHT.plain) + `${nF * 0.34})`;
     ctx.fillRect(0, 0, W, H);
   }
   // lucioles la nuit
