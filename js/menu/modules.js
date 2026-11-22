@@ -530,7 +530,7 @@ function drawMsg(t) {
 function statLines(m) {
   switch (m.name) {
     case 'Bouclier énergétique': return ['Bouclier : 70 PV', 'Régénération : 3 PV/s (après 4 s)'];
-    case 'Ruée dimensionnelle': return ['Distance : ~450 px', 'Durée : 0,5 s', 'Recharge : 8 s'];
+    case 'Ruée dimensionnelle': return ['Distance : ~560 px', 'Durée : 0,3 s', 'Recharge : 8 s'];
     case 'Surcharge': return ['Dégâts : +50 %', 'Durée : 6 s', 'Recharge : 14 s'];
     case 'Régénération': return ['Régénération : +4 PV/s'];
     case 'Onde de choc': return ['Rayon : 230 px', 'Dégâts : 50 + 4×niv', 'Recharge : 15 s'];

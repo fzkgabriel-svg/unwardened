@@ -254,10 +254,12 @@ export function drawWeaponPanel() {
     : MODE_STYLE[p.attackMode === 5 ? 'bow' : p.attackMode === 3 ? 'lance' : 'sword'];
   const wMult = G.equip ? G.equip.weaponMult : 1;
   const mMult = titan ? 1 : modeMult(G.inv, key);
-  const dmgTot = Math.round((p.attackDamage ?? 30) * wMult * mMult);
+  // dégâts totaux infligés par cette arme pendant la partie (runWmode accumulé par damageEnemy)
+  const dmgTot = Math.round((G.runWmode && G.runWmode[key]) || 0);
   const dmgPct = Math.round((wMult * mMult - 1) * 100);
+  const mi = titan ? { lvl: 1 } : modeInfo(G.inv, key);
 
-  const pw = 150, ph = 56, px = 14, py = H - 100;
+  const pw = 196, ph = 56, px = 14, py = H - 100;
   // dégâts totaux : petit compteur juste au-dessus du panneau arme
   crisp(`⚔ ${dmgTot}`, px + pw / 2, py - 8, 11, '#ffd740', 'center', { weight: 700, spacing: 0.5 });
   parchment(px, py, pw, ph, 0.9);
@@ -265,6 +267,6 @@ export function drawWeaponPanel() {
   roundRect(px + 3, py + 3, pw - 6, ph - 6, 6); ctx.stroke();
 
   gem(px + 24, py + ph / 2, 8, st.col, 1.2);
-  crisp('PUISSANCE', px + 42, py + 22, 10, '#5a4526', 'left', { weight: 700, spacing: 1.2 });
-  crisp(`+${dmgPct} %`, px + 42, py + 44, 20, '#33240f', 'left', { font: HUD_CINZEL, weight: 700 });
+  crisp((titan ? 'TITAN DE FEU' : st.name).toUpperCase(), px + 42, py + 22, 14, '#33240f', 'left', { font: HUD_CINZEL, weight: 700, spacing: 0.8 });
+  crisp(titan ? 'PUISSANCE INFERNALE' : `NIV ${mi.lvl} · +${dmgPct} %`, px + 42, py + 43, 11, '#5a4526', 'left', { weight: 700, spacing: 0.6 });
 }

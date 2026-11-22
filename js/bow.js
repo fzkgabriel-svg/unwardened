@@ -6,7 +6,7 @@ import { spawnParticles, addDamageText } from './effects.js';
 import { damageEnemy } from './enemies.js';
 import { playerAngle, waveBonus } from './attacks.js';
 import { worldW, worldH } from './world.js';
-import { sfxBowFire, sfxSingularity } from './audio.js';
+import { sfxBowFire, sfxSingularity, sfxBossAtk } from './audio.js';
 import { wearWeaponUse } from './inventory.js';
 
 export const BOW_SING_CD = 10;          // recharge de la singularité
@@ -71,6 +71,7 @@ export function doSingularity() {
   b.recoil = 1.6;
   sfxSingularity();
   G.screenShake = Math.max(G.screenShake, 5);
+  G.singPrep = G.time; // animation de charge cosmique autour du joueur
   return true;
 }
 
@@ -79,14 +80,18 @@ function boltImpact(s) {
   if (s.impacted) return;
   s.impacted = true;
   if (s.type === 'sing') {
-    // zone de distorsion : implosion + aspiration + ralentissement
+    // singularité : formation + aspiration + détonation (3,8 s)
     G.singZones = G.singZones || [];
-    G.singZones.push({ x: s.x, y: s.y, r: s.zoneR || 210, t: 0, dur: 3.4 });
-    spawnParticles(s.x, s.y, '#7c4dff', 34, 9);
-    spawnParticles(s.x, s.y, '#18ffff', 22, 7);
-    spawnParticles(s.x, s.y, '#e040fb', 16, 5);
+    G.singZones.push({ x: s.x, y: s.y, r: s.zoneR || 210, t: 0, dur: 3.8 });
+    spawnParticles(s.x, s.y, '#7c4dff', 40, 10);
+    spawnParticles(s.x, s.y, '#18ffff', 26, 8);
+    spawnParticles(s.x, s.y, '#e040fb', 18, 6);
+    spawnParticles(s.x, s.y, '#ffffff', 12, 5);
+    G.rings.push({ x: s.x, y: s.y, r: 8, maxR: (s.zoneR || 210) * 0.55, life: 22, maxLife: 22, color: '#b388ff' });
     addDamageText(s.x, s.y - 26, '⬤ SINGULARITÉ', '#b388ff');
-    G.screenShake = Math.max(G.screenShake, 9);
+    G.screenShake = Math.max(G.screenShake, 10);
+    G.screenFlash = Math.max(G.screenFlash || 0, 0.22);
+    sfxBossAtk('void');
   } else {
     const col = s.type === 'charged' ? '#b388ff' : '#40c4ff';
     spawnParticles(s.x, s.y, col, s.type === 'charged' ? 18 : 9, s.type === 'charged' ? 7 : 5);
@@ -186,34 +191,60 @@ export function updateBow(dt) {
     }
   }
 
-  // --- zones de singularité : aspiration + ralentissement ---
+  // --- zones de singularité : formation -> attraction -> détonation ---
   G.singZones = G.singZones || [];
   for (let i = G.singZones.length - 1; i >= 0; i--) {
     const z = G.singZones[i];
     z.t += dt;
-    if (z.t >= z.dur) { G.singZones.splice(i, 1); continue; }
+    if (z.t >= z.dur) { detonateSing(z); G.singZones.splice(i, 1); continue; }
     const k = 1 - z.t / z.dur;
+    const det = z.t > z.dur - 0.9; // contraction finale : les anneaux accélèrent
+    const pullK = det ? 1.8 : 1.0;
     for (const e of G.enemies) {
       const d = Math.hypot(e.x - z.x, e.y - z.y);
       if (d < z.r + e.r) {
-        // aspiration douce vers le centre + perturbation
+        // aspiration vers le centre — les boss résistent à ~30 % du pull
         if (d > 8) {
-          const pull = (1 - d / (z.r + e.r)) * 2.4 * k;
-          e.x -= ((e.x - z.x) / d) * pull * dt * 60 * 0.28;
-          e.y -= ((e.y - z.y) / d) * pull * dt * 60 * 0.28;
+          const boss = e.boss || /boss/i.test(e.type || '');
+          const pull = (1 - d / (z.r + e.r)) * 2.6 * k * pullK * (boss ? 0.3 : 1);
+          e.x -= ((e.x - z.x) / d) * pull * dt * 60 * 0.3;
+          e.y -= ((e.y - z.y) / d) * pull * dt * 60 * 0.3;
         }
-        e.slow = Math.max(e.slow || 0, 0.6); // distorsion : ralentit les ennemis dans la zone
+        e.slow = Math.max(e.slow || 0, det ? 0.9 : 0.6); // distorsion : ralentit les ennemis
         if ((z.t * 8 | 0) !== ((z.t - dt) * 8 | 0)) {
-          damageEnemy(e, 26 * waveBonus() * k, Math.atan2(e.y - z.y, e.x - z.x)); // dps de la distorsion
+          damageEnemy(e, (det ? 44 : 26) * waveBonus() * k, Math.atan2(e.y - z.y, e.x - z.x)); // dps de la distorsion
         }
       }
     }
-    // vortex visuel : particules aspirées
-    if (Math.random() < dt * 22) {
+    // vortex visuel : particules aspirées (plus denses en phase de détonation)
+    if (Math.random() < dt * (det ? 40 : 22)) {
       const a = Math.random() * TAU, rr = z.r * (0.7 + Math.random() * 0.5);
-      spawnParticles(z.x + Math.cos(a) * rr, z.y + Math.sin(a) * rr, '#7c4dff', 1, 0.4);
+      spawnParticles(z.x + Math.cos(a) * rr, z.y + Math.sin(a) * rr,
+        Math.random() < 0.6 ? '#7c4dff' : (Math.random() < 0.5 ? '#18ffff' : '#e040fb'), 1, 0.5);
     }
   }
+}
+
+// ---------- DÉTONATION de la singularité ----------
+function detonateSing(z) {
+  const R = z.r * 1.2;
+  // onde de choc violette + cyan
+  G.rings.push({ x: z.x, y: z.y, r: 16, maxR: R * 1.5, life: 30, maxLife: 30, color: '#b388ff' });
+  G.rings.push({ x: z.x, y: z.y, r: 8, maxR: R, life: 24, maxLife: 24, color: '#00e5ff' });
+  G.screenShake = Math.max(G.screenShake, 15);
+  G.screenFlash = Math.max(G.screenFlash || 0, 0.4);
+  spawnParticles(z.x, z.y, '#b388ff', 46, 12);
+  spawnParticles(z.x, z.y, '#18ffff', 30, 10);
+  spawnParticles(z.x, z.y, '#e040fb', 22, 8);
+  spawnParticles(z.x, z.y, '#ffffff', 16, 6);
+  sfxBossAtk('void');
+  for (const e of [...G.enemies]) {
+    if (Math.hypot(e.x - z.x, e.y - z.y) < R + e.r) {
+      damageEnemy(e, G.player.attackDamage * 3.4 * waveBonus(), Math.atan2(e.y - z.y, e.x - z.x));
+      e.slow = Math.max(e.slow || 0, 5);
+    }
+  }
+  addDamageText(z.x, z.y - 34, '✦ DÉTONATION', '#e040fb');
 }
 
 //Called from main.js for singularity input

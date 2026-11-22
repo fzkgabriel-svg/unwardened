@@ -5,6 +5,7 @@ import { G, ctx, TAU } from '../state.js';
 import { roundRect } from '../utils.js';
 import { curWorld } from '../world.js';
 import { activeSlot, slotMeta } from '../chars.js';
+import { weaponAllowed } from '../inventory.js';
 import { HPAL, metalFrame, medBar, engraved, gem } from './frame.js';
 
 const PW = 330, PH = 132, PX = 14, PY = 10;
@@ -131,6 +132,19 @@ export function drawProfile() {
     ctx.globalAlpha = 0.65 + Math.sin(G.time * 6) * 0.35;
     engraved('PRÊT !', barX + barW - 56, uY - 3, 10.5, ultInfo.ready, 'right', 'Consolas, monospace');
     ctx.globalAlpha = 1;
+  }
+
+  // ---- bouclier de la lance sous la barre d'ultime (D : -85 % dégâts, 3 s / 10 s) ----
+  if (weaponAllowed(G.inv, 'lance')) {
+    const sY = uY + 17, sH = 7;
+    const active = p.shieldT > 0;
+    const frac = active ? 1 : 1 - Math.min(1, (p.shieldCd || 0) / 10);
+    medBar(barX, sY, barW, sH, frac, null,
+      active ? '#9be7ff' : '#4fc3f7', active ? '#0277bd' : '#0d3a52',
+      { glow: active ? '#4fc3f7' : null });
+    engraved('🛡 BOUCLIER', barX + 6, sY + sH / 2 + 2.5, 8.5, 'rgba(216,196,154,0.85)', 'left', 'Georgia, serif');
+    engraved(active ? `ACTIF ${p.shieldT.toFixed(0)}s` : (frac >= 1 ? 'PRÊT [D]' : `${Math.ceil(p.shieldCd || 0)}s`),
+      barX + barW - 6, sY + sH / 2 + 2.5, 8.5, active ? '#9be7ff' : frac >= 1 ? '#4fc3f7' : 'rgba(216,196,154,0.6)', 'right', 'Consolas, monospace');
   }
 
   // ---- flèches de feedback PV (bordure qui s'embrase) ----

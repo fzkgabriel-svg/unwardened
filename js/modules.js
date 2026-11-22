@@ -139,10 +139,15 @@ export function activateModule() {
   const lvl = p.level || 1;
   switch (id) {
     case 'ruee': {
-      // dash vers la dernière direction de déplacement (ou vers la droite)
-      const dx = p.lastDx !== undefined ? p.lastDx : 1, dy = p.lastDy !== undefined ? p.lastDy : 0;
-      p.dashT = 0.5; p.dashDx = dx; p.dashDy = dy;
-      spawnParticles(p.x, p.y, m.col, 14, 5);
+      // vrai dash : impulsion unique sur ~560 px en 0,3 s (ease-out), pas un boost
+      let dx = p.lastDx !== undefined ? p.lastDx : 1, dy = p.lastDy !== undefined ? p.lastDy : 0;
+      const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l;
+      p.dashT = 0; p.dashDur = 0.3;
+      p.dashX0 = p.x; p.dashY0 = p.y;
+      p.dashDist = 560; p.dashDx = dx; p.dashDy = dy;
+      spawnParticles(p.x, p.y, m.col, 18, 6);
+      G.rings.push({ x: p.x, y: p.y, r: 10, maxR: 60, life: 16, maxLife: 16, color: m.col });
+      G.screenShake = Math.max(G.screenShake, 3);
       break;
     }
     case 'surcharge':
@@ -204,14 +209,25 @@ export function updateModules(dt) {
   ensureModules();
   const buffs = G.modBuffs = G.modBuffs || {};
   for (const k in buffs) if (buffs[k] > 0) buffs[k] = Math.max(0, buffs[k] - dt);
-  // dash : déplacement rapide + traînée
-  if (p.dashT > 0) {
-    p.dashT = Math.max(0, p.dashT - dt);
-    const sp = p.speed * 4.6;
-    p.x = Math.max(p.r, Math.min(G.world ? worldWSafe() - p.r : p.x + sp * dt, p.x + p.dashDx * sp * dt));
-    p.y = Math.max(p.r, Math.min(worldHSafe() - p.r, p.y + p.dashDy * sp * dt));
-    spawnParticles(p.x, p.y, '#18ffff', 2, 2.5);
-    if (Math.random() < 0.4) G.rings.push({ x: p.x, y: p.y, r: 6, maxR: 26, life: 14, maxLife: 14, color: 'rgba(24,255,255,0.5)' });
+  // ruée dimensionnelle : dash directionnel — distance fixe, ease-out brutal
+  if (p.dashDur > 0) {
+    p.dashT += dt;
+    const k = Math.min(1, p.dashT / p.dashDur);
+    const e = 1 - Math.pow(1 - k, 3); // décélération franche : départ fulgurant, arrêt net
+    const nx = p.dashX0 + p.dashDx * p.dashDist * e;
+    const ny = p.dashY0 + p.dashDy * p.dashDist * e;
+    const wx = G.world ? worldWSafe() - p.r : nx, wy = G.world ? worldHSafe() - p.r : ny;
+    p.x = Math.max(p.r, Math.min(wx, nx));
+    p.y = Math.max(p.r, Math.min(wy, ny));
+    // traînée spectrale : afterimages cyan + étincelles
+    spawnParticles(p.x, p.y, '#18ffff', 3, 3);
+    if (Math.random() < 0.5) spawnParticles(p.x - p.dashDx * 14, p.y - p.dashDy * 14, '#7b2ff7', 1, 1.5);
+    if (k >= 1) {
+      p.dashDur = 0;
+      spawnParticles(p.x, p.y, '#18ffff', 22, 7);
+      spawnParticles(p.x, p.y, '#e040fb', 10, 4);
+      G.rings.push({ x: p.x, y: p.y, r: 8, maxR: 70, life: 18, maxLife: 18, color: 'rgba(24,255,255,0.7)' });
+    }
   }
   // frappe orbitale retardée
   if (G.modStrike) {

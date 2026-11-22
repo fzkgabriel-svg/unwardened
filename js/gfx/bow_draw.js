@@ -195,6 +195,17 @@ export function drawBowShots() {
       ctx.beginPath(); ctx.arc(s.x, s.y, s.r * 1.5, t * 4, t * 4 + TAU * 0.8); ctx.stroke();
       ctx.strokeStyle = `rgba(224,64,251,${0.5 * pu})`; ctx.lineWidth = 1.2;
       ctx.beginPath(); ctx.arc(s.x, s.y, s.r * 1.1, -t * 6, -t * 6 + TAU * 0.7); ctx.stroke();
+      // fragments cosmiques orbitant la pointe
+      for (let i = 0; i < 4; i++) {
+        const oa = t * 7 + i * TAU / 4;
+        const or = s.r * (1.7 + Math.sin(t * 9 + i) * 0.35);
+        const ox = s.x + Math.cos(oa) * or, oy = s.y + Math.sin(oa) * or * 0.8;
+        ctx.fillStyle = i % 2 ? `rgba(0,229,255,${0.8 * pu})` : `rgba(224,64,251,${0.8 * pu})`;
+        ctx.save();
+        ctx.translate(ox, oy); ctx.rotate(oa * 2);
+        ctx.fillRect(-2, -0.8, 4, 1.6);
+        ctx.restore();
+      }
     } else {
       const charged = s.type === 'charged';
       const pu = 0.8 + Math.sin(t * 18 + s.x * 0.1) * 0.2;
@@ -220,40 +231,136 @@ export function drawBowShots() {
   }
 }
 
-// ---------- zones de singularité (implosion + vortex) ----------
+// ---------- zones de singularité : trou noir cinématique ----------
+// Formation -> attraction gravitationnelle -> contraction -> détonation.
 export function drawSingZones() {
   if (!G.singZones) return;
   const t = G.time || 0;
   for (const z of G.singZones) {
-    const k = 1 - z.t / z.dur;         // 1 -> 0
-    const grow = Math.min(1, z.t / 0.35);
-    const r = z.r * (0.4 + 0.6 * grow) * (0.9 + Math.sin(t * 5) * 0.05);
+    const k = 1 - z.t / z.dur;
+    const grow = Math.min(1, z.t / 0.4);
+    const ease = 1 - Math.pow(1 - grow, 3);
+    const det = z.t > z.dur - 0.9;                    // contraction finale
+    const detK = det ? (z.t - (z.dur - 0.9)) / 0.9 : 0;
+    const r = z.r * (0.25 + 0.75 * ease) * (det ? 1 + detK * 0.35 : (0.93 + Math.sin(t * 4.5) * 0.05));
+    const bright = 1 + detK * 1.8;                     // luminosité croissante
+    const rv = r * 1.14;                                // halo visuel au-delà du rayon de jeu
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
-    // disque de distorsion : dégradé sombre au centre vers liseré violet
-    const dg = ctx.createRadialGradient(z.x, z.y, r * 0.1, z.x, z.y, r);
-    dg.addColorStop(0, `rgba(10,4,30,${0.55 * k})`);
-    dg.addColorStop(0.55, `rgba(76,29,149,${0.30 * k})`);
-    dg.addColorStop(0.85, `rgba(124,77,255,${0.28 * k})`);
+    // halo externe : lueur violette diffuse qui déborde de la zone
+    const hg2 = ctx.createRadialGradient(z.x, z.y, r * 0.5, z.x, z.y, rv * 1.35);
+    hg2.addColorStop(0, `rgba(124,77,255,${0.20 * k})`);
+    hg2.addColorStop(0.55, `rgba(76,29,149,${0.10 * k})`);
+    hg2.addColorStop(1, 'rgba(0,229,255,0)');
+    ctx.fillStyle = hg2;
+    ctx.beginPath(); ctx.arc(z.x, z.y, rv * 1.35, 0, TAU); ctx.fill();
+    // ombre gravitationnelle portée sur le sol
+    ctx.fillStyle = `rgba(4,1,18,${0.6 * k})`;
+    ctx.beginPath(); ctx.ellipse(z.x, z.y + r * 0.18, r * 1.15, r * 0.52, 0, 0, TAU); ctx.fill();
+    // halo de lentille : anneaux concentriques chromatiques (violet/cyan décalés)
+    for (let i = 0; i < 4; i++) {
+      const lr = rv * (1.0 + i * 0.06 + Math.sin(t * 3 + i) * 0.02);
+      ctx.strokeStyle = i === 1 || i === 3 ? `rgba(0,229,255,${0.13 * k})` : `rgba(179,136,255,${0.18 * k})`;
+      ctx.lineWidth = 6 - i;
+      ctx.beginPath(); ctx.arc(z.x, z.y, lr, 0, TAU); ctx.stroke();
+    }
+    // disque d'accrétion : dégradé profond sombre -> violet -> cyan
+    const dg = ctx.createRadialGradient(z.x, z.y, r * 0.04, z.x, z.y, rv);
+    dg.addColorStop(0, `rgba(0,0,0,${0.97 * k})`);
+    dg.addColorStop(0.28, `rgba(24,7,64,${0.82 * k})`);
+    dg.addColorStop(0.55, `rgba(96,30,175,${0.55 * k * bright})`);
+    dg.addColorStop(0.8, `rgba(124,77,255,${0.45 * k * bright})`);
+    dg.addColorStop(0.93, `rgba(0,229,255,${0.34 * k * bright})`);
     dg.addColorStop(1, 'rgba(0,229,255,0)');
     ctx.fillStyle = dg;
-    ctx.beginPath(); ctx.arc(z.x, z.y, r, 0, TAU); ctx.fill();
-    // anneaux d'implosion spiralés
-    for (let i = 0; i < 3; i++) {
-      const rr = r * (0.35 + i * 0.28) * (1 - (z.t * 0.12 % 1) * 0.3);
-      ctx.strokeStyle = `rgba(${i === 1 ? '224,64,251' : '0,229,255'},${(0.4 - i * 0.1) * k})`;
-      ctx.lineWidth = 2 - i * 0.4;
+    ctx.beginPath(); ctx.arc(z.x, z.y, rv, 0, TAU); ctx.fill();
+    // bras spiraux du disque d'accrétion : 3 volutes de matière en chute
+    for (let arm = 0; arm < 3; arm++) {
+      ctx.strokeStyle = `rgba(${arm === 1 ? '0,229,255' : '224,64,251'},${0.30 * k * bright})`;
+      ctx.lineWidth = 3.5 - arm * 0.7;
       ctx.beginPath();
-      ctx.arc(z.x, z.y, rr, t * (2 + i) + i, t * (2 + i) + i + TAU * 0.75);
+      const asp = t * (det ? 4.5 : 1.8) * (arm % 2 ? -1 : 1) + arm * TAU / 3;
+      for (let j = 0; j <= 22; j++) {
+        const aa = asp + j * 0.32;
+        const rr2 = rv * (0.22 + j * 0.042);
+        const px2 = z.x + Math.cos(aa) * rr2;
+        const py2 = z.y + Math.sin(aa) * rr2 * 0.42;
+        j === 0 ? ctx.moveTo(px2, py2) : ctx.lineTo(px2, py2);
+      }
       ctx.stroke();
     }
-    // étoile à 4 branches au centre (singularité)
-    const cr = 12 + Math.sin(t * 16) * 3;
-    ctx.strokeStyle = `rgba(224,64,251,${0.8 * k})`; ctx.lineWidth = 2;
+    // anneaux gravitationnels : 4 anneaux elliptiques inclinés, vitesses différentes
+    const tilts = [0.40, 0.50, 0.34, 0.46];
+    const cols = ['124,77,255', '0,229,255', '224,64,251', '179,136,255'];
+    for (let i = 0; i < 4; i++) {
+      const spd = (det ? 5 + i * 2.5 : 1.4 + i * 0.8) * (i % 2 ? 1 : -1);
+      const rr = rv * (0.30 + i * 0.18) * (1 - detK * 0.15);
+      const rot = t * spd * 0.5;
+      ctx.strokeStyle = `rgba(${cols[i]},${(0.62 - i * 0.08) * k * bright})`;
+      ctx.lineWidth = 1.8 - i * 0.3;
+      ctx.beginPath();
+      ctx.ellipse(z.x, z.y, rr, rr * tilts[i], rot * 0.3, t * spd, t * spd + TAU * 0.72);
+      ctx.stroke();
+    }
+    // sphère de photons : anneau fin très brillant près de l'horizon
+    ctx.strokeStyle = `rgba(255,255,255,${0.55 * k * bright})`;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.ellipse(z.x, z.y, r * 0.32, r * 0.32 * 0.4, t * 2, 0, TAU); ctx.stroke();
+    // étoile à 4 branches : le cœur de la singularité
+    const cr = (10 + Math.sin(t * (det ? 26 : 14)) * 3) * (0.5 + grow * 0.5) * bright;
+    ctx.strokeStyle = `rgba(224,64,251,${0.85 * k * bright})`; ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(z.x - cr * 2, z.y); ctx.lineTo(z.x + cr * 2, z.y);
-    ctx.moveTo(z.x, z.y - cr * 2); ctx.lineTo(z.x, z.y + cr * 2);
+    ctx.moveTo(z.x - cr * 2.2, z.y); ctx.lineTo(z.x + cr * 2.2, z.y);
+    ctx.moveTo(z.x, z.y - cr * 2.2); ctx.lineTo(z.x, z.y + cr * 2.2);
     ctx.stroke();
+    ctx.fillStyle = `rgba(255,255,255,${0.8 * k})`;
+    ctx.beginPath(); ctx.arc(z.x, z.y, 2.5 + detK * 3, 0, TAU); ctx.fill();
+    // débris de matière en orbite : 12 fragments sur ellipses
+    for (let i = 0; i < 12; i++) {
+      const oa = t * (1.1 + (i % 3) * 0.5) + i * TAU / 12;
+      const orad = rv * (0.4 + (i % 4) * 0.15);
+      const ox = z.x + Math.cos(oa) * orad;
+      const oy = z.y + Math.sin(oa) * orad * tilts[i % 4];
+      const tw = 0.4 + 0.6 * Math.abs(Math.sin(t * 5 + i * 1.9));
+      ctx.fillStyle = i % 3 === 0 ? `rgba(0,229,255,${0.75 * tw * k})` : `rgba(179,136,255,${0.7 * tw * k})`;
+      ctx.beginPath(); ctx.arc(ox, oy, 1.4 + (i % 3) * 0.7, 0, TAU); ctx.fill();
+    }
+    // traînées lumineuses des ennemis aspirés vers le centre
+    if (k > 0.25) {
+      for (const e of G.enemies) {
+        const dx = e.x - z.x, dy = e.y - z.y;
+        const d = Math.hypot(dx, dy);
+        if (d < z.r * 0.95 && d > 24) {
+          const pullStr = (1 - d / (z.r * 0.95)) * k;
+          const nx = dx / d, ny = dy / d;
+          const sx = e.x - nx * Math.min(34, d * 0.3), sy = e.y - ny * Math.min(34, d * 0.3);
+          const cg2 = ctx.createLinearGradient(sx, sy, z.x + nx * 14, z.y + ny * 14);
+          cg2.addColorStop(0, 'rgba(179,136,255,0)');
+          cg2.addColorStop(1, `rgba(179,136,255,${0.4 * pullStr})`);
+          ctx.strokeStyle = cg2; ctx.lineWidth = 2.2;
+          ctx.beginPath();
+          ctx.moveTo(sx, sy);
+          ctx.quadraticCurveTo((sx + z.x) / 2 + ny * 10, (sy + z.y) / 2 - nx * 10, z.x + nx * 14, z.y + ny * 14);
+          ctx.stroke();
+        }
+      }
+    }
+    ctx.restore();
+  }
+  // PRÉPARATION : fragments cosmiques orbitant le joueur pendant ~0,8 s
+  const prep = G.singPrep ? (G.time || 0) - G.singPrep : 99;
+  if (prep < 0.8 && G.player) {
+    const p = G.player, fade = 1 - prep / 0.8;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 12; i++) {
+      const a = prep * 9 + i * TAU / 12;
+      const rr = 24 + Math.sin(prep * 10 + i) * 8;
+      const ox = p.x + Math.cos(a) * rr, oy = p.y + Math.sin(a) * rr * 0.7;
+      const col = i % 3 === 0 ? '0,229,255' : i % 3 === 1 ? '179,136,255' : '224,64,251';
+      ctx.fillStyle = `rgba(${col},${0.85 * fade})`;
+      ctx.beginPath(); ctx.arc(ox, oy, 1.8 + (i % 3) * 0.8, 0, TAU); ctx.fill();
+    }
     ctx.restore();
   }
 }
