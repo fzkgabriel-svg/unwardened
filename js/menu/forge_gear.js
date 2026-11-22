@@ -110,28 +110,28 @@ function drawHeroCenter(L, CL) {
   ctx.restore();
   drawDoll(D.x, D.y);
 
-  // records répartis sur les côtés du mannequin (2 gauche, 2 droite)
-  const recs = [
-    ['📦', `${s.totalRuns || 0} parties`], ['🌊', `vag. ${s.bestWave || 0}`],
-    ['💀', `${(s.totalKills || 0).toLocaleString('fr-FR')} kills`], ['⏱', fmtPlaytime(s.playtime || 0)]
-  ];
-  const rw = 110, rh = 28, gap = 4; // espacement réduit pour rapprocher les badges
+  // records répartis sur les côtés du mannequin (1 ligne par côté)
+  const leftRow = [`📦 ${s.totalRuns || 0} parties`, `🌊 vag. ${s.bestWave || 0}`];
+  const rightRow = [`💀 ${(s.totalKills || 0).toLocaleString('fr-FR')} kills`, `⏱ ${fmtPlaytime(s.playtime || 0)}`];
+  const rw = 130, rh = 28;
   const sideY = D.y - 10; // alignés avec le haut du mannequin
-  const leftX = D.x - 180, rightX = D.x + 70; // écartement maximum absolu
-  recs.forEach((r, i) => {
-    const isLeft = i < 2;
-    const col = isLeft ? 0 : i - 2;
-    const rx = isLeft ? leftX : rightX;
-    const ry = sideY + col * (rh + gap);
-    ctx.fillStyle = 'rgba(255,255,255,0.05)';
-    roundRect(rx, ry, rw, rh, 7); ctx.fill();
-    ctx.strokeStyle = 'rgba(255,215,64,0.25)'; ctx.lineWidth = 1;
-    roundRect(rx, ry, rw, rh, 7); ctx.stroke();
-    ctx.fillStyle = '#d4b062'; ctx.font = `11px ${UI}`; ctx.textAlign = 'center';
-    ctx.fillText(r[0], rx + 18, ry + 18);
-    ctx.fillStyle = '#e8e0c8'; ctx.font = `bold 10px ${UI}`;
-    ctx.fillText(fitText(String(r[1]), rw - 40), rx + rw / 2 + 8, ry + 18);
-  });
+  const leftX = D.x - 180, rightX = D.x + 70;
+
+  // gauche : parties + vague sur une ligne
+  ctx.fillStyle = 'rgba(255,255,255,0.05)';
+  roundRect(leftX, sideY, rw, rh, 7); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,215,64,0.25)'; ctx.lineWidth = 1;
+  roundRect(leftX, sideY, rw, rh, 7); ctx.stroke();
+  ctx.fillStyle = '#e8e0c8'; ctx.font = `bold 10px ${UI}`; ctx.textAlign = 'center';
+  ctx.fillText(leftRow.join(' · '), leftX + rw / 2, sideY + 18);
+
+  // droite : kills + temps sur une ligne
+  ctx.fillStyle = 'rgba(255,255,255,0.05)';
+  roundRect(rightX, sideY, rw, rh, 7); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,215,64,0.25)'; ctx.lineWidth = 1;
+  roundRect(rightX, sideY, rw, rh, 7); ctx.stroke();
+  ctx.fillStyle = '#e8e0c8'; ctx.font = `bold 10px ${UI}`; ctx.textAlign = 'center';
+  ctx.fillText(rightRow.join(' · '), rightX + rw / 2, sideY + 18);
 }
 
 // mannequin du héros (respiration discrète)
