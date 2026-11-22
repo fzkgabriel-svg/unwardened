@@ -608,6 +608,9 @@ function drawDetail(L, inv, t) {
   ctx.fillText(cfg.stock == null ? 'stock illimité' : `stock : ${left}/${cfg.stock} aujourd'hui`, d.x + 118, d.y + 76);
   ctx.fillStyle = C_MUT; ctx.font = '11px Inter, sans-serif';
   ctx.fillText(`${cfg.price} ◆ / unité`, d.x + 118, d.y + 94);
+  // coût total de la sélection (colonne de gauche, sous le prix unitaire)
+  ctx.fillStyle = afford ? '#69f0ae' : '#ff8a80'; ctx.font = 'bold 12.5px Consolas, monospace';
+  ctx.fillText(`×${qty} = ${cost} ◆`, d.x + 118, d.y + 112);
   // sélecteur quantité
   const qy = d.y + d.h / 2 + 8;
   ctx.fillStyle = 'rgba(0,0,0,0.35)'; roundRect(L.minus.x - 8, L.minus.y - 4, L.plus.x + L.plus.w - L.minus.x + 16, L.minus.h + 8, 9); ctx.fill();
@@ -618,9 +621,6 @@ function drawDetail(L, inv, t) {
   ctx.fillText(`×${qty}`, (L.minus.x + L.minus.w + L.plus.x) / 2, qy + 4);
   ctx.fillStyle = pq ? '#fff' : C_MUT;
   ctx.fillText('+', L.plus.x + L.plus.w / 2, qy + 4);
-  // coût total
-  ctx.fillStyle = afford ? '#69f0ae' : '#ff8a80'; ctx.font = 'bold 13px Consolas, monospace'; ctx.textAlign = 'right';
-  ctx.fillText(`TOTAL : ${cost} ◆`, L.buy.x - 14, qy + 4);
   // bouton acheter
   const b = L.buy, bh = inR(b, G.mouse.x, G.mouse.y);
   ctx.fillStyle = afford ? (bh ? 'rgba(46,204,113,0.9)' : 'rgba(46,204,113,0.55)') : 'rgba(255,255,255,0.08)';
