@@ -47,6 +47,7 @@ export function damagePlayer(dmg, slow = 1.0, killer = null) {
   sfxHurt();
   p.lastHurt = G.time;
   p.slowT = Math.max(p.slowT, slow);
+  p.hitSlowT = 0.35; // léger ralentissement à chaque coup subi (×0,88 pendant 0,35 s)
   addDamageText(p.x, p.y - 18, `-${Math.round(dmg)}`, '#ff1744');
   spawnParticles(p.x, p.y, '#ff1744', 6, 4);
   // usure des équipements : chaque coup use l'armure, l'arme et le talisman
@@ -155,7 +156,8 @@ function update(dt) {
   if (keys['q'] || keys['arrowleft']) dx -= 1;
   if (keys['d'] || keys['arrowright']) dx += 1;
   if (p.slowT > 0) p.slowT = Math.max(0, p.slowT - dt);
-  const pSpeed = p.speed * (p.slowT > 0 ? 0.8 : 1) * (p.attackMode === 3 ? 0.7 : p.attackMode === 5 ? 0.97 : 0.93) * modSpeedMult(); // lance tank / arc léger / épée / module Impulsion
+  if (p.hitSlowT > 0) p.hitSlowT = Math.max(0, p.hitSlowT - dt);
+  const pSpeed = p.speed * (p.slowT > 0 ? 0.8 : 1) * (p.hitSlowT > 0 ? 0.88 : 1) * (p.attackMode === 3 ? 0.7 : p.attackMode === 5 ? 0.9 : 0.93) * modSpeedMult(); // lance tank / arc très légèrement plus lent que l'épée / module Impulsion
   if (dx || dy) {
     const len = Math.hypot(dx, dy);
     p.lastDx = dx / len; p.lastDy = dy / len; // direction pour la Ruée dimensionnelle

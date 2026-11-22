@@ -4,11 +4,11 @@ import { sfxPotion, sfxLevel, sfxPickup } from './audio.js';
 
 export function gainXp(amount) {
   const p = G.player;
-  p.xp += amount * (G.equip ? G.equip.xp : 1); // bonus XP de l'équipement
+  p.xp += Math.max(1, Math.round(amount * (G.equip ? G.equip.xp : 1))); // bonus XP de l'équipement — XP toujours entier
   while (p.xp >= p.xpNext) {
     p.xp -= p.xpNext;
     p.level++;
-    p.xpNext = Math.floor(p.xpNext * 1.5);
+    p.xpNext = Math.floor(p.xpNext * 1.34); // croissance assouplie : ×1,34/niv au lieu de ×1,5
     p.maxHp += 20;
     p.hp = p.maxHp;
     p.attackDamage += 8;

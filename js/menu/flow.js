@@ -196,7 +196,7 @@ export function resetToMenu() {
     spinDamage: 70, spinRadius: 110, spinCooldown: 0, spinDuration: 0,
     ultCharge: 0, ultRadius: 400, ultActive: 0, ultAnim: 0,
     xp: 0, level: 1, xpNext: 50, attackMode: 1,
-    shieldT: 0, shieldCd: 0, switchLock: 0,
+    shieldT: 0, shieldCd: 0, switchLock: 0, hitSlowT: 0,
     alive: true, lastHurt: -99, potions: 0, maxPotions: 3, slowT: 0, potionCooldown: 0,
     poisonT: 0, poisonDps: 0, _titanMax: 0, handCd: 0, handUsed: false
   });

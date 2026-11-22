@@ -9,7 +9,7 @@ import { worldW, worldH } from './world.js';
 import { sfxBowFire, sfxSingularity, sfxBossAtk } from './audio.js';
 import { wearWeaponUse } from './inventory.js';
 
-export const BOW_SING_CD = 10;          // recharge de la singularité
+export const BOW_SING_CD = 12.5;         // recharge de la singularité
 const CHARGE_TIME = 1.15;               // temps de charge max (s)
 const MIN_DMG = 0.55, MAX_DMG = 2.6;    // multiplicateur de dégâts selon la charge
 const BOW_SHOT_CD = 0.25;               // cadence mini entre deux tirs (anti-spam)

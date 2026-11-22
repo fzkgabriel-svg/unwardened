@@ -3,7 +3,7 @@
 // Équipement : 1 actif + 1 passif (slot passif débloqué pour 500 ◆). Persisté dans inv.modules via saveInv.
 import { G, ctx, TAU, H } from './state.js';
 import { roundRect, hexA } from './utils.js';
-import { saveInv } from './inventory.js';
+import { saveInv, MATS } from './inventory.js';
 import { spawnParticles, addDamageText } from './effects.js';
 import { damageEnemy } from './enemies.js';
 import { worldW, worldH } from './world.js';
@@ -12,8 +12,8 @@ import { sfxPickup } from './audio.js';
 // id → définition. type: 'actif'|'passif' · price: émeraudes (0 = offert)
 export const MODULES = {
   bouclier:    { name: 'Bouclier énergétique', type: 'passif', rar: 'Épique',      col: '#4fc3f7', icon: '🛡', price: 0,   cd: 0,
-    desc: 'Barre de bouclier qui absorbe les dégâts avant les PV. Se régénère après 4 s sans dégâts.' },
-  ruee:        { name: 'Ruée dimensionnelle',  type: 'actif',  rar: 'Épique',      col: '#18ffff', icon: '➤', price: 0,   cd: 8,
+    desc: 'Barre de bouclier qui absorbe les dégâts avant les PV. 2-5 % des dégâts absorbés reconstituent le bouclier (max 75 %). Se régénère après 4 s sans dégâts.' },
+  ruee:        { name: 'Ruée dimensionnelle',  type: 'actif',  rar: 'Épique',      col: '#18ffff', icon: '➤', price: 0,   cd: 14,
     desc: 'Dash foudroyant vers l\'avant avec traînée d\'énergie. Recharge 8 s.' },
   surcharge:   { name: 'Surcharge',            type: 'actif',  rar: 'Rare',        col: '#ff5252', icon: '⚡', price: 160, cd: 14,
     desc: '+50 % de dégâts pendant 6 s. Recharge 14 s.' },
@@ -59,6 +59,7 @@ export function modState(inv) {
   if (m.eq.act === undefined) m.eq.act = null;
   if (m.eq.pass === undefined) m.eq.pass = null;
   if (m.passUnlocked === undefined) m.passUnlocked = false;
+  if (m.levels === undefined) m.levels = {}; // niveaux de module 1→3
   // sanitisation : chaque slot n'accepte que son type — un module d'un
   // mauvais type est déplacé vers l'autre slot s'il est libre, sinon retiré
   const sanitize = (slot, want, other) => {
@@ -111,19 +112,57 @@ export function equippedMods() {
 export function eqActive() { const inv = G.inv; return inv ? modState(inv).eq.act : null; }
 export function hasMod(id) { const inv = G.inv; return inv ? modState(inv).owned.includes(id) : false; }
 
+// ---------- NIVEAUX DE MODULE (1 → 3, améliorés avec émeraudes + cristaux) ----------
+export function modLevel(id) {
+  const inv = G.inv; if (!inv) return 1;
+  const lv = (modState(inv).levels || {})[id];
+  return Math.min(3, Math.max(1, lv || 1));
+}
+// coût pour passer au niveau suivant : niv2 = 120◆+4 cristaux, niv3 = 300◆+10 cristaux
+export function modUpgradeCost(id) {
+  const l = modLevel(id);
+  if (l >= 3) return null;
+  return l === 1 ? { emeraude: 120, cristal: 4 } : { emeraude: 300, cristal: 10 };
+}
+export function upgradeModule(id) {
+  const inv = G.inv;
+  if (!inv || !MODULES[id]) return { ok: false, msg: 'Module introuvable' };
+  const ms = modState(inv);
+  if (!ms.owned.includes(id)) return { ok: false, msg: 'Module non possédé' };
+  ms.levels = ms.levels || {};
+  const l = ms.levels[id] || 1;
+  if (l >= 3) return { ok: false, msg: 'Niveau maximum atteint' };
+  const cost = modUpgradeCost(id);
+  inv.mats = inv.mats || {};
+  for (const k in cost) {
+    if ((inv.mats[k] || 0) < cost[k]) {
+      const names = Object.keys(cost).map(k2 => `${cost[k2]} ${MATS[k2] ? MATS[k2].name : k2}`).join(' + ');
+      return { ok: false, msg: `Matériaux insuffisants — ${names} requis` };
+    }
+  }
+  for (const k in cost) inv.mats[k] -= cost[k];
+  ms.levels[id] = l + 1;
+  saveInv(inv);
+  return { ok: true, msg: `${MODULES[id].name} → niveau ${l + 1} !` };
+}
+
 // ---------- STATS PASSIFS ÉQUIPÉS ----------
 function has(id) { return equippedMods().some(m => m && MODULES[id] === m); }
+// niveau d'un module (1→3) pour la montée en puissance des améliorations
+function mlvl(id) { return modLevel(id); }
 export function modDmgMult() {
   const b = G.modBuffs || {};
-  return (b.surcharge > 0 ? 1.5 : 1) * (b.ultBuff > 0 ? 1.2 : 1);
+  return (b.surcharge > 0 ? 1.5 + 0.15 * (mlvl('surcharge') - 1) : 1) * (b.ultBuff > 0 ? 1.2 : 1);
 }
-export function modDmgReduce() { return has('resistance') ? 0.12 : 0; }
-export function modCritBonus() { return has('instinct') ? 0.12 : 0; }
-export function modLifesteal() { return has('absorption') ? 0.08 : 0; }
-export function modRegen() { return has('regeneration') ? 4 : 0; }
-export function modShieldMax() { return has('bouclier') ? 70 : 0; }
-export function modShieldRegen() { return has('bouclier') ? 3 : 0; }
-export function modSpeedMult() { const b = G.modBuffs || {}; return b.impulsion > 0 ? 1.6 : 1; }
+export function modDmgReduce() { return has('resistance') ? 0.12 + 0.04 * (mlvl('resistance') - 1) : 0; }
+export function modCritBonus() { return has('instinct') ? 0.12 + 0.05 * (mlvl('instinct') - 1) : 0; }
+export function modLifesteal() { return has('absorption') ? 0.08 + 0.02 * (mlvl('absorption') - 1) : 0; }
+export function modRegen() { return has('regeneration') ? 4 + 2 * (mlvl('regeneration') - 1) : 0; }
+export function modShieldMax() { return has('bouclier') ? 70 + 40 * (mlvl('bouclier') - 1) : 0; }
+export function modShieldRegen() { return has('bouclier') ? 3 + 1.5 * (mlvl('bouclier') - 1) : 0; }
+// conversion dégâts absorbés -> PV de bouclier : 2 % (niv1) -> 5 % (niv3)
+export function modShieldGain() { return has('bouclier') ? 0.02 + 0.015 * (mlvl('bouclier') - 1) : 0; }
+export function modSpeedMult() { const b = G.modBuffs || {}; return b.impulsion > 0 ? 1.6 + 0.15 * (mlvl('impulsion') - 1) : 1; }
 
 // ---------- ACTIVATION (touche X) ----------
 export function activateModule() {
@@ -135,16 +174,17 @@ export function activateModule() {
   if (!m || m.type !== 'actif') return false;
   const cds = G.modCds = G.modCds || {};
   if ((cds[id] || 0) > G.time) return false; // en recharge
-  cds[id] = G.time + m.cd;
+  const ml = modLevel(id); // niveau du module : améliore effets ET réduit le cooldown
+  cds[id] = G.time + m.cd * (1 - 0.07 * (ml - 1));
   const lvl = p.level || 1;
   switch (id) {
     case 'ruee': {
-      // vrai dash : impulsion unique sur ~560 px en 0,3 s (ease-out), pas un boost
+      // vrai dash : impulsion unique ~560 px en 0,3 s (ease-out), +15 %/niv
       let dx = p.lastDx !== undefined ? p.lastDx : 1, dy = p.lastDy !== undefined ? p.lastDy : 0;
       const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l;
       p.dashT = 0; p.dashDur = 0.3;
       p.dashX0 = p.x; p.dashY0 = p.y;
-      p.dashDist = 560; p.dashDx = dx; p.dashDy = dy;
+      p.dashDist = Math.round(560 * (1 + 0.15 * (ml - 1))); p.dashDx = dx; p.dashDy = dy;
       spawnParticles(p.x, p.y, m.col, 18, 6);
       G.rings.push({ x: p.x, y: p.y, r: 10, maxR: 60, life: 16, maxLife: 16, color: m.col });
       G.screenShake = Math.max(G.screenShake, 3);
@@ -156,7 +196,7 @@ export function activateModule() {
       spawnParticles(p.x, p.y, m.col, 20, 6);
       break;
     case 'onde': {
-      const dmg = 50 + lvl * 4, R = 230;
+      const dmg = (50 + lvl * 4) * (1 + 0.2 * (ml - 1)), R = 230 * (1 + 0.1 * (ml - 1));
       G.rings.push({ x: p.x, y: p.y, r: 20, maxR: R, life: 30, maxLife: 30, color: m.col });
       spawnParticles(p.x, p.y, m.col, 40, 8);
       G.screenShake = Math.max(G.screenShake, 8);
@@ -168,7 +208,7 @@ export function activateModule() {
     case 'distorsion': {
       let n = 0;
       for (const e of G.enemies) {
-        if (Math.hypot(e.x - p.x, e.y - p.y) < 270 + e.r) { e.timeSlow = 4; n++; }
+        if (Math.hypot(e.x - p.x, e.y - p.y) < 270 + e.r) { e.timeSlow = 4 + 0.5 * (ml - 1); n++; }
       }
       addDamageText(p.x, p.y - 34, `DISTORSION ×${n}`, m.col);
       G.rings.push({ x: p.x, y: p.y, r: 30, maxR: 270, life: 36, maxLife: 36, color: m.col });
@@ -182,14 +222,14 @@ export function activateModule() {
         if (d < bd) { bd = d; best = e; }
       }
       if (best) {
-        const dmg = 130 + lvl * 8;
+        const dmg = (130 + lvl * 8) * (1 + 0.25 * (ml - 1));
         G.modStrike = { t: 0.45, x: best.x, y: best.y, e: best, dmg };
         spawnParticles(best.x, best.y, m.col, 16, 5);
       } else addDamageText(p.x, p.y - 34, 'AUCUNE CIBLE', '#90a4ae');
       break;
     }
     case 'impulsion':
-      G.modBuffs = G.modBuffs || {}; G.modBuffs.impulsion = 4;
+      G.modBuffs = G.modBuffs || {}; G.modBuffs.impulsion = 4 + 0.5 * (ml - 1);
       addDamageText(p.x, p.y - 34, 'IMPULSION !', m.col);
       spawnParticles(p.x, p.y, m.col, 22, 6);
       break;
@@ -256,8 +296,9 @@ export function updateModules(dt) {
   if (has('rempart') && p.alive && p.hp > 0 && p.hp < p.maxHp * 0.3) {
     const cds = G.modCds = G.modCds || {};
     if (!(cds._rempart > G.time)) {
-      cds._rempart = G.time + 30;
-      p.modShield = Math.max(p.modShield || 0, 60);
+      const rl = modLevel('rempart');
+      cds._rempart = G.time + (30 - 4 * (rl - 1));
+      p.modShield = Math.max(p.modShield || 0, 60 + 40 * (rl - 1));
       addDamageText(p.x, p.y - 44, 'DERNIER REMPART !', '#ffd54f');
       spawnParticles(p.x, p.y, '#ffd54f', 26, 6);
       G.rings.push({ x: p.x, y: p.y, r: 10, maxR: 120, life: 26, maxLife: 26, color: '#ffd54f' });
@@ -276,8 +317,19 @@ export function moduleAbsorb(dmg) {
     const absorbed = Math.min(shield, d);
     p.modShield = shield - absorbed;
     d -= absorbed;
-    if (absorbed > 0) addDamageText(p.x, p.y - 30, `🛡 -${Math.round(absorbed)}`, '#4fc3f7');
-    spawnParticles(p.x, p.y, '#4fc3f7', 5, 3);
+    if (absorbed > 0) {
+      addDamageText(p.x, p.y - 30, `🛡 -${Math.round(absorbed)}`, '#4fc3f7');
+      spawnParticles(p.x, p.y, '#4fc3f7', 5, 3);
+      // conversion : 2→5 % des dégâts absorbés refont des PV de bouclier (plafond 75 % du max)
+      const gainRate = modShieldGain();
+      if (gainRate > 0) {
+        const cap = modShieldMax() * 0.75;
+        const before = p.modShield || 0;
+        p.modShield = Math.min(cap, before + absorbed * gainRate);
+        const gained = p.modShield - before;
+        if (gained >= 1) addDamageText(p.x, p.y - 48, `+${Math.round(gained)} 🛡`, '#69f0ae');
+      }
+    }
   }
   return d;
 }

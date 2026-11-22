@@ -3,7 +3,7 @@
 // cartes holographiques par rareté, panneau de détail, boutique intégrée.
 import { G, ctx, W, H, TAU } from '../state.js';
 import { roundRect, hexA } from '../utils.js';
-import { MODULES, MOD_IDS, modState, modulesUnlocked, ensureModules, unlockPassSlot, PASS_SLOT_PRICE } from '../modules.js';
+import { MODULES, MOD_IDS, modState, modulesUnlocked, ensureModules, unlockPassSlot, PASS_SLOT_PRICE, modLevel, modUpgradeCost, upgradeModule } from '../modules.js';
 import { saveInv } from '../inventory.js';
 import { inR, UI, SERIF, C_TEXT, C_MUTED, C_GOLD, menuButtons, drawMenuButton } from './common.js';
 import { sfxClick, sfxEquip, sfxConfirm } from '../audio.js';
@@ -35,9 +35,13 @@ function layout() {
     id, x: gx + (i % cols) * (cw + 12), y: gy + Math.floor(i / cols) * (ch + 12), w: cw, h: ch, i,
   }));
   const btnY = det.y + det.h - 52;
+  // bas du panneau : [équiper/installé] à gauche + [améliorer] à droite
+  const bw = det.w - 40, uw = Math.min(150, bw * 0.44);
+  const ew = bw - uw - 12;
   return {
     slots, cards, det,
-    equipBtn: { x: det.x + 20, y: btnY, w: det.w - 40, h: 40 },
+    equipBtn: { x: det.x + 20, y: btnY, w: ew, h: 40 },
+    upBtn: { x: det.x + 20 + ew + 12, y: btnY, w: uw, h: 40 },
     shopBtn: { x: det.x + 20, y: btnY, w: det.w - 40, h: 40 },
   };
 }
@@ -85,6 +89,13 @@ export function modClickAt(x, y) {
   // bouton boutique du panneau détail (module non possédé)
   if (G.modSel && !ms.owned.includes(G.modSel) && inR(L.shopBtn, x, y)) {
     G.shopOpen = true; sfxConfirm(); return 'shop';
+  }
+  // bouton amélioration (module possédé, niveau < 3)
+  if (G.modSel && ms.owned.includes(G.modSel) && inR(L.upBtn, x, y)) {
+    const r = upgradeModule(G.modSel);
+    G.modMsg = { msg: r.msg, t: G.time, bad: !r.ok };
+    if (r.ok) { G.modFx = G.time; sfxEquip(); } else sfxClick();
+    return r.ok ? 'upgrade' : 'deny';
   }
   // bouton équiper du panneau détail
   if (G.modSel && ms.owned.includes(G.modSel) && inR(L.equipBtn, x, y)) {
@@ -314,6 +325,16 @@ function drawCard(c, t) {
   ctx.fillText(m.name, ix, c.y + c.h - 34, c.w - 12);
   ctx.font = `8.5px ${UI}`; ctx.fillStyle = owned ? rc : 'rgba(255,255,255,0.25)';
   ctx.fillText(`${m.rar.toUpperCase()} · ${m.type === 'actif' ? 'ACTIF' : 'PASSIF'}`, ix, c.y + c.h - 20);
+  // niveau du module (possédé) : pastilles en haut à droite
+  if (owned) {
+    const lv = modLevel(id);
+    ctx.textAlign = 'right';
+    for (let k = 0; k < 3; k++) {
+      ctx.fillStyle = k < lv ? '#ffd740' : 'rgba(255,255,255,0.15)';
+      ctx.beginPath(); ctx.arc(c.x + c.w - 14 - (2 - k) * 10, c.y + 14, 3.2, 0, TAU); ctx.fill();
+    }
+    ctx.textAlign = 'center';
+  }
   // badge bas : équipé / touche X / prix
   if (equipped) {
     ctx.fillStyle = m.col; ctx.font = `700 9px ${UI}`;
@@ -387,9 +408,20 @@ function drawDetail(L, id, t) {
   ctx.fillText(m.icon, ix, iy + bob);
   ctx.restore();
   // nom + chips
+  const lvl = owned ? modLevel(id) : 1;
   ctx.globalAlpha = enter;
   ctx.font = `700 18px ${UI}`; ctx.fillStyle = owned ? C_TEXT : 'rgba(255,255,255,0.4)';
   ctx.fillText(m.name, ix, d.y + 152);
+  // pastilles de niveau sous le nom
+  if (owned) {
+    for (let k = 0; k < 3; k++) {
+      ctx.fillStyle = k < lvl ? '#ffd740' : 'rgba(255,255,255,0.18)';
+      ctx.save(); ctx.translate(ix + (k - 1) * 16, d.y + 168);
+      ctx.rotate(Math.PI / 4); ctx.fillRect(-4, -4, 8, 8); ctx.restore();
+    }
+    ctx.font = `700 9px ${UI}`; ctx.fillStyle = lvl >= 3 ? '#ffd740' : '#69f0ae';
+    ctx.fillText(lvl >= 3 ? 'NIV MAX' : `NIV ${lvl}`, ix + 40, d.y + 171);
+  }
   ctx.font = `600 9.5px ${UI}`; ctx.letterSpacing = '1.5px';
   ctx.fillStyle = rc; ctx.fillText(m.rar.toUpperCase(), ix - 60, d.y + 172);
   ctx.fillStyle = m.col; ctx.fillText(m.type === 'actif' ? 'MODULE ACTIF' : 'MODULE PASSIF', ix + 60, d.y + 172);
@@ -411,27 +443,45 @@ function drawDetail(L, id, t) {
   ctx.font = `600 9.5px ${UI}`; ctx.letterSpacing = '2px'; ctx.fillStyle = CYAN;
   ctx.fillText('STATISTIQUES', ix, sy + 2); ctx.letterSpacing = '0px';
   ctx.font = `11px ${UI}`; ctx.fillStyle = owned ? C_MUTED : 'rgba(255,255,255,0.28)';
-  statLines(m).forEach((l, i) => ctx.fillText(l, ix, sy + 20 + i * 15));
-  // bouton bas : équiper / équipé / acheter à la boutique
+  statLines(m, lvl).forEach((l, i) => ctx.fillText(l, ix, sy + 20 + i * 15));
+  // boutons bas : [équiper/installé] + [améliorer niv] (module possédé) ou [acheter] (verrouillé)
   const b = equipped ? L.equipBtn : (owned ? L.equipBtn : L.shopBtn);
   const hov = inR(b, G.mouse.x, G.mouse.y);
+  const ub = L.upBtn;
+  const ucost = owned && lvl < 3 ? modUpgradeCost(id) : null;
+  if (ucost) {
+    const hovU = inR(ub, G.mouse.x, G.mouse.y);
+    ctx.fillStyle = hovU ? 'rgba(105,240,174,0.95)' : 'rgba(105,240,174,0.55)';
+    roundRect(ub.x, ub.y, ub.w, ub.h, 10); ctx.fill();
+    ctx.fillStyle = '#06130c';
+    ctx.font = `700 10.5px ${UI}`;
+    ctx.fillText(`⬆ AMÉLIORER → NIV ${lvl + 1}`, ub.x + ub.w / 2, ub.y + 16);
+    ctx.font = `600 9px ${UI}`;
+    ctx.fillText(`${ucost.emeraude} ◆ + ${ucost.cristal} ✦`, ub.x + ub.w / 2, ub.y + 31);
+  } else if (owned && lvl >= 3) {
+    ctx.fillStyle = 'rgba(255,255,255,0.05)';
+    roundRect(ub.x, ub.y, ub.w, ub.h, 10); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,215,64,0.5)'; ctx.lineWidth = 1; roundRect(ub.x, ub.y, ub.w, ub.h, 10); ctx.stroke();
+    ctx.fillStyle = '#ffd740'; ctx.font = `700 10.5px ${UI}`;
+    ctx.fillText('★ NIVEAU MAX', ub.x + ub.w / 2, ub.y + ub.h / 2 + 4);
+  }
   if (equipped) {
     ctx.fillStyle = 'rgba(255,255,255,0.05)';
     roundRect(b.x, b.y, b.w, b.h, 10); ctx.fill();
     ctx.strokeStyle = m.col; ctx.lineWidth = 1.5; roundRect(b.x, b.y, b.w, b.h, 10); ctx.stroke();
     ctx.fillStyle = m.col; ctx.font = `700 12.5px ${UI}`;
-    ctx.fillText('◈ INSTALLÉ — cliquez un slot pour changer', ix, b.y + b.h / 2 + 4);
+    ctx.fillText('◈ INSTALLÉ', b.x + b.w / 2, b.y + b.h / 2 + 4);
   } else if (!owned) {
     ctx.fillStyle = hov ? 'rgba(255,215,64,0.9)' : 'rgba(255,215,64,0.55)';
     roundRect(b.x, b.y, b.w, b.h, 10); ctx.fill();
     ctx.fillStyle = '#16130c'; ctx.font = `700 12.5px ${UI}`;
-    ctx.fillText(`🛒 ACHETER À LA BOUTIQUE — ${m.price} ◆`, ix, b.y + b.h / 2 + 4);
+    ctx.fillText(`🛒 ACHETER — ${m.price} ◆`, b.x + b.w / 2, b.y + b.h / 2 + 4);
   } else {
     const passLocked = m.type === 'passif' && !ms.passUnlocked;
     ctx.fillStyle = passLocked ? (hov ? 'rgba(255,215,64,0.9)' : 'rgba(255,215,64,0.55)') : hov ? hexA(m.col, 0.95) : hexA(m.col, 0.5);
     roundRect(b.x, b.y, b.w, b.h, 10); ctx.fill();
     ctx.fillStyle = passLocked ? '#16130c' : '#06101e'; ctx.font = `700 12.5px ${UI}`;
-    ctx.fillText(passLocked ? `🔒 DÉBLOQUER LE SLOT PASSIF — ${PASS_SLOT_PRICE} ◆` : (m.type === 'actif' ? '⚡ INSTALLER COMME MODULE ACTIF [X]' : '⬡ INSTALLER COMME MODULE PASSIF'), ix, b.y + b.h / 2 + 4);
+    ctx.fillText(passLocked ? `🔒 SLOT PASSIF — ${PASS_SLOT_PRICE} ◆` : (m.type === 'actif' ? '⚡ INSTALLER [X]' : '⬡ INSTALLER PASSIF'), b.x + b.w / 2, b.y + b.h / 2 + 4);
   }
   ctx.restore();
 }
@@ -527,20 +577,21 @@ function drawMsg(t) {
 }
 
 // ---------- statistiques par module ----------
-function statLines(m) {
+function statLines(m, lvl = 1) {
+  const cd = c => (c * (1 - 0.07 * (lvl - 1))).toFixed(1).replace('.', ',');
   switch (m.name) {
-    case 'Bouclier énergétique': return ['Bouclier : 70 PV', 'Régénération : 3 PV/s (après 4 s)'];
-    case 'Ruée dimensionnelle': return ['Distance : ~560 px', 'Durée : 0,3 s', 'Recharge : 8 s'];
-    case 'Surcharge': return ['Dégâts : +50 %', 'Durée : 6 s', 'Recharge : 14 s'];
-    case 'Régénération': return ['Régénération : +4 PV/s'];
-    case 'Onde de choc': return ['Rayon : 230 px', 'Dégâts : 50 + 4×niv', 'Recharge : 15 s'];
-    case 'Instinct du chasseur': return ['Chance critique : +12 %', 'Critique : ×1,75'];
-    case 'Distorsion temporelle': return ['Portée : 270 px', 'Ralentissement : 45 % / 4 s', 'Recharge : 18 s'];
-    case 'Absorption': return ['Soins : 8 % des dégâts infligés'];
-    case 'Frappe orbitale': return ['Cible : ennemi le plus proche', 'Dégâts : 130 + 8×niv', 'Recharge : 12 s'];
-    case 'Résistance': return ['Dégâts subis : −12 %'];
-    case 'Impulsion': return ['Vitesse : +60 %', 'Durée : 4 s', 'Recharge : 14 s'];
-    case 'Dernier rempart': return ['Déclencheur : PV < 30 %', 'Bouclier : 60 PV / 6 s', 'Recharge : 30 s'];
+    case 'Bouclier énergétique': return [`Bouclier : ${70 + 40 * (lvl - 1)} PV`, `Régén : ${(3 + 1.5 * (lvl - 1)).toFixed(1).replace('.', ',')} PV/s`, `Conversion : ${(2 + 1.5 * (lvl - 1)).toFixed(1).replace('.', ',')} % (max 75 %)`];
+    case 'Ruée dimensionnelle': return [`Distance : ~${Math.round(560 * (1 + 0.15 * (lvl - 1)))} px`, 'Durée : 0,3 s', `Recharge : ${cd(14)} s`];
+    case 'Surcharge': return [`Dégâts : +${50 + 15 * (lvl - 1)} %`, 'Durée : 6 s', `Recharge : ${cd(14)} s`];
+    case 'Régénération': return [`Régénération : +${4 + 2 * (lvl - 1)} PV/s`];
+    case 'Onde de choc': return [`Rayon : ${Math.round(230 * (1 + 0.1 * (lvl - 1)))} px`, `Dégâts : +${20 * (lvl - 1)} %`, `Recharge : ${cd(15)} s`];
+    case 'Instinct du chasseur': return [`Chance critique : +${12 + 5 * (lvl - 1)} %`, 'Critique : ×1,75'];
+    case 'Distorsion temporelle': return ['Portée : 270 px', `Ralentissement : 45 % / ${4 + 0.5 * (lvl - 1)} s`, `Recharge : ${cd(18)} s`];
+    case 'Absorption': return [`Soins : ${8 + 2 * (lvl - 1)} % des dégâts infligés`];
+    case 'Frappe orbitale': return ['Cible : ennemi le plus proche', `Dégâts : +${25 * (lvl - 1)} %`, `Recharge : ${cd(12)} s`];
+    case 'Résistance': return [`Dégâts subis : −${12 + 4 * (lvl - 1)} %`];
+    case 'Impulsion': return [`Vitesse : +${60 + 15 * (lvl - 1)} %`, `Durée : ${4 + 0.5 * (lvl - 1)} s`, `Recharge : ${cd(14)} s`];
+    case 'Dernier rempart': return ['Déclencheur : PV < 30 %', `Bouclier : ${60 + 40 * (lvl - 1)} PV / ${Math.max(4, 6 - (lvl - 1))} s`, `Recharge : ${30 - 4 * (lvl - 1)} s`];
     default: return [m.desc];
   }
 }

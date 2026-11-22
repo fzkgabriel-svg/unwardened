@@ -108,7 +108,7 @@ const MODE_STYLE = {
 };
 
 // max connus des jauges de recharge (secondes)
-const CD_MAX = { atk: 0.9, spin: 5, shield: 10, hand: 2.6, sing: 22 };
+const CD_MAX = { atk: 0.9, spin: 5, shield: 10, hand: 2.6, sing: 12.5 };
 
 function slotFrame(cx, cy, r, active, accent, spent, cdFrac, subFrac, subColor) {
   const now = G.time || 0;

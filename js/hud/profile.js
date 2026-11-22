@@ -113,7 +113,7 @@ export function drawProfile() {
   // ---- barre XP (or fin) + XP restant ----
   const xpY = barY + barH + 6;
   medBar(barX, xpY, barW, 8, p.xp / p.xpNext, null, '#f0d488', '#8a6a2f', { glow: '#d4a84b' });
-  engraved(`+${p.xpNext - p.xp} XP`, barX + barW - 4, xpY + 7.5, 9.5, '#f0d488', 'right', 'Consolas, monospace');
+  engraved(`+${Math.max(0, Math.ceil(p.xpNext - p.xp))} XP`, barX + barW - 4, xpY + 7.5, 9.5, '#f0d488', 'right', 'Consolas, monospace');
 
   // ---- barre d'ultime (couleur de l'ulti choisi) ----
   const uY = xpY + 18;

@@ -12,7 +12,7 @@ export const ctx = canvas.getContext('2d');
 ctx.scale(SS, SS);
 export const W = 1200, H = 640;
 export const TAU = Math.PI * 2;
-export const VERSION = '3.26.0';
+export const VERSION = '3.27.0';
 export const FINAL_WAVE = 20; // vague du boss final (campagne 1) // incrémenter à chaque mise à jour du jeu
 // vagues finales : campagne 2 -> 25, 3 -> 30, 4 (Égouts) -> 35, 5 (Espace) -> 40
 export function finalWave() {
@@ -52,7 +52,7 @@ export const G = {
     handCd: 0,               // main de feu du titan : recharge 2,6 s
     handUsed: false,         // la main de feu n'est utilisable qu'UNE fois par transformation
     switchLock: 0, // 2s sans attaque après un changement d'arme
-    alive: true, lastHurt: -99, potions: 0, maxPotions: 3, slowT: 0, potionCooldown: 0,
+    alive: true, lastHurt: -99, potions: 0, maxPotions: 3, slowT: 0, hitSlowT: 0, potionCooldown: 0,
     poisonT: 0, poisonDps: 0 // poison de la sorcière : DoT 3s, plancher 15% PV
   },
 
