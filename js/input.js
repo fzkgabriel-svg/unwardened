@@ -197,7 +197,7 @@ export function initInput() {
       if (btn === 'ach') { G.menuView = 'achievements'; sfxClick(); return; }
       if (btn === 'forge') { G.menuView = 'forge'; sfxClick(); return; }
       if (btn === 'modules') {
-        if (modulesUnlocked()) { G.menuView = 'modules'; G.modSel = null; sfxConfirm(); }
+        if (modulesUnlocked()) { G.menuView = 'modules'; G.modSel = null; G.modViewT = G.time; sfxConfirm(); }
         else sfxClick(); // verrouillé : boss du monde 4 non vaincu
         return;
       }
