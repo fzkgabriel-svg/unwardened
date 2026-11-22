@@ -256,7 +256,7 @@ function drawUltStrip(L) {
   const y = ub.nuke.y;
   // label
   ctx.fillStyle = C_GOLD; ctx.font = `bold 10px ${UI}`; ctx.textAlign = 'left';
-  ctx.fillText('ULTIME · F', ub.nuke.x, y - 6);
+  ctx.fillText('ULTIME · F', ub.nuke.x, y - 12);
   const sel = G.stats.ultSel || 'nuke';
   const iceOk = !!G.stats.iceUlt, hellOk = !!G.stats.hellUlt;
   const defs = [
@@ -322,7 +322,7 @@ function drawHeroStatsTab(L) {
     { icon: '💥', label: 'Rayon ultime', val: `+${Math.round((b.ultR - 1) * 100)} %`, tip: 'Portée de l\'ultime (touche F)' },
     { icon: '👹', label: 'Dégâts boss (ult.)', val: `+${Math.round(b.ultBoss * 100)} %`, tip: 'Dégâts bonus de l\'ultime sur les boss' }
   ];
-  const cols = 2, cw = (w - 20) / cols, rh = 34, x0 = x + 10, y0 = y + 40;
+  const cols = 2, cw = (w - 20) / cols, rh = 30, x0 = x + 10, y0 = y + 40;
   rows.forEach((r, i) => {
     const cx = x0 + (i % cols) * cw, cy = y0 + Math.floor(i / cols) * rh;
     const hov = inR({ x: cx, y: cy - 14, w: cw - 10, h: rh }, G.mouse.x, G.mouse.y);
@@ -333,10 +333,10 @@ function drawHeroStatsTab(L) {
     ctx.fillStyle = '#ffe9a3'; ctx.font = `bold 12.5px Consolas, monospace`; ctx.textAlign = 'right';
     ctx.fillText(r.val, cx + cw - 16, cy + 2);
     ctx.textAlign = 'left'; ctx.font = `italic 10px ${UI}`; ctx.fillStyle = C_MUTED;
-    ctx.fillText(fitText(r.tip, cw - 30), cx + 26, cy + 15);
+    ctx.fillText(fitText(r.tip, cw - 30), cx + 26, cy + 13);
   });
   // niveaux d'armes en bas
-  const wy = y0 + Math.ceil(rows.length / cols) * rh + 8;
+  const wy = y0 + Math.ceil(rows.length / cols) * rh + 6;
   secHead('NIVEAUX D\'ARMES', x + 10, wy, w - 20);
   const cw3 = (w - 40) / 3;
   SKILL_DEF.forEach((sd, i) => {
@@ -344,17 +344,17 @@ function drawHeroStatsTab(L) {
     const locked = sd.key === 'arc' && !(G.stats && G.stats.bowUnlocked);
     const cx = x0 + i * cw3;
     ctx.fillStyle = locked ? 'rgba(20,16,40,0.5)' : 'rgba(255,255,255,0.05)';
-    roundRect(cx, wy + 14, cw3 - 14, 44, 8); ctx.fill();
+    roundRect(cx, wy + 12, cw3 - 14, 40, 8); ctx.fill();
     ctx.strokeStyle = locked ? 'rgba(124,77,255,0.4)' : sd.color; ctx.lineWidth = 1.2;
-    roundRect(cx, wy + 14, cw3 - 14, 44, 8); ctx.stroke();
+    roundRect(cx, wy + 12, cw3 - 14, 40, 8); ctx.stroke();
     ctx.textAlign = 'left'; ctx.font = `13px serif`;
-    ctx.fillText(sd.icon, cx + 10, wy + 33);
+    ctx.fillText(sd.icon, cx + 10, wy + 30);
     ctx.fillStyle = locked ? '#7c6aa8' : sd.color; ctx.font = `bold 11.5px ${UI}`;
-    ctx.fillText(locked ? 'ARC VERROUILLÉ' : sd.label, cx + 32, wy + 30);
+    ctx.fillText(locked ? 'ARC VERROUILLÉ' : sd.label, cx + 32, wy + 27);
     ctx.fillStyle = '#ffe9a3'; ctx.font = `bold 11px Consolas, monospace`; ctx.textAlign = 'right';
-    ctx.fillText(locked ? '🔒' : `NIV ${info.lvl} · +${Math.round((modeMult(G.inv, sd.key) - 1) * 100)}%`, cx + cw3 - 24, wy + 30);
+    ctx.fillText(locked ? '🔒' : `NIV ${info.lvl} · +${Math.round((modeMult(G.inv, sd.key) - 1) * 100)}%`, cx + cw3 - 24, wy + 27);
     ctx.fillStyle = '#8d99ae'; ctx.font = `9.5px ${UI}`; ctx.textAlign = 'left';
-    ctx.fillText(locked ? 'boss final du monde 9' : `${Math.floor(info.xp).toLocaleString('fr-FR')} / ${info.need.toLocaleString('fr-FR')} XP`, cx + 32, wy + 45);
+    ctx.fillText(locked ? 'boss final du monde 9' : `${Math.floor(info.xp).toLocaleString('fr-FR')} / ${info.need.toLocaleString('fr-FR')} XP`, cx + 32, wy + 41);
   });
 }
 

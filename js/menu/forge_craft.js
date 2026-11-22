@@ -545,16 +545,20 @@ function drawRepairTab(L) {
     // coût en matériaux
     const rc = repairCost(G.inv, row.id);
     const okR = canRepair(G.inv, row.id);
+    const rb = repairRowBtn(row);
     ctx.textAlign = 'left'; ctx.font = `10.5px Consolas, monospace`;
     let cxm = bx + bw + 16;
+    const maxCostX = rb.x - 12; // ne pas dépasser le bouton
     for (const m in rc) {
       const have = G.inv.mats[m] || 0;
+      const text = `${MATS[m].name} ${have}/${rc[m]}`;
+      const w = ctx.measureText(text).width;
+      if (cxm + w > maxCostX) break; // stop si ça chevauche le bouton
       ctx.fillStyle = have >= rc[m] ? '#a5d6a7' : '#ef9a9a';
-      ctx.fillText(`${MATS[m].name} ${have}/${rc[m]}`, cxm, cy + 4);
-      cxm += ctx.measureText(`${MATS[m].name} ${have}/${rc[m]}`).width + 12;
+      ctx.fillText(text, cxm, cy + 4);
+      cxm += w + 12;
     }
     // bouton réparer
-    const rb = repairRowBtn(row);
     ctx.fillStyle = okR ? 'rgba(76,175,80,0.4)' : 'rgba(255,255,255,0.06)';
     roundRect(rb.x, rb.y, rb.w, rb.h, 8); ctx.fill();
     ctx.strokeStyle = okR ? '#81c784' : 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1.4;

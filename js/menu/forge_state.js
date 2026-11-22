@@ -203,7 +203,7 @@ export function craftZones(L) {
   const costRows = it ? Object.keys(it.cost).map((m, i) => ({ m, y: ry + 96 + i * 24 })) : [];
   return {
     lx, lw, cx2, cw2, rx, rw, y0, y1, rows, selId, it,
-    craftBtn: it ? { x: rx + 16, y: y1 - 62, w: rw - 32, h: 46 } : null,
+    craftBtn: it ? { x: rx + 16, y: y1 - 52, w: rw - 32, h: 38 } : null,
     costRows
   };
 }
@@ -222,7 +222,7 @@ export function upgradeCards(L) {
   const cw = (L.cw - 60 - 2 * gap) / 3, x0 = L.cx + 30;
   return ['epee', 'lance', 'arc'].map((key, i) => ({
     key, x: x0 + i * (cw + gap), y: y0, w: cw, h: ch,
-    btn: { x: x0 + i * (cw + gap) + 18, y: y0 + ch - 52, w: cw - 36, h: 36 }
+    btn: { x: x0 + i * (cw + gap) + 18, y: y0 + ch - 48, w: cw - 36, h: 32 }
   }));
 }
 // ---------- RÉPARATION : liste des équipements endommagés ----------
@@ -238,11 +238,11 @@ export function repairRows(L) {
 }
 // bouton « tout réparer » en haut à droite de l'onglet
 export function repairAllBtn(L) {
-  return { x: L.cx + L.cw - 240, y: L.cy + 130, w: 210, h: 30 };
+  return { x: L.cx + L.cw - 240, y: L.cy + 130, w: 210, h: 28 };
 }
 // bouton de réparation d'une ligne (à droite de la ligne)
 export function repairRowBtn(row) {
-  return { x: row.x + row.w - 150, y: row.y + row.h / 2 - 15, w: 130, h: 30 };
+  return { x: row.x + row.w - 140, y: row.y + row.h / 2 - 14, w: 120, h: 28 };
 }
 
 // liste des objets possédés pour l'inventaire (rétro-compat : utilisé par les anciens appels)
