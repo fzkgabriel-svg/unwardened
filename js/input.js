@@ -1,5 +1,5 @@
 import { G, canvas, W, H } from './state.js';
-import { startGame, menuButtonAt, gameOverButtonAt, pauseButtonAt, playAgain, nextWorld, resetToMenu, requestResume, forgeClickAt, forgeWheel, achClickAt, achWheel, charClickAt, adminClickAt, switchCharacter, reloadPersistence, durWarnClickAt, durWarnAction, campaignClickAt } from './menu.js';
+import { startGame, menuButtonAt, gameOverButtonAt, pauseButtonAt, playAgain, nextWorld, resetToMenu, requestResume, forgeClickAt, forgeWheel, achClickAt, achWheel, charClickAt, adminClickAt, switchCharacter, reloadPersistence, durWarnClickAt, durWarnAction, campaignClickAt, campaignPlayBtn } from './menu.js';
 import { checkAdminPass, createChar } from './chars.js';
 import { adminMenuClickAt, adminButtonAt, adminUnlocked } from './menu.js';
 import { usePotion } from './player.js';
@@ -54,8 +54,16 @@ export function initInput() {
       if (G.menuView === 'characters') return; // écran de sélection : clics uniquement
       if (G.menuView === 'admin') { G.menuView = 'characters'; sfxClick(); return; }
       if (G.menuView === 'campaign') {
-        // Entrée/Espace : lance la campagne sélectionnée (comme le bouton JOUER de la carte)
-        if (k === 'enter' || k === ' ') campaignClickAt(W / 2, H - 93);
+        // flèches : naviguer entre les territoires ; Entrée/Espace : lancer la campagne
+        if (k === 'arrowleft' || k === 'arrowright' || k === 'arrowup' || k === 'arrowdown') {
+          const d = (k === 'arrowleft' || k === 'arrowup') ? -1 : 1;
+          G.campaignSel = ((G.campaignSel ?? 0) + d + 5) % 5;
+          sfxClick();
+        }
+        if (k === 'enter' || k === ' ') {
+          const pb = campaignPlayBtn();
+          campaignClickAt(pb.x + pb.w / 2, pb.y + pb.h / 2);
+        }
         return;
       }
       if (G.menuView !== 'main') { G.menuView = 'main'; sfxClick(); return; }

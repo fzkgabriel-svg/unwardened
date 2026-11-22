@@ -45,7 +45,11 @@ const MUSIC_THEMES = {
     beat: 0.66, pad: 'sine'
   }
 };
-const theme = () => MUSIC_THEMES[G.campaign] || MUSIC_THEMES[0];
+// sur la carte de campagne, le thème suit le territoire survolé/sélectionné
+const theme = () => MUSIC_THEMES[
+  G.state === 'menu' && G.menuView === 'campaign' && G.campaignSel !== undefined && G.campaignSel !== null
+    ? G.campaignSel : (G.campaign || 0)
+] || MUSIC_THEMES[0];
 const beatLen = () => theme().beat;
 
 // ---------- moteur ----------
