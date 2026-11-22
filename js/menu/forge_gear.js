@@ -244,7 +244,7 @@ function drawSkillCard(x, y, w, h, sd, locked) {
     ctx.fillStyle = 'rgba(0,0,0,0.4)';
     roundRect(x, y, w, h, 10); ctx.fill();
     ctx.fillStyle = '#b388ff'; ctx.font = `bold 10px ${UI}`; ctx.textAlign = 'center';
-    ctx.fillText('🔒', x + w / 2, y + h / 2 + 4);
+    ctx.fillText('🔒 VAINCRE L\'ABOMINATION COSMIQUE', x + w / 2, y + h - 12);
     ctx.globalAlpha = 1; return;
   }
   // barre d'XP
@@ -293,24 +293,7 @@ function drawUltStrip(L) {
 }
 
 function drawProgressionStrip(L) {
-  const s = slotSummary(activeSlot()) || {};
-  const done = Object.values(G.stats.campaignDone || {}).filter(Boolean).length;
-  const ach = `${achievementCount()}/${ACHIEVEMENTS.length}`;
-  const items = [
-    `🏆 ${ach} succès`,
-    `🗺️ ${done}/5 campagnes`,
-    `🌊 vag. ${s.bestWave || 0}`,
-    `💀 ${(s.totalKills || 0).toLocaleString('fr-FR')} kills`,
-    `⏱ ${fmtPlaytime(s.playtime || 0)}`
-  ];
-  const x = L.cx + L.cw - 14;
-  const y0 = L.cy + L.ch - 160; // plus bas
-  const lh = 16;
-  ctx.textAlign = 'right'; ctx.font = `bold 11px ${UI}`; ctx.fillStyle = '#c9b98a';
-  items.forEach((item, i) => {
-    ctx.fillText(item, x, y0 + i * lh);
-  });
-  ctx.textAlign = 'left';
+  // stats de progression supprimées (demande utilisateur)
 }
 
 // ---------- SOUS-ONGLET CARACTÉRISTIQUES : toutes les stats réelles ----------
