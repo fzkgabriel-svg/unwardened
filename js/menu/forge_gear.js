@@ -76,7 +76,7 @@ function drawEquipList(L, col) {
       ctx.fillText(fitText(it.name + (broken ? ' 💥' : ''), r.w - 70), r.x + 46, r.y + 17);
       ctx.fillStyle = tier; ctx.font = `9.5px ${UI}`;
       ctx.fillText(`${ITEM_RARITY[it.rar] || ''} · ${SLOT_LABEL[r.slot]}`, r.x + 46, r.y + 29);
-      const dbx = r.x + 46, dbw = r.w - 56, dby = r.y + r.h - 8;
+      const dbx = r.x + 46, dbw = r.w - 66, dby = r.y + r.h - 8; // largeur réduite pour rester dans le cadre
       ctx.fillStyle = 'rgba(255,255,255,0.12)'; roundRect(dbx, dby, dbw, 4, 2); ctx.fill();
       const dst = durState(dur);
       const dc = dst === 'ok' ? '#69f0ae' : dst === 'warn' ? '#ffd740' : '#ff5252';
@@ -118,8 +118,8 @@ function drawHeroCenter(L, CL) {
     ['📦', `${s.totalRuns || 0} parties`], ['🌊', `vag. ${s.bestWave || 0}`],
     ['💀', `${(s.totalKills || 0).toLocaleString('fr-FR')} kills`], ['⏱', fmtPlaytime(s.playtime || 0)]
   ];
-  const rw = 110, rh = 22, gap = 0; // hauteur réduite pour éviter chevauchement
-  const sideY = D.y - 10; // alignés avec le haut du mannequin
+  const rw = 110, rh = 22, gap = 6; // gap augmenté pour éviter superposition
+  const sideY = D.y + 10; // descendus pour éviter superposition avec le corps
   const leftX = D.x - 180, rightX = D.x + 70;
   recs.forEach((r, i) => {
     const isLeft = i < 2;
@@ -344,17 +344,17 @@ function drawHeroStatsTab(L) {
     const locked = sd.key === 'arc' && !(G.stats && G.stats.bowUnlocked);
     const cx = x0 + i * cw3;
     ctx.fillStyle = locked ? 'rgba(20,16,40,0.5)' : 'rgba(255,255,255,0.05)';
-    roundRect(cx, wy + 12, cw3 - 14, 40, 8); ctx.fill();
+    roundRect(cx, wy + 18, cw3 - 14, 40, 8); ctx.fill(); // descendu de 6 px (12→18)
     ctx.strokeStyle = locked ? 'rgba(124,77,255,0.4)' : sd.color; ctx.lineWidth = 1.2;
-    roundRect(cx, wy + 12, cw3 - 14, 40, 8); ctx.stroke();
+    roundRect(cx, wy + 18, cw3 - 14, 40, 8); ctx.stroke();
     ctx.textAlign = 'left'; ctx.font = `13px serif`;
-    ctx.fillText(sd.icon, cx + 10, wy + 30);
+    ctx.fillText(sd.icon, cx + 10, wy + 36);
     ctx.fillStyle = locked ? '#7c6aa8' : sd.color; ctx.font = `bold 11.5px ${UI}`;
-    ctx.fillText(locked ? 'ARC VERROUILLÉ' : sd.label, cx + 32, wy + 27);
+    ctx.fillText(locked ? 'ARC VERROUILLÉ' : sd.label, cx + 32, wy + 33);
     ctx.fillStyle = '#ffe9a3'; ctx.font = `bold 11px Consolas, monospace`; ctx.textAlign = 'right';
-    ctx.fillText(locked ? '🔒' : `NIV ${info.lvl} · +${Math.round((modeMult(G.inv, sd.key) - 1) * 100)}%`, cx + cw3 - 24, wy + 27);
+    ctx.fillText(locked ? '🔒' : `NIV ${info.lvl} · +${Math.round((modeMult(G.inv, sd.key) - 1) * 100)}%`, cx + cw3 - 24, wy + 33);
     ctx.fillStyle = '#8d99ae'; ctx.font = `9.5px ${UI}`; ctx.textAlign = 'left';
-    ctx.fillText(locked ? 'boss final du monde 9' : `${Math.floor(info.xp).toLocaleString('fr-FR')} / ${info.need.toLocaleString('fr-FR')} XP`, cx + 32, wy + 41);
+    ctx.fillText(locked ? 'boss final du monde 9' : `${Math.floor(info.xp).toLocaleString('fr-FR')} / ${info.need.toLocaleString('fr-FR')} XP`, cx + 32, wy + 47);
   });
 }
 
