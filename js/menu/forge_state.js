@@ -122,12 +122,14 @@ export function invCells(L) {
   const cells = [];
   let totalH = 0;
   if (invUI.cat === 'mats') {
-    // les 5 matériaux + fioles
-    const cw3 = (tw - 4 * 12) / 5, ch3 = 92;
+    // les matériaux (liste dynamique : s'adapte au nombre de MATS)
+    const nM = Object.keys(MATS).length;
+    const colsM = nM <= 5 ? nM : 6;
+    const cw3 = (tw - (colsM - 1) * 12) / colsM, ch3 = 92;
     Object.keys(MATS).forEach((m, i) => {
-      cells.push({ mat: m, x: view.x + i * (cw3 + 12), y: view.y, w: cw3, h: ch3 });
+      cells.push({ mat: m, x: view.x + (i % colsM) * (cw3 + 12), y: view.y + Math.floor(i / colsM) * (ch3 + 10), w: cw3, h: ch3 });
     });
-    totalH = ch3;
+    totalH = Math.ceil(nM / colsM) * (ch3 + 10);
   } else {
     const ids = invVisible();
     const cols = 6, gap = 10;
@@ -208,9 +210,13 @@ export function craftZones(L) {
   };
 }
 
-// coût d'une amélioration d'arme : XP = 10 % du niveau requis, prix en matériaux
-export function upgradeCost(lvl) {
-  return { essence: 8 + Math.floor(lvl / 8), cristal: 4 + Math.floor(lvl / 12) };
+// coût d'une amélioration d'arme : XP = 10 % du niveau requis, payé en ÉMERAUDES.
+// Le prix croît avec le niveau ET la puissance de l'arme
+// (épée = base, lance = +25 %, arc cinétique légendaire = +60 %).
+const UPGRADE_WF = { epee: 1, lance: 1.25, arc: 1.6 };
+export function upgradeCost(lvl, key = 'epee') {
+  const wf = UPGRADE_WF[key] || 1;
+  return { emeraude: Math.max(1, Math.ceil((3 + Math.floor(lvl / 5)) * wf)) };
 }
 export function upgradeXpGain(inv, key) {
   const info = modeInfo(inv, key);
@@ -490,7 +496,7 @@ export function forgeClickAt(x, y) {
         const info = modeInfo(G.inv, card.key);
         const locked = card.key === 'arc' && !(G.stats && G.stats.bowUnlocked);
         const xpGain = upgradeXpGain(G.inv, card.key);
-        const cost = upgradeCost(info.lvl);
+        const cost = upgradeCost(info.lvl, card.key);
         if (locked || info.lvl >= MODE_MAX_LVL || !canPay(cost)) continue;
         if (inR(card.btn, x, y)) {
           for (const m in cost) G.inv.mats[m] -= cost[m];

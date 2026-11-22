@@ -235,9 +235,13 @@ export function damageEnemy(e, dmg, angle) {
     let mi = 0;
     for (const m in table) {
       if (Math.random() < table[m] * matMult) {
-        addMaterial(G.inv, m);
-        G.runMats[m] = (G.runMats[m] || 0) + 1; // résumé de fin de partie
-        addDamageText(e.x + (mi % 3 - 1) * 14, e.y - e.r - 26 - mi * 10, `+1 ${MATS[m].name}`, MATS[m].color);
+        // l'émeraude est précieuse : les boss en lâchent une petite poignée
+        const qty = m === 'emeraude'
+          ? (e.type.startsWith('finalBoss') ? 8 : e.isBoss ? 5 : e.isMini ? 3 : 1)
+          : 1;
+        addMaterial(G.inv, m, qty);
+        G.runMats[m] = (G.runMats[m] || 0) + qty; // résumé de fin de partie
+        addDamageText(e.x + (mi % 3 - 1) * 14, e.y - e.r - 26 - mi * 10, `+${qty} ${MATS[m].name}`, MATS[m].color);
         mi++;
       }
     }

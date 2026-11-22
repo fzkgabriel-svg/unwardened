@@ -3,6 +3,7 @@
 import { G, W, H, TAU } from './state.js';
 import { addDamageText, spawnParticles } from './effects.js';
 import { gainXp } from './player.js';
+import { addMaterial } from './inventory.js';
 import { sfxPortal, sfxPickup } from './audio.js';
 import { CONFIG, WORLDS, CAMPAIGNS, campaignOf, campaignStart, campaignEnd, BUILDING_TYPES, LOOT_BONUS, LOOT_BONUS_FROZEN, LOOT_BONUS_HELL, LOOT_BONUS_DEEP, RARITY_COLOR } from './world_data.js';
 export * from './world_data.js';
@@ -341,6 +342,19 @@ export function genWorld(idx) {
     }
   }
 
+  // émeraudes cachées dans les bâtiments : RNG dédié -> layout existant préservé.
+  // Montant = rareté du bâtiment × richesse de la campagne (les Terres Oubliées
+  // sont pauvres, les profondeurs spatiales regorgent d'émeraudes).
+  {
+    const erng = mulberry32(hashSeed(`emerald${idx}:${seed}`));
+    const RAR_E = { commun: 3, rare: 5, epique: 8, legendaire: 14 };
+    const CAMP_E = [1, 1.4, 1.8, 2.4, 3.2];
+    for (const b of buildings) {
+      b.emerald = Math.max(1, Math.round(
+        (RAR_E[b.def.rarity] || 3) * (CAMP_E[camp] || 1) * (0.8 + erng() * 0.4)));
+    }
+  }
+
   // lacs : RNG dédié (layout existant préservé), évite bâtiments et spawn.
   // Les Enfers n'ont pas de lacs : le sol est une croûte de braise.
   const lrng = mulberry32(hashSeed(`lake${idx}:${seed}`));
@@ -572,6 +586,15 @@ export function tryInteract() {
       } else {
         addDamageText(b.x + 24, b.y - 80, 'FIOLES PLEINES !', '#90a4ae');
       }
+    }
+    // émeraude : la pierre précieuse des profondeurs, utilisée pour améliorer les armes
+    if (b.emerald > 0) {
+      const n = b.emerald;
+      addMaterial(G.inv, 'emeraude', n);
+      G.runMats = G.runMats || {};
+      G.runMats.emeraude = (G.runMats.emeraude || 0) + n;
+      addDamageText(b.x, b.y - 100, `+${n} ÉMERAUDE`, '#2ecc71');
+      spawnParticles(b.x, b.y - 30, '#2ecc71', 10, 4);
     }
     addDamageText(b.x, b.y - 60, `${b.def.name} pillé !`, '#a5d6a7');
     return true;

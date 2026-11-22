@@ -81,7 +81,7 @@ export function updateHellEvents(dt) {
     const loot = {};
     const n = 3 + Math.floor(Math.random() * 4);
     for (let i = 0; i < n; i++) {
-      const m = ['or', 'essence', 'cristal', 'fer'][Math.floor(Math.random() * 4)];
+      const m = ['or', 'essence', 'cristal', 'fer', 'emeraude'][Math.floor(Math.random() * 5)];
       loot[m] = (loot[m] || 0) + (2 + Math.floor(Math.random() * 5));
     }
     for (const m in loot) { addMaterial(G.inv, m, loot[m]); G.runMats[m] = (G.runMats[m] || 0) + loot[m]; }
@@ -141,7 +141,7 @@ export function updateFrozenEvents(dt) {
     const loot = {};
     const n = 3 + Math.floor(Math.random() * 4);
     for (let i = 0; i < n; i++) {
-      const m = ['cristal', 'essence', 'fer', 'or'][Math.floor(Math.random() * 4)];
+      const m = ['cristal', 'essence', 'fer', 'or', 'emeraude'][Math.floor(Math.random() * 5)];
       loot[m] = (loot[m] || 0) + (2 + Math.floor(Math.random() * 5));
     }
     for (const m in loot) { addMaterial(G.inv, m, loot[m]); G.runMats[m] = (G.runMats[m] || 0) + loot[m]; }
@@ -215,7 +215,7 @@ export function updateSewerEvents(dt) {
     const loot = {};
     const n = 3 + Math.floor(Math.random() * 4);
     for (let i = 0; i < n; i++) {
-      const m = ['fer', 'cristal', 'or', 'essence'][Math.floor(Math.random() * 4)];
+      const m = ['fer', 'cristal', 'or', 'essence', 'emeraude'][Math.floor(Math.random() * 5)];
       loot[m] = (loot[m] || 0) + (2 + Math.floor(Math.random() * 5));
     }
     for (const m in loot) { addMaterial(G.inv, m, loot[m]); G.runMats[m] = (G.runMats[m] || 0) + loot[m]; }
@@ -296,7 +296,7 @@ export function updateSpaceEvents(dt) {
     const loot = {};
     const n = 3 + Math.floor(Math.random() * 4);
     for (let i = 0; i < n; i++) {
-      const m = ['cristal', 'essence', 'or', 'fer'][Math.floor(Math.random() * 4)];
+      const m = ['cristal', 'essence', 'or', 'fer', 'emeraude'][Math.floor(Math.random() * 5)];
       loot[m] = (loot[m] || 0) + (2 + Math.floor(Math.random() * 5));
     }
     for (const m in loot) { addMaterial(G.inv, m, loot[m]); G.runMats[m] = (G.runMats[m] || 0) + loot[m]; }

@@ -414,13 +414,13 @@ function drawUpgradeTab(L) {
   ];
   const y0 = L.cy + 142;
   ctx.fillStyle = C_MUTED; ctx.font = `italic 12px Inter, sans-serif`; ctx.textAlign = 'center';
-  ctx.fillText('Chaque amélioration ajoute 10 % de l\'XP nécessaire au niveau suivant — les matériaux sont consommés.', L.cx + L.cw / 2, y0 - 14);
+  ctx.fillText('Chaque amélioration ajoute 10 % de l\'XP nécessaire au niveau suivant — payable en Émeraudes uniquement.', L.cx + L.cw / 2, y0 - 14);
   for (const card of upgradeCards(L)) {
     const def = defs.find(d => d.key === card.key);
     const info = modeInfo(G.inv, card.key);
     const locked = card.key === 'arc' && !(G.stats && G.stats.bowUnlocked);
     const xpGain = upgradeXpGain(G.inv, card.key);
-    const cost = upgradeCost(info.lvl);
+    const cost = upgradeCost(info.lvl, card.key);
     const canPay = Object.keys(cost).every(m => (G.inv.mats[m] || 0) >= cost[m]);
     const maxed = info.lvl >= 100;
     // carte

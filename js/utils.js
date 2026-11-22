@@ -94,6 +94,27 @@ export function drawMatIcon(m, x, y, r) {
     ctx.beginPath(); ctx.moveTo(-r * 0.7, -r * 0.25); ctx.lineTo(r * 0.7, -r * 0.25); ctx.stroke();
     ctx.fillStyle = 'rgba(255,255,255,0.8)';
     ctx.beginPath(); ctx.moveTo(0, -r); ctx.lineTo(r * 0.25, -r * 0.3); ctx.lineTo(0, -r * 0.1); ctx.lineTo(-r * 0.2, -r * 0.35); ctx.closePath(); ctx.fill();
+  } else if (m === 'emeraude') {
+    // émeraude : gemme facettée vert vif + éclat central + monture dorée
+    const g = ctx.createLinearGradient(0, -r, 0, r);
+    g.addColorStop(0, '#a5f0b8'); g.addColorStop(0.45, '#2ecc71'); g.addColorStop(1, '#0e7a3d');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(0, -r); ctx.lineTo(r * 0.72, -r * 0.2); ctx.lineTo(r * 0.5, r * 0.85);
+    ctx.lineTo(-r * 0.5, r * 0.85); ctx.lineTo(-r * 0.72, -r * 0.2);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#065f2e'; ctx.lineWidth = 1; ctx.stroke();
+    // facettes
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.moveTo(0, -r); ctx.lineTo(0, r * 0.85); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-r * 0.72, -r * 0.2); ctx.lineTo(r * 0.72, -r * 0.2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-r * 0.3, r * 0.4); ctx.lineTo(r * 0.3, r * 0.4); ctx.stroke();
+    // éclat central
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.beginPath(); ctx.moveTo(0, -r * 0.55); ctx.lineTo(r * 0.18, -r * 0.1); ctx.lineTo(0, r * 0.15); ctx.lineTo(-r * 0.15, -r * 0.12); ctx.closePath(); ctx.fill();
+    // monture dorée (serti)
+    ctx.strokeStyle = '#ffd740'; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.moveTo(-r * 0.85, r * 0.95); ctx.lineTo(-r * 0.35, r * 0.55); ctx.lineTo(r * 0.35, r * 0.55); ctx.lineTo(r * 0.85, r * 0.95); ctx.stroke();
   }
   ctx.restore();
 }
