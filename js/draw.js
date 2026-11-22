@@ -17,6 +17,13 @@ import { drawShop, drawShopBtn } from './shop.js';
 // ---------- DESSIN ----------
 export function draw() {
   ctx.save();
+  // boutique : vue exclusive plein écran (comme la forge) — aucun autre overlay
+  if (G.shopOpen) {
+    ctx.fillStyle = '#0a0c12'; ctx.fillRect(0, 0, W, H);
+    drawShop();
+    ctx.restore();
+    return;
+  }
   // secousse d'écran pendant la bombe atomique
   if (G.screenShake > 0) {
     ctx.translate((Math.random() - 0.5) * G.screenShake, (Math.random() - 0.5) * G.screenShake);
@@ -78,7 +85,6 @@ export function draw() {
     ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(232,217,176,0.45)';
     ctx.fillText(`v${VERSION}`, W - 14, H - 12);
     drawMusicButton(); drawShopBtn();
-    if (G.shopOpen) drawShop(); // boutique par-dessus le menu
     ctx.restore();
     return;
   }
@@ -89,7 +95,6 @@ export function draw() {
     ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(232,217,176,0.45)';
     ctx.fillText(`v${VERSION}`, W - 14, H - 12);
     drawMusicButton(); drawShopBtn();
-    if (G.shopOpen) drawShop(); // boutique par-dessus l'écran de victoire
     ctx.restore();
     return;
   }
@@ -132,7 +137,6 @@ export function draw() {
   }
   if (G.state === 'gameover') drawGameOver();
   if (G.state === 'paused' && !G.adminMenu && !G.adminInput) drawPauseMenu(); // l'admin passe au-dessus
-  if (G.shopOpen) drawShop(); // boutique : matériaux contre émeraudes
   // version du jeu, en bas à droite (visible partout : menu, partie, game over)
   ctx.font = '11px Consolas, monospace';
   ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(232,217,176,0.45)';
