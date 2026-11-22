@@ -17,8 +17,8 @@ Jeu HTML5 Canvas / JavaScript ES modules. Servi en HTTP (ES modules incompatible
 - `js/state.js` : état global `G`, canvas, VERSION.
 - `js/world.js` : génération procédurale (seed), secteurs, bâtiments, obstacles (rochers/montagnes), lacs+ponts, portails, `resolveObstacles` (collision joueur/ennemis).
 - `js/graphics.js` : rendu monde/entités/HUD decor, `drawTerrain` (canvas pré-rendu), montagnes, lacs, bombe B-2.
-- `js/menu.js` : menus, forge (craft + réparation durabilité), succès, stats, animations.
-- `js/inventory.js` : mats, items, craft, équipement, durabilité (`getDur`, `wearEquipment`, `repairItem`).
+- `js/menu.js` : orchestrateur menus ; sous-modules `js/menu/` (flow, forge, forge_state, forge_craft, forge_gear, forge_fx, heros, achv, admin, campaign, end, common). Forge = 3 onglets (FORGER/INVENTAIRE/PERSONNAGE) avec sous-onglets de catégories, recherche, tri, fiche détail, améliorations d'armes.
+- `js/inventory.js` : mats, items (rareté `rar`, slots weapon/armor/helm/gloves/charm/boots/conso), craft, équipement, durabilité, buffs consommables.
 - `js/achievements.js` : 34 succès, raretés, récompenses.
 - `js/tutorial.js` : tutoriel 12 étapes (retour menu, Entrée = étape suivante, cooldown 2,5 s).
 - `js/hud.js` : orchestrateur HUD ; sous-modules `js/hud/` (frame, profile, skills, boss, map, equip, toasts) — HUD médiéval fantastique. Minimap : bâtiments = brouillard de guerre, lacs, obstacles.

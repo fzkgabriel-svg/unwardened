@@ -59,30 +59,66 @@ export const MATERIAL_DROPS = {
   finalBossSpace:{ or: 0.9, cristal: 0.9, essence: 1.0, fer: 0.9, cuir: 0.8 },
 };
 
-// objets craftables : 3 par emplacement (arme / armure / talisman)
+// raretés des objets forgés (couleurs dans utils.itemTier)
+export const ITEM_RARITY = {
+  commun:    'Commun',
+  rare:      'Rare',
+  epique:    'Épique',
+  legendaire:'Légendaire'
+};
+
+// objets craftables — slot : weapon (artefacts) / armor / helm / gloves / charm / boots / conso
+// conso = consommable utilisable depuis l'inventaire (stackable, non équipable)
 export const ITEMS = {
-  talFer:    { slot: 'weapon', name: 'Talisman de Fer',     icon: '⚔️', desc: '+20% de dégâts',            cost: { fer: 28, cuir: 18 } },
-  talOr:     { slot: 'weapon', name: 'Talisman d\'Or',      icon: '⚔️', desc: '+40% de dégâts',            cost: { or: 34, fer: 70, essence: 22 } },
-  talEss:    { slot: 'weapon', name: 'Talisman d\'Essence', icon: '⚔️', desc: '+60% de dégâts',            cost: { essence: 46, cristal: 28, or: 46 } },
-  ultBraise: { slot: 'weapon', name: 'Réceptacle de Braise',icon: '🔥', desc: 'Ultime : +20% rayon, boss +8%', cost: { fer: 24, cuir: 16 } },
-  ultSage:   { slot: 'weapon', name: 'Réceptacle du Sage',  icon: '🔮', desc: 'Ultime : +40% rayon, boss +20%', cost: { or: 34, essence: 26, fer: 60 } },
-  ultChaos:  { slot: 'weapon', name: 'Cœur du Cataclysme',  icon: '☢️', desc: 'Ultime : +65% rayon, boss +30%', cost: { essence: 46, cristal: 28, or: 46 } },
-  armCuir:   { slot: 'armor',  name: 'Cuirasse de Cuir',    icon: '🛡️', desc: '-15% de dégâts subis',      cost: { cuir: 46, fer: 14 } },
-  armFer:    { slot: 'armor',  name: 'Armure de Fer',       icon: '🛡️', desc: '-32% de dégâts subis',      cost: { fer: 74, cuir: 38 } },
-  armOr:     { slot: 'armor',  name: 'Armure Royale',       icon: '👑', desc: '-45% de dégâts subis',      cost: { or: 70, fer: 100, essence: 40 } },
-  amuGolem:  { slot: 'charm',  name: 'Amulette du Golem',   icon: '🧿', desc: '+40 PV max',                cost: { cuir: 24, fer: 18, essence: 14 } },
-  courBoss:  { slot: 'charm',  name: 'Sagesse antique',     icon: '📿', desc: '+40% d\'XP gagnée',         cost: { essence: 40, cristal: 22, or: 34 } },
-  patSpider: { slot: 'charm',  name: 'Patte d\'araignée',   icon: '🕷️', desc: '+0,3 de vitesse',           cost: { essence: 40, cristal: 22 } },
-  gourdeBasse:{ slot: 'charm',  name: 'Gourde usée',        icon: '🏺', desc: '+20% de soin',                 cost: { fer: 16, cuir: 12 } },
-  gourde:    { slot: 'charm',  name: 'Gourde du Herboriste',icon: '🍶', desc: '+1 fiole max, +35% de soin',  cost: { essence: 34, cristal: 20, or: 28 } },
-  gourdeHaute:{ slot: 'charm',  name: 'Grande Gourde Sacrée',icon: '🏆', desc: '+2 fioles max, +55% de soin', cost: { essence: 56, cristal: 34, or: 56 } },
-  // ---------- BOTTEES (nouvelle catégorie : vitesse de déplacement) ----------
-  bottCuir:   { slot: 'boots',  name: 'Semelles de Cuir',      icon: '🥾', desc: '+0,12 de vitesse',                    cost: { cuir: 22 } },
-  bottGolem:  { slot: 'boots',  name: 'Sabots du Golem',       icon: '👞', desc: '+0,22 de vitesse',                    cost: { fer: 38, cuir: 26 } },
-  bottNuage:  { slot: 'boots',  name: 'Bottes du Nuage',       icon: '☁️', desc: '+0,32 de vitesse',                    cost: { essence: 26, cristal: 16 } },
-  bottLievre: { slot: 'boots',  name: 'Pattes du Lièvre',      icon: '🐇', desc: '+0,42 de vitesse',                    cost: { essence: 38, cristal: 22, or: 16 } },
-  bottSage:   { slot: 'boots',  name: 'Bottes du Sage Errant', icon: '🥾', desc: '+0,26 vitesse, +15% de soin',         cost: { or: 32, essence: 28, fer: 32 } },
-  bottRelique:{ slot: 'boots',  name: 'Relique-Oiseau',        icon: '🪽', desc: '+0,50 de vitesse — le summum',        cost: { essence: 52, cristal: 32, or: 46 } },
+  // ---------- ARMES (artefactsWeapons du slot weapon) ----------
+  talFer:    { slot: 'weapon', name: 'Talisman de Fer',     icon: '⚔️', desc: '+20% de dégâts',                 cost: { fer: 28, cuir: 18 },              rar: 'rare' },
+  talOr:     { slot: 'weapon', name: 'Talisman d\'Or',      icon: '⚔️', desc: '+40% de dégâts',                 cost: { or: 34, fer: 70, essence: 22 },    rar: 'epique' },
+  talEss:    { slot: 'weapon', name: 'Talisman d\'Essence', icon: '⚔️', desc: '+60% de dégâts',                 cost: { essence: 46, cristal: 28, or: 46 }, rar: 'legendaire' },
+  ultBraise: { slot: 'weapon', name: 'Réceptacle de Braise',icon: '🔥', desc: 'Ultime : +20% rayon, boss +8%',   cost: { fer: 24, cuir: 16 },               rar: 'rare' },
+  ultSage:   { slot: 'weapon', name: 'Réceptacle du Sage',  icon: '🔮', desc: 'Ultime : +40% rayon, boss +20%',  cost: { or: 34, essence: 26, fer: 60 },     rar: 'epique' },
+  ultChaos:  { slot: 'weapon', name: 'Cœur du Cataclysme',  icon: '☢️', desc: 'Ultime : +65% rayon, boss +30%',  cost: { essence: 46, cristal: 28, or: 46 }, rar: 'legendaire' },
+  // nouveaux artefacts-armas (monde 3-5)
+  lameMarais:{ slot: 'weapon', name: 'Machette des Marais',  icon: '🗡️', desc: '+28% dégâts, +0,06 vitesse',     cost: { essence: 30, cristal: 14, fer: 30 }, rar: 'rare' },
+  lanceCryo: { slot: 'weapon', name: 'Guisarme du Souverain',icon: '🔱', desc: '+32% dégâts, +15% XP',            cost: { cristal: 36, essence: 26, or: 20 },  rar: 'epique' },
+  mailletGolem:{ slot: 'weapon', name: 'Marteau du Fondeur', icon: '🔨', desc: '+24% dégâts, +25 PV max',        cost: { fer: 55, essence: 20, cuir: 20 },   rar: 'rare' },
+  dagueBaron:{ slot: 'weapon', name: 'Dague du Baron',       icon: '🗡️', desc: '+45% dégâts, +20% soins',        cost: { essence: 44, or: 38, fer: 40 },     rar: 'epique' },
+  epeeSombre:{ slot: 'weapon', name: 'Espadon du Néant',     icon: '⚔️', desc: '+50% dégâts, boss +15%',         cost: { essence: 50, cristal: 30, or: 40 }, rar: 'epique' },
+  arcConfins:{ slot: 'weapon', name: 'Arc des Confins',      icon: '🏹', desc: '+80% dégâts, +30% XP — légendaire', cost: { essence: 60, cristal: 40, or: 55 }, rar: 'legendaire' },
+  sceptreOublie:{ slot: 'weapon', name: 'Sceptre du Roi Oublié',icon: '🔮', desc: '+85% dégâts, ultime +35%',    cost: { essence: 65, cristal: 45, or: 60 }, rar: 'legendaire' },
+  // ---------- ARMURES ----------
+  armCuir:   { slot: 'armor',  name: 'Cuirasse de Cuir',    icon: '🛡️', desc: '-15% de dégâts subis',           cost: { cuir: 46, fer: 14 },                rar: 'rare' },
+  armFer:    { slot: 'armor',  name: 'Armure de Fer',       icon: '🛡️', desc: '-32% de dégâts subis',           cost: { fer: 74, cuir: 38 },                rar: 'epique' },
+  armOr:     { slot: 'armor',  name: 'Armure Royale',       icon: '👑', desc: '-45% de dégâts subis',           cost: { or: 70, fer: 100, essence: 40 },    rar: 'legendaire' },
+  armEmeraude:{ slot: 'armor', name: 'Cuirasse d\'Émeraude',icon: '🟢', desc: '-40% dégâts, +25 PV max',         cost: { cuir: 50, essence: 34, cristal: 18 }, rar: 'epique' },
+  armEgout:  { slot: 'armor',  name: 'Cuirasse du Tyran',   icon: '🐸', desc: '-42% dégâts, +15% soins',        cost: { essence: 36, cristal: 20, cuir: 40 }, rar: 'rare' },
+  armEspace: { slot: 'armor',  name: 'Carapace Stellaire',  icon: '👾', desc: '-58% dégâts, +0,08 vitesse',      cost: { essence: 60, cristal: 45, or: 50 },  rar: 'legendaire' },
+  // ---------- CASQUES (nouveau slot) ----------
+  helmFer:   { slot: 'helm',   name: 'Heaume de Fer',       icon: '⛑️', desc: '-12% dégâts, +20 PV max',         cost: { fer: 45, cuir: 25 },                rar: 'rare' },
+  helmVide:  { slot: 'helm',   name: 'Couronne du Vide',    icon: '👑', desc: '-22% dégâts, +25% XP',            cost: { essence: 55, cristal: 40, or: 48 },  rar: 'legendaire' },
+  // ---------- GANTS (nouveau slot) ----------
+  gantsCuir: { slot: 'gloves', name: 'Gants de Cuir',       icon: '🧤', desc: '+10% de dégâts',                  cost: { cuir: 30, fer: 20 },                rar: 'rare' },
+  gantsFondeur:{ slot: 'gloves', name: 'Gants du Fondeur',  icon: '🧤', desc: '+22% dégâts, ultime +15%',         cost: { fer: 50, essence: 30, or: 20 },     rar: 'epique' },
+  // ---------- ACCESSOIRES (talisman) ----------
+  amuGolem:  { slot: 'charm',  name: 'Amulette du Golem',   icon: '🧿', desc: '+40 PV max',                     cost: { cuir: 24, fer: 18, essence: 14 },   rar: 'rare' },
+  courBoss:  { slot: 'charm',  name: 'Sagesse antique',     icon: '📿', desc: '+40% d\'XP gagnée',              cost: { essence: 40, cristal: 22, or: 34 },  rar: 'epique' },
+  patSpider: { slot: 'charm',  name: 'Patte d\'araignée',   icon: '🕷️', desc: '+0,3 de vitesse',                cost: { essence: 40, cristal: 22 },         rar: 'rare' },
+  gourdeBasse:{ slot: 'charm', name: 'Gourde usée',         icon: '🏺', desc: '+20% de soin',                    cost: { fer: 16, cuir: 12 },                rar: 'commun' },
+  gourde:    { slot: 'charm',  name: 'Gourde du Herboriste',icon: '🍶', desc: '+1 fiole max, +35% de soin',      cost: { essence: 34, cristal: 20, or: 28 },  rar: 'rare' },
+  gourdeHaute:{ slot: 'charm', name: 'Grande Gourde Sacrée',icon: '🏆', desc: '+2 fioles max, +55% de soin',     cost: { essence: 56, cristal: 34, or: 56 },  rar: 'epique' },
+  anneauZéphyr:{ slot: 'charm',name: 'Anneau du Zéphyr',    icon: '💍', desc: '+0,30 vitesse, +10% XP',          cost: { essence: 32, cristal: 18, or: 12 },  rar: 'rare' },
+  coeurNébuleux:{ slot: 'charm', name: 'Cœur Nébuleux',     icon: '💜', desc: '+1 fiole max, ultime +30%',       cost: { essence: 58, cristal: 38, or: 52 },  rar: 'legendaire' },
+  // ---------- BOTTEES ----------
+  bottCuir:   { slot: 'boots', name: 'Semelles de Cuir',    icon: '🥾', desc: '+0,12 de vitesse',                 cost: { cuir: 22 },                         rar: 'commun' },
+  bottGolem:  { slot: 'boots', name: 'Sabots du Golem',     icon: '👞', desc: '+0,22 de vitesse',                 cost: { fer: 38, cuir: 26 },                rar: 'rare' },
+  bottNuage:  { slot: 'boots', name: 'Bottes du Nuage',     icon: '☁️', desc: '+0,32 de vitesse',                 cost: { essence: 26, cristal: 16 },         rar: 'epique' },
+  bottLievre: { slot: 'boots', name: 'Pattes du Lièvre',    icon: '🐇', desc: '+0,42 de vitesse',                 cost: { essence: 38, cristal: 22, or: 16 },  rar: 'epique' },
+  bottSage:   { slot: 'boots', name: 'Bottes du Sage Errant',icon: '🥾',desc: '+0,26 vitesse, +15% de soin',      cost: { or: 32, essence: 28, fer: 32 },     rar: 'rare' },
+  bottRelique:{ slot: 'boots', name: 'Relique-Oiseau',      icon: '🪽', desc: '+0,50 de vitesse — le summum',     cost: { essence: 52, cristal: 32, or: 46 },  rar: 'legendaire' },
+  bottCrapaud:{ slot: 'boots', name: 'Pattes de Crapaud',   icon: '🐸', desc: '+0,34 vitesse, +20% soins',         cost: { essence: 30, cristal: 16, cuir: 26 }, rar: 'rare' },
+  bottAntigrav:{ slot: 'boots', name: 'Bottes Antigravité', icon: '👢', desc: '+0,44 vitesse, +10% XP',            cost: { essence: 44, cristal: 28, or: 30 },  rar: 'epique' },
+  // ---------- CONSOMMABLES (utilisables depuis l'inventaire, stackables) ----------
+  ragoût:     { slot: 'conso', name: 'Ragoût du Chasseur',  icon: '🍖', desc: 'Consommer : +35 PV',               cost: { cuir: 18, essence: 12 },            rar: 'commun', conso: true },
+  breuvage:   { slot: 'conso', name: 'Breuvage du Herboriste',icon: '🧪', desc: 'Consommer : +1 fiole',            cost: { essence: 16, cristal: 10 },         rar: 'rare', conso: true },
 };
 
 // effets des objets équipés
@@ -93,21 +129,39 @@ const FX = {
   ultBraise: { ultR: 1.20, ultBoss: 0.08 },
   ultSage:   { ultR: 1.40, ultBoss: 0.20 },
   ultChaos:  { ultR: 1.65, ultBoss: 0.30 },
+  lameMarais:{ weaponMult: 1.28, speed: 0.06 },
+  lanceCryo: { weaponMult: 1.32, xp: 1.15 },
+  mailletGolem:{ weaponMult: 1.24, hp: 25 },
+  dagueBaron:{ weaponMult: 1.45, potionMult: 1.20 },
+  epeeSombre:{ weaponMult: 1.50, ultBoss: 0.15 },
+  arcConfins:{ weaponMult: 1.80, xp: 1.30 },
+  sceptreOublie:{ weaponMult: 1.85, ultR: 1.35 },
   armCuir:   { armorReduce: 0.15 },
   armFer:    { armorReduce: 0.32 },
   armOr:     { armorReduce: 0.45 },
+  armEmeraude:{ armorReduce: 0.40, hp: 25 },
+  armEgout:  { armorReduce: 0.42, potionMult: 1.15 },
+  armEspace: { armorReduce: 0.58, speed: 0.08 },
+  helmFer:   { armorReduce: 0.12, hp: 20 },
+  helmVide:  { armorReduce: 0.22, xp: 1.25 },
+  gantsCuir: { weaponMult: 1.10 },
+  gantsFondeur:{ weaponMult: 1.22, ultR: 1.15 },
   amuGolem:  { hp: 40 },
   courBoss:  { xp: 1.40 },
   patSpider: { speed: 0.30 },
   gourdeBasse:{ potions: 0, potionMult: 1.20 },
   gourde:    { potions: 1, potionMult: 1.35 },
   gourdeHaute:{ potions: 2, potionMult: 1.55 },
+  anneauZéphyr:{ speed: 0.30, xp: 1.10 },
+  coeurNébuleux:{ potions: 1, ultR: 1.30 },
   bottCuir:   { speed: 0.12 },
   bottGolem:  { speed: 0.22 },
   bottNuage:  { speed: 0.32 },
   bottLievre: { speed: 0.42 },
   bottSage:   { speed: 0.26, potionMult: 1.15 },
   bottRelique:{ speed: 0.50 },
+  bottCrapaud:{ speed: 0.34, potionMult: 1.20 },
+  bottAntigrav:{ speed: 0.44, xp: 1.10 },
 };
 
 // v4 : une sauvegarde par personnage (préfixe rpg2d_c{slot}_)
@@ -115,13 +169,13 @@ const KEY = () => storeKey('inv_v3');
 export function loadInv() {
   try {
     const d = JSON.parse(localStorage.getItem(KEY()));
-    if (d && d.mats && d.items && d.equip) { d.dur = d.dur || {}; d.wmode = d.wmode || {}; return d; }
+    if (d && d.mats && d.items && d.equip) { d.dur = d.dur || {}; d.wmode = d.wmode || {}; d.buffs = d.buffs || {}; return d; }
   } catch (e) {}
   // reset complet : on efface toutes les anciennes sauvegardes d'inventaire
   for (const k of ['rpg2d_inv', 'rpg2d_inv_v2', 'rpg2d_inv_v3', KEY()]) {
     try { localStorage.removeItem(k); } catch (e) {}
   }
-  const d = { mats: {}, items: {}, equip: {}, dur: {}, wmode: {} };
+  const d = { mats: {}, items: {}, equip: {}, dur: {}, wmode: {}, buffs: {} };
   try { localStorage.setItem(KEY(), JSON.stringify(d)); } catch (e) {}
   return d;
 }
@@ -136,15 +190,18 @@ export function addMaterial(inv, type, n = 1) {
 }
 
 export function canCraft(inv, id) {
+  const it = ITEMS[id];
+  if (it.conso) return (inv.items[id] || 0) < 99; // les consommables s'empilent
   if (inv.items[id]) return false;
-  for (const k in ITEMS[id].cost) if ((inv.mats[k] || 0) < ITEMS[id].cost[k]) return false;
+  for (const k in it.cost) if ((inv.mats[k] || 0) < it.cost[k]) return false;
   return true;
 }
 
 export function craft(inv, id) {
   if (!canCraft(inv, id)) return false;
-  for (const k in ITEMS[id].cost) inv.mats[k] -= ITEMS[id].cost[k];
-  inv.items[id] = true;
+  const it = ITEMS[id];
+  for (const k in it.cost) inv.mats[k] -= it.cost[k];
+  inv.items[id] = it.conso ? (inv.items[id] || 0) + 1 : true; // conso = compteur
   inv.dur = inv.dur || {};
   inv.dur[id] = 100; // tout objet forgé commence à 100 % de durabilité
   saveInv(inv);
@@ -152,9 +209,25 @@ export function craft(inv, id) {
 }
 
 export function toggleEquip(inv, id) {
+  const it = ITEMS[id];
+  if (it && it.conso) return false; // un consommable ne s'équipe pas
   if (getDur(inv, id) <= 0) return false; // un objet cassé ne s'équipe pas
-  const slot = ITEMS[id].slot;
+  const slot = it.slot;
   inv.equip[slot] = inv.equip[slot] === id ? null : id;
+  saveInv(inv);
+  return true;
+}
+
+// consommer un objet 'conso' : effet permanent léger (inv.buffs)
+export function useConsumable(inv, id) {
+  const it = ITEMS[id];
+  if (!it || !it.conso) return false;
+  const n = inv.items[id] || 0;
+  if (n <= 0) return false;
+  if (--inv.items[id] <= 0) delete inv.items[id];
+  inv.buffs = inv.buffs || {};
+  if (id === 'ragoût') inv.buffs.hp = (inv.buffs.hp || 0) + 35;
+  if (id === 'breuvage') inv.buffs.potions = (inv.buffs.potions || 0) + 1;
   saveInv(inv);
   return true;
 }
@@ -172,7 +245,7 @@ function setDur(inv, id, v) {
 // usure à chaque coup subi : l'armure trinque le plus, l'arme et le talisman moins.
 // Retourne { broken, wear } : nom du premier objet cassé + usure par objet
 // (id -> % de durabilité perdue), pour le résumé de fin de partie.
-const SLOT_WEAR = { weapon: 1.5, armor: 3.0, charm: 1.0, boots: 0.8 };
+const SLOT_WEAR = { weapon: 1.5, armor: 3.0, helm: 2.2, gloves: 1.2, charm: 1.0, boots: 0.8 };
 export function wearEquipment(inv) {
   if (!inv || !inv.equip) return { broken: null, wear: {} };
   let broken = null;
@@ -252,6 +325,9 @@ export function modeMult(inv, key) {
 }
 
 // bonus dérivés de l'équipement actuel (level = niveau du personnage pour l'enchantement)
+// bonus bruts d'un objet (pour affichage détaillé)
+export function itemBonuses(id) { return FX[id] || {}; }
+
 export function equipBonuses(inv, level) {
   const b = { weaponMult: 1, armorReduce: 0, hp: 0, speed: 0, xp: 1, potions: 0, potionMult: 1, ultR: 1, ultBoss: 0 };
   for (const slot in inv.equip) {

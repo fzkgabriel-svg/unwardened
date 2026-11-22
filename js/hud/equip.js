@@ -9,7 +9,7 @@ import { HPAL, metalFrame, parchment, engraved } from './frame.js';
 export function drawEquipPanel() {
   const inv = G.inv;
   if (!inv || !inv.equip) return;
-  const slots = [['weapon', 'ARME'], ['armor', 'ARMURE'], ['charm', 'TALISMAN'], ['boots', 'BOTTES']];
+  const slots = [['weapon', 'ARME'], ['armor', 'ARMURE'], ['helm', 'CASQUE'], ['gloves', 'GANTS'], ['charm', 'ACCESSOIRE'], ['boots', 'BOTTES']];
   const px = W - 182, py = 66, pw = 168;
   const rowH = 46, headerH = 26;
   const ph = headerH + slots.length * rowH + 10;

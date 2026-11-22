@@ -38,6 +38,13 @@ export function initInput() {
       else if (e.key.length === 1 && G.adminInput.text.length < 24 && !e.ctrlKey && !e.metaKey) G.adminInput.text += e.key;
       return;
     }
+    // recherche d'inventaire (forge > onglet inventaire, champ actif)
+    if (G.invQueryFocus) {
+      if (k === 'enter' || k === 'escape') { G.invQueryFocus = false; sfxClick(); }
+      else if (k === 'backspace') G.invQuery = (G.invQuery || '').slice(0, -1);
+      else if (e.key.length === 1 && (G.invQuery || '').length < 24 && !e.ctrlKey && !e.metaKey) G.invQuery = (G.invQuery || '') + e.key;
+      return;
+    }
     G.keys[k] = true;
     if (G.state === 'menu') {
       if (G.menuView === 'characters') return; // écran de sélection : clics uniquement

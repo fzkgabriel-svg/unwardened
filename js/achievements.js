@@ -275,7 +275,7 @@ export function adminUnlockAll() {
       // tous les objets forgés, durabilité pleine (visibles et équipables à la forge)
       G.inv.items = G.inv.items || {};
       G.inv.dur = G.inv.dur || {};
-      for (const id in ITEMS) { G.inv.items[id] = true; G.inv.dur[id] = 100; }
+      for (const id in ITEMS) { G.inv.items[id] = ITEMS[id].conso ? 5 : true; G.inv.dur[id] = 100; }
       // stocks de matériaux complets (réparations, fabrications)
       G.inv.mats = G.inv.mats || {};
       for (const m in MATS) G.inv.mats[m] = Math.max(G.inv.mats[m] || 0, 999);

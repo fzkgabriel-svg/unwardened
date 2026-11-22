@@ -2,7 +2,7 @@ import { G, ctx, W, H, TAU, saveStats, finalWave } from '../state.js';
 import { roundRect, drawMatIcon, drawItemIcon, itemTier } from '../utils.js';
 import { regenerateDecor } from '../graphics.js';
 import { ACHIEVEMENTS, unlocked, achievementCount, checkAchievements, achInfo, isClaimed, claimReward, achTabList, unclaimedInTab, adminUnlockAll } from '../achievements.js';
-import { ITEMS, MATS, canCraft, craft, toggleEquip, equipBonuses, getDur, canRepair, repairItem, repairCost, loadInv, addMaterial, modeInfo, addWmodeXp, modeMult, MODE_MAX_LVL, setInvNoSave } from '../inventory.js';
+import { ITEMS, MATS, ITEM_RARITY, canCraft, craft, toggleEquip, equipBonuses, getDur, canRepair, repairItem, repairCost, loadInv, addMaterial, modeInfo, addWmodeXp, modeMult, MODE_MAX_LVL, setInvNoSave } from '../inventory.js';
 import { spawnEnemy, spawnFinalBoss } from '../enemies.js';
 import { gainXp } from '../player.js';
 import { curWorld, syncCamera, regenerateWorld, reloadWorlds, campaignStart } from '../world.js';
@@ -10,7 +10,7 @@ import { sfxCraft, sfxRepair, sfxEquip, sfxConfirm, sfxClick } from '../audio.js
 import { MAX_SLOTS, activeSlot, allSlots, slotMeta, slotSummary, createChar, selectChar, deselectChar, resetChar, fmtPlaytime, fmtDate, checkAdminPass, adminOK as _adminOK, adminList, adminWipeAll, adminLock } from '../chars.js';
 import { inR, fitText, wrapLines, hexA, fmtTime, overline, panel, overlineCentered, drawMenuButton, drawAdminPwInput, menuButtons, menuButtonAt, adminUnlocked, campaignUnlocked, UI, SERIF, C_TEXT, C_MUTED, C_GOLD, MENU_X, MENU_W, MENU_ITEMS } from './common.js';
 
-import { craftCells, forgeScroll, forgeScrollMax, itemDetail, forgeTab, invItems, heroSlots, heroColLayout, ultBtns, SLOT_LABEL } from './forge_state.js';
+import { invCells, invUI, invVisible, INV_CATS, forgeScroll, forgeScrollMax, itemDetail, forgeTab, heroColLayout, heroTabs, heroEquipRows, heroDoll, ultBtns, SLOT_LABEL, craftTabs, craftZones, craftUI, heroUI, upgradeCards, upgradeCost, upgradeXpGain } from './forge_state.js';
 
 // ---------- ONGLET PERSONNAGE — refonte « Forge 2.0 » ----------
 // 3 colonnes : PERSONNAGE + STATISTIQUES | mannequin + ÉQUIPEMENT | COMPÉTENCES
@@ -23,124 +23,122 @@ function secHead(text, x, y, w) {
   ctx.beginPath(); ctx.moveTo(x, y + 7); ctx.lineTo(x + w, y + 7); ctx.stroke();
 }
 
+// petit chip de sous-onglet (partagé dessin)
+function chip(r, label, active, count) {
+  const hov = inR(r, G.mouse.x, G.mouse.y);
+  ctx.fillStyle = active ? 'rgba(255,215,64,0.22)' : hov ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.04)';
+  roundRect(r.x, r.y, r.w, r.h, 8); ctx.fill();
+  ctx.strokeStyle = active ? '#ffd740' : hov ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.16)';
+  ctx.lineWidth = active ? 2 : 1;
+  roundRect(r.x, r.y, r.w, r.h, 8); ctx.stroke();
+  ctx.fillStyle = active ? '#ffe9a3' : C_TEXT; ctx.font = `bold 11px ${UI}`; ctx.textAlign = 'center';
+  ctx.fillText(count !== undefined ? `${label} · ${count}` : label, r.x + r.w / 2, r.y + r.h / 2 + 4);
+}
+
 export function drawHeroPaperdoll(L) {
+  const ht = heroTabs(L);
+  chip(ht.apercu, 'APERÇU', heroUI.tab === 'apercu');
+  chip(ht.stats, 'CARACTÉRISTIQUES', heroUI.tab === 'stats');
+  if (heroUI.tab === 'stats') { drawHeroStatsTab(L); return; }
   const CL = heroColLayout(L);
-  drawHeroIdentity(CL.left);
-  drawHeroStats(CL.left);
-  drawEquipCenter(L, CL);
+  drawEquipList(L, CL.left);
+  drawHeroCenter(L, CL);
   drawSkillsColumn(CL.right);
+  drawBuffsNote(CL.right);
   drawUltStrip(L);
   drawProgressionStrip(L);
 }
 
-// ---------- PERSONNAGE : nom, niveau record, historique ----------
-function drawHeroIdentity(col) {
-  const x = col.x + 14, w = col.w - 28;
-  // sous-panneau PERSONNAGE
-  panel(col.x + 6, col.y + 6, col.w - 12, 148);
-  secHead('PERSONNAGE', x, col.y + 22, w);
+// ---------- ZONE GAUCHE : liste des 6 emplacements d'équipement ----------
+function drawEquipList(L, col) {
+  const rows = heroEquipRows(L);
+  panel(col.x + 4, col.y, col.w - 8, col.h);
+  secHead('ÉQUIPEMENT', col.x + 14, col.y + 16, col.w - 28);
+  ctx.fillStyle = C_MUTED; ctx.font = `italic 10px ${UI}`; ctx.textAlign = 'left';
+  ctx.fillText('clique une pièce pour son détail', col.x + 14, col.y + 32);
+  rows.forEach(r => {
+    const id = G.inv.equip[r.slot], it = id && ITEMS[id];
+    const eq = !!it;
+    const dur = eq ? getDur(G.inv, id) : 100;
+    const broken = eq && dur <= 0;
+    const tier = eq ? itemTier(it) : '#546e7a';
+    const hov = inR(r, G.mouse.x, G.mouse.y);
+    ctx.fillStyle = eq ? hexA(tier, 0.10) : hov ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.03)';
+    roundRect(r.x, r.y, r.w, r.h, 8); ctx.fill();
+    ctx.strokeStyle = eq ? tier : hov ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.12)';
+    ctx.lineWidth = eq ? 1.6 : 1;
+    roundRect(r.x, r.y, r.w, r.h, 8); ctx.stroke();
+    ctx.textAlign = 'left';
+    if (it) {
+      drawItemIcon(it, r.x + 24, r.y + r.h / 2, 15);
+      ctx.fillStyle = broken ? '#ff8a80' : '#ffe9a3'; ctx.font = `bold 11.5px ${UI}`;
+      ctx.fillText(fitText(it.name + (broken ? ' 💥' : ''), r.w - 70), r.x + 46, r.y + 17);
+      ctx.fillStyle = tier; ctx.font = `9.5px ${UI}`;
+      ctx.fillText(`${ITEM_RARITY[it.rar] || ''} · ${SLOT_LABEL[r.slot]}`, r.x + 46, r.y + 29);
+      const dbx = r.x + 46, dbw = r.w - 56, dby = r.y + r.h - 8;
+      ctx.fillStyle = 'rgba(255,255,255,0.12)'; roundRect(dbx, dby, dbw, 4, 2); ctx.fill();
+      const dc = dur > 50 ? '#69f0ae' : dur > 25 ? '#ffd740' : '#ff5252';
+      if (dur > 0) { ctx.fillStyle = dc; roundRect(dbx, dby, dbw * dur / 100, 4, 2); ctx.fill(); }
+    } else {
+      ctx.fillStyle = '#546e7a'; ctx.font = '15px serif';
+      ctx.fillText('—', r.x + 24, r.y + r.h / 2 + 5);
+      ctx.fillStyle = '#455a64'; ctx.font = `italic 10.5px ${UI}`;
+      ctx.fillText(`${SLOT_LABEL[r.slot]} : vide`, r.x + 46, r.y + r.h / 2 + 4);
+    }
+  });
+}
+
+// ---------- ZONE CENTRALE : mannequin + nom + niveau + records ----------
+function drawHeroCenter(L, CL) {
+  const D = heroDoll(L);
   const meta = slotMeta(activeSlot());
   const s = slotSummary(activeSlot()) || {};
-  ctx.textAlign = 'left';
+  ctx.textAlign = 'center';
   ctx.fillStyle = '#ffe9a3'; ctx.font = `bold 21px ${SERIF}`;
-  ctx.fillText(fitText(meta ? meta.name : 'Héros sans nom', w), x, col.y + 52);
-  // badge niveau record
-  const lvl = s.bestLevel || 1;
+  ctx.fillText(fitText(meta ? meta.name : 'Héros sans nom', 320), D.x, D.y - 126);
   ctx.fillStyle = 'rgba(255,215,64,0.14)';
-  roundRect(x, col.y + 62, 108, 24, 12); ctx.fill();
+  roundRect(D.x - 62, D.y - 116, 124, 22, 11); ctx.fill();
   ctx.strokeStyle = 'rgba(255,215,64,0.45)'; ctx.lineWidth = 1;
-  roundRect(x, col.y + 62, 108, 24, 12); ctx.stroke();
-  ctx.fillStyle = '#ffd740'; ctx.font = `bold 12px ${UI}`;
-  ctx.fillText(`NIV. RECORD ${lvl}`, x + 54, col.y + 78);
-  // historique : 2 colonnes × 3 lignes
-  const rows = [
-    ['📦', 'Parties', `${s.totalRuns || 0}`],
-    ['🌊', 'Vague record', `${s.bestWave || 0}`],
-    ['💀', 'Éliminations', `${(s.totalKills || 0).toLocaleString('fr-FR')}`],
-    ['⏱', 'Temps de jeu', fmtPlaytime(s.playtime || 0)],
-    ['🗺', 'Campagnes', `${Object.values(G.stats.campaignDone || {}).filter(Boolean).length}/5`]
-  ];
-  ctx.font = `11px ${UI}`;
-  rows.forEach((r, i) => {
-    const rx = x + (i % 2) * (w / 2), ry = col.y + 102 + Math.floor(i / 2) * 20;
-    ctx.fillStyle = '#d4b062'; ctx.fillText(r[0], rx, ry);
-    ctx.fillStyle = C_MUTED; ctx.fillText(r[1], rx + 18, ry);
-    ctx.fillStyle = C_TEXT; ctx.font = `bold 11px ${UI}`;
-    ctx.fillText(r[2], rx + 18 + ctx.measureText(r[1]).width + 8, ry);
-    ctx.font = `11px ${UI}`;
-  });
-}
+  roundRect(D.x - 62, D.y - 116, 124, 22, 11); ctx.stroke();
+  ctx.fillStyle = '#ffd740'; ctx.font = `bold 11px ${UI}`;
+  ctx.fillText(`NIV. RECORD ${s.bestLevel || 1}`, D.x, D.y - 101);
 
-// ---------- STATISTIQUES : bonus dérivés de l'équipement, infobulles au survol ----------
-function drawHeroStats(col) {
-  const x = col.x + 14, w = col.w - 28;
-  const py = col.y + 162;
-  panel(col.x + 6, py, col.w - 12, col.h - 168);
-  secHead('STATISTIQUES', x, py + 16, w);
-  const b = equipBonuses(G.inv, 1);
-  const rows = [];
-  if (b.weaponMult > 1.001) rows.push({ icon: '⚔️', label: 'Dégâts', val: `+${Math.round((b.weaponMult - 1) * 100)} %`, tip: 'Multiplicateur de dégâts de toutes tes attaques' });
-  if (b.armorReduce > 0) rows.push({ icon: '🛡️', label: 'Défense', val: `-${Math.round(b.armorReduce * 100)} %`, tip: 'Réduction des dégâts subis' });
-  if (b.hp > 0) rows.push({ icon: '❤️', label: 'PV max', val: `+${b.hp}`, tip: 'Points de vie supplémentaires' });
-  if (b.speed > 0) rows.push({ icon: '👟', label: 'Vitesse', val: `+${b.speed.toFixed(2)}`, tip: 'Vitesse de déplacement en plus' });
-  if (b.xp > 1.001) rows.push({ icon: '✨', label: 'XP', val: `+${Math.round((b.xp - 1) * 100)} %`, tip: 'Expérience gagnée en plus' });
-  if (b.potions > 0) rows.push({ icon: '🧪', label: 'Fioles', val: `+${b.potions}`, tip: 'Fioles supplémentaires' });
-  if (b.potionMult > 1.001) rows.push({ icon: '🍶', label: 'Soins', val: `+${Math.round((b.potionMult - 1) * 100)} %`, tip: 'Efficacité des fioles' });
-  if (b.ultR > 1.001) rows.push({ icon: '💥', label: 'Rayon ultime', val: `+${Math.round((b.ultR - 1) * 100)} %`, tip: 'Portée de ton ultime' });
-  if (b.ultBoss > 0) rows.push({ icon: '👹', label: 'Boss', val: `+${Math.round(b.ultBoss * 100)} %`, tip: 'Dégâts bonus infligés aux boss' });
-  if (!rows.length) rows.push({ icon: '—', label: 'Bonus', val: 'aucun', tip: 'Équipe des objets forgés pour gagner des bonus', dim: true });
-  // grille 2 colonnes
-  const cellW = w / 2, rh = 22;
-  let hovTip = null;
-  rows.forEach((r, i) => {
-    const cx = x + (i % 2) * cellW, cy = py + 36 + Math.floor(i / 2) * rh;
-    const cell = { x: cx, y: cy - 13, w: cellW - 8, h: rh };
-    const hov = inR(cell, G.mouse.x, G.mouse.y);
-    if (hov) hovTip = { r, x: cx, y: cy };
-    if (hov) { ctx.fillStyle = 'rgba(255,255,255,0.06)'; roundRect(cell.x, cell.y, cell.w, cell.h, 6); ctx.fill(); }
-    ctx.textAlign = 'left'; ctx.font = `12px ${UI}`;
-    ctx.fillStyle = r.dim ? C_MUTED : '#d4b062'; ctx.fillText(r.icon, cx + 2, cy + 4);
-    ctx.fillStyle = r.dim ? C_MUTED : C_TEXT; ctx.fillText(r.label, cx + 20, cy + 4);
-    ctx.fillStyle = r.dim ? C_MUTED : '#ffe9a3'; ctx.font = `bold 11px Consolas, monospace`; ctx.textAlign = 'right';
-    ctx.fillText(r.val, cx + cellW - 14, cy + 4);
-  });
-  // infobulle au survol
-  if (hovTip) {
-    const r = hovTip.r;
-    ctx.font = `11px ${UI}`;
-    const tw = ctx.measureText(r.tip).width;
-    const bx = Math.min(Math.max(G.mouse.x + 14, 8), W - tw - 30);
-    const by = G.mouse.y - 30;
-    ctx.fillStyle = 'rgba(20,16,8,0.95)';
-    roundRect(bx, by, tw + 18, 24, 7); ctx.fill();
-    ctx.strokeStyle = 'rgba(212,176,98,0.5)'; ctx.lineWidth = 1;
-    roundRect(bx, by, tw + 18, 24, 7); ctx.stroke();
-    ctx.fillStyle = '#efe8d6'; ctx.textAlign = 'left';
-    ctx.fillText(r.tip, bx + 9, by + 16);
-  }
-}
-
-// ---------- CENTRE : mannequin + emplacements d'équipement ----------
-function drawEquipCenter(L, CL) {
-  const top = CL.iy + 4;
-  // en-tête de section au-dessus du mannequin
-  secHead('ÉQUIPEMENT', CL.dcx - 110, top, 220);
-  // positions partagées avec les clics (forge_state.heroSlots)
-  const S2 = heroSlots(L);
-  // halo doré doux derrière le mannequin
   ctx.save();
-  const hg = ctx.createRadialGradient(S2.hx, S2.hy - 10, 10, S2.hx, S2.hy - 10, 130);
+  const hg = ctx.createRadialGradient(D.x, D.y - 20, 10, D.x, D.y - 20, 130);
   hg.addColorStop(0, 'rgba(255,215,64,0.10)'); hg.addColorStop(1, 'rgba(255,215,64,0)');
   ctx.fillStyle = hg;
-  ctx.beginPath(); ctx.arc(S2.hx, S2.hy - 10, 130, 0, TAU); ctx.fill();
+  ctx.beginPath(); ctx.arc(D.x, D.y - 20, 130, 0, TAU); ctx.fill();
   ctx.restore();
+  drawDoll(D.x, D.y);
 
-  // ---- silhouette du héros (respiration discrète) ----
+  // records en ligne sous le mannequin
+  const recs = [
+    ['📦', `${s.totalRuns || 0} parties`], ['🌊', `vag. ${s.bestWave || 0}`],
+    ['💀', `${(s.totalKills || 0).toLocaleString('fr-FR')} kills`], ['⏱', fmtPlaytime(s.playtime || 0)]
+  ];
+  const rw = 120, gap = 10, rx0 = D.x - (recs.length * rw + (recs.length - 1) * gap) / 2;
+  const ry = D.y + 104;
+  recs.forEach((r, i) => {
+    const rx = rx0 + i * (rw + gap);
+    ctx.fillStyle = 'rgba(255,255,255,0.05)';
+    roundRect(rx, ry, rw, 32, 8); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,215,64,0.25)'; ctx.lineWidth = 1;
+    roundRect(rx, ry, rw, 32, 8); ctx.stroke();
+    ctx.fillStyle = '#d4b062'; ctx.font = `12px ${UI}`; ctx.textAlign = 'center';
+    ctx.fillText(r[0], rx + 20, ry + 20);
+    ctx.fillStyle = '#e8e0c8'; ctx.font = `bold 10.5px ${UI}`;
+    ctx.fillText(fitText(String(r[1]), rw - 48), rx + rw / 2 + 8, ry + 20);
+  });
+}
+
+// mannequin du héros (respiration discrète)
+function drawDoll(hx, hy) {
   const br = 1 + Math.sin((G.time || 0) * 1.3) * 0.008;
   const bob = Math.sin((G.time || 0) * 1.3 + 1) * 2;
   ctx.save();
-  ctx.translate(S2.hx, S2.hy + bob);
+  ctx.translate(hx, hy + bob);
   ctx.scale(br, br);
+
   // bottes
   ctx.fillStyle = '#0d1b33';
   ctx.beginPath(); ctx.ellipse(-9, 62, 8, 11, 0, 0, TAU); ctx.fill();
@@ -188,70 +186,6 @@ function drawEquipCenter(L, CL) {
     ctx.strokeStyle = '#ffd740'; ctx.lineWidth = 1.5; ctx.stroke();
   }
   ctx.restore();
-
-  // ---- emplacements : cadres cliquables avec l'objet équipé ----
-  let hovSlot = null;
-  for (const slot of ['weapon', 'armor', 'charm', 'boots']) {
-    const r = S2[slot], id = G.inv.equip[slot], it = id && ITEMS[id];
-    const eq = !!it;
-    const dur = eq ? getDur(G.inv, id) : 100;
-    const tier = eq ? itemTier(it) : '#ffd740';
-    const hov = inR(r, G.mouse.x, G.mouse.y);
-    if (hov) hovSlot = { slot, it, r };
-    // halo de rareté pulsant pour les objets équipés non communs
-    if (eq && hov) {
-      ctx.save();
-      ctx.shadowColor = tier; ctx.shadowBlur = 14;
-      ctx.strokeStyle = tier; ctx.lineWidth = 2.5;
-      roundRect(r.x - 2, r.y - 2, r.w + 4, r.h + 4, 12); ctx.stroke();
-      ctx.restore();
-    }
-    // cadre : teinté de la rareté quand l'emplacement est occupé
-    ctx.fillStyle = eq ? 'rgba(255,215,64,0.10)' : 'rgba(255,255,255,0.04)';
-    roundRect(r.x, r.y, r.w, r.h, 10); ctx.fill();
-    ctx.strokeStyle = eq ? tier : (hov ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.18)');
-    ctx.lineWidth = eq ? 2 : 1;
-    roundRect(r.x, r.y, r.w, r.h, 10); ctx.stroke();
-    // étiquette du slot en haut du cadre
-    ctx.fillStyle = eq ? tier : '#90caf9'; ctx.font = 'bold 9px Inter, sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText(SLOT_LABEL[slot], r.x + r.w / 2, r.y + 11);
-    if (it) {
-      // icône centrée, nom dessous, mini barre de durabilité en bas
-      const icY = r.y + r.h * 0.42;
-      drawItemIcon(it, r.x + r.w / 2, icY, 19);
-      ctx.fillStyle = '#ffe9a3'; ctx.font = 'bold 9.5px Inter, sans-serif';
-      ctx.fillText(fitText(it.name, r.w - 12), r.x + r.w / 2, r.y + r.h - 22);
-      const bw2 = r.w - 20, bx2 = r.x + 10, by2 = r.y + r.h - 12;
-      ctx.fillStyle = 'rgba(255,255,255,0.15)'; roundRect(bx2, by2, bw2, 3.5, 2); ctx.fill();
-      if (dur > 0) {
-        ctx.fillStyle = dur > 50 ? '#69f0ae' : dur > 25 ? '#ffd740' : '#ff5252';
-        roundRect(bx2, by2, bw2 * dur / 100, 3.5, 2); ctx.fill();
-      }
-    } else {
-      ctx.fillStyle = '#546e7a'; ctx.font = '20px serif';
-      ctx.fillText('—', r.x + r.w / 2, r.y + r.h * 0.5 + 6);
-      ctx.fillStyle = '#455a64'; ctx.font = 'italic 9px Inter, sans-serif';
-      ctx.fillText('vide', r.x + r.w / 2, r.y + r.h - 14);
-    }
-  }
-  // infobulle : description de l'objet survolé (effet + rareté)
-  if (hovSlot && hovSlot.it) {
-    const it = hovSlot.it, tier = itemTier(it);
-    const tip = `${it.name} — ${it.desc}`;
-    ctx.font = `11px ${UI}`;
-    const tw = ctx.measureText(tip).width;
-    const bx = Math.min(Math.max(G.mouse.x + 14, 8), W - tw - 34);
-    const by = Math.max(8, G.mouse.y - 34);
-    ctx.fillStyle = 'rgba(20,16,8,0.95)';
-    roundRect(bx, by, tw + 20, 26, 7); ctx.fill();
-    ctx.strokeStyle = tier; ctx.lineWidth = 1.2;
-    roundRect(bx, by, tw + 20, 26, 7); ctx.stroke();
-    ctx.fillStyle = '#efe8d6'; ctx.textAlign = 'left';
-    ctx.fillText(tip, bx + 10, by + 17);
-  }
-  // astuce discrète sous le mannequin
-  ctx.fillStyle = '#78909c'; ctx.font = 'italic 11px Inter, sans-serif'; ctx.textAlign = 'center';
-  ctx.fillText('clique un emplacement pour voir le détail', S2.hx, S2.hy + 140);
 }
 
 // ---------- COMPÉTENCES : cartes verticales des 3 types d'armes ----------
@@ -367,94 +301,193 @@ function drawProgressionStrip(L) {
   ctx.textAlign = 'left';
 }
 
+// ---------- SOUS-ONGLET CARACTÉRISTIQUES : toutes les stats réelles ----------
+function drawHeroStatsTab(L) {
+  const CL = heroColLayout(L);
+  const x = CL.ix + 10, w = CL.iw - 20, y = CL.iy + 6, h = CL.ih - 12;
+  panel(CL.ix + 4, y, CL.iw - 8, h);
+  secHead('CARACTÉRISTIQUES', x, y + 18, w);
+  const b = equipBonuses(G.inv, 1);
+  const buffs = G.inv.buffs || {};
+  const baseHp = (G.campaign === 4 ? 500 : G.campaign === 3 ? 400 : G.campaign === 2 ? 300 : G.campaign === 1 ? 200 : 100);
+  const maxHp = baseHp + b.hp + (buffs.hp || 0);
+  const p = G.player || {};
+  const modeKey = { 1: 'epee', 3: 'lance', 5: 'arc' }[p.attackMode] || 'epee';
+  const wMult = b.weaponMult * modeMult(G.inv, modeKey);
+  const rows = [
+    { icon: '❤️', label: 'Points de vie', val: `${Math.round(p.hp ?? maxHp)} / ${maxHp}`, tip: `Base ${baseHp} + équipement ${b.hp > 0 ? '+' + b.hp : '0'}${buffs.hp ? ' + consommables +' + buffs.hp : ''}` },
+    { icon: '⚔️', label: 'Dégâts de base', val: `${p.attackDamage ?? 30}`, tip: 'Dégâts d\'une attaque de base' },
+    { icon: '🌀', label: 'Dégâts rotation', val: `${p.spinDamage ?? 70}`, tip: 'Dégâts du tourbillon' },
+    { icon: '💥', label: 'Bonus dégâts', val: `+${Math.round((wMult - 1) * 100)} %`, tip: `Artefacts ${b.weaponMult > 1 ? '+' + Math.round((b.weaponMult - 1) * 100) + '%' : 'aucun'} × niveau arme ${modeKey} +${Math.round((modeMult(G.inv, modeKey) - 1) * 100)} %` },
+    { icon: '🛡️', label: 'Défense', val: `-${Math.round(b.armorReduce * 100)} %`, tip: 'Réduction des dégâts subis (armure + casque)' },
+    { icon: '👟', label: 'Vitesse', val: (p.speed ?? 3.4).toFixed(2), tip: `Déplacement en cases/sec (base +${b.speed.toFixed(2)} équipement)` },
+    { icon: '✨', label: 'Bonus XP', val: `+${Math.round((b.xp - 1) * 100)} %`, tip: 'Expérience gagnée en plus' },
+    { icon: '🍶', label: 'Efficacité soins', val: `+${Math.round((b.potionMult - 1) * 100)} %`, tip: 'Efficacité des fioles' },
+    { icon: '🧪', label: 'Fioles max', val: `${3 + b.potions + (buffs.potions || 0)}`, tip: 'Base 3 + gourdes + consommables' },
+    { icon: '💥', label: 'Rayon ultime', val: `+${Math.round((b.ultR - 1) * 100)} %`, tip: 'Portée de l\'ultime (touche F)' },
+    { icon: '👹', label: 'Dégâts boss (ult.)', val: `+${Math.round(b.ultBoss * 100)} %`, tip: 'Dégâts bonus de l\'ultime sur les boss' }
+  ];
+  const cols = 2, cw = (w - 20) / cols, rh = 34, x0 = x + 10, y0 = y + 40;
+  rows.forEach((r, i) => {
+    const cx = x0 + (i % cols) * cw, cy = y0 + Math.floor(i / cols) * rh;
+    const hov = inR({ x: cx, y: cy - 14, w: cw - 10, h: rh }, G.mouse.x, G.mouse.y);
+    if (hov) { ctx.fillStyle = 'rgba(255,255,255,0.06)'; roundRect(cx, cy - 14, cw - 10, rh, 7); ctx.fill(); }
+    ctx.textAlign = 'left'; ctx.font = `13px ${UI}`;
+    ctx.fillStyle = '#d4b062'; ctx.fillText(r.icon, cx + 4, cy + 2);
+    ctx.fillStyle = C_TEXT; ctx.fillText(fitText(r.label, cw * 0.45), cx + 26, cy + 2);
+    ctx.fillStyle = '#ffe9a3'; ctx.font = `bold 12.5px Consolas, monospace`; ctx.textAlign = 'right';
+    ctx.fillText(r.val, cx + cw - 16, cy + 2);
+    ctx.textAlign = 'left'; ctx.font = `italic 10px ${UI}`; ctx.fillStyle = C_MUTED;
+    ctx.fillText(fitText(r.tip, cw - 30), cx + 26, cy + 15);
+  });
+  // niveaux d'armes en bas
+  const wy = y0 + Math.ceil(rows.length / cols) * rh + 8;
+  secHead('NIVEAUX D\'ARMES', x + 10, wy, w - 20);
+  const cw3 = (w - 40) / 3;
+  SKILL_DEF.forEach((sd, i) => {
+    const info = modeInfo(G.inv, sd.key);
+    const locked = sd.key === 'arc' && !(G.stats && G.stats.bowUnlocked);
+    const cx = x0 + i * cw3;
+    ctx.fillStyle = locked ? 'rgba(20,16,40,0.5)' : 'rgba(255,255,255,0.05)';
+    roundRect(cx, wy + 14, cw3 - 14, 44, 8); ctx.fill();
+    ctx.strokeStyle = locked ? 'rgba(124,77,255,0.4)' : sd.color; ctx.lineWidth = 1.2;
+    roundRect(cx, wy + 14, cw3 - 14, 44, 8); ctx.stroke();
+    ctx.textAlign = 'left'; ctx.font = `13px serif`;
+    ctx.fillText(sd.icon, cx + 10, wy + 33);
+    ctx.fillStyle = locked ? '#7c6aa8' : sd.color; ctx.font = `bold 11.5px ${UI}`;
+    ctx.fillText(locked ? 'ARC VERROUILLÉ' : sd.label, cx + 32, wy + 30);
+    ctx.fillStyle = '#ffe9a3'; ctx.font = `bold 11px Consolas, monospace`; ctx.textAlign = 'right';
+    ctx.fillText(locked ? '🔒' : `NIV ${info.lvl} · +${Math.round((modeMult(G.inv, sd.key) - 1) * 100)}%`, cx + cw3 - 24, wy + 30);
+    ctx.fillStyle = '#8d99ae'; ctx.font = `9.5px ${UI}`; ctx.textAlign = 'left';
+    ctx.fillText(locked ? 'boss final du monde 9' : `+0,5 % dégâts / niveau — ${Math.floor(info.xp).toLocaleString('fr-FR')}/${info.need.toLocaleString('fr-FR')} XP`, cx + 32, wy + 45);
+  });
+}
+
+// note des bonus permanents des consommables (sous les compétences)
+function drawBuffsNote(col) {
+  const buffs = G.inv.buffs || {};
+  if (!buffs.hp && !buffs.potions) return;
+  const y = col.y + col.h - 58;
+  ctx.fillStyle = '#69f0ae'; ctx.font = `bold 10px ${UI}`; ctx.textAlign = 'left';
+  ctx.fillText('BONUS CONSOMMABLES', col.x + 14, y);
+  ctx.fillStyle = C_MUTED; ctx.font = `10px ${UI}`;
+  let yy = y + 15;
+  if (buffs.hp) { ctx.fillText(`+${buffs.hp} PV max`, col.x + 14, yy); yy += 14; }
+  if (buffs.potions) { ctx.fillText(`+${buffs.potions} fiole max`, col.x + 14, yy); }
+}
+
 export function drawForgeInv(L) {
-  // compteurs de matériaux en haut
-  let mx = L.cx + 30;
-  ctx.font = 'bold 12px Consolas, monospace'; ctx.textAlign = 'left';
-  for (const m in MATS) {
-    const count = G.inv.mats[m] || 0;
-    drawMatIcon(m, mx + 6, L.cy + 121, 6);
-    ctx.fillStyle = '#e0e0e0';
-    ctx.fillText(`${MATS[m].name} ×${count}`, mx + 17, L.cy + 126);
-    mx += ctx.measureText(`${MATS[m].name} ×${count}`).width + 36;
+  const g = invCells(L);
+  // ---------- onglets catégories ----------
+  g.tabs.forEach(t => chip(t.r, t.label, invUI.cat === t.key, t.count));
+  // ---------- barre d'outils : recherche + tri + rareté ----------
+  const s = g.search;
+  const focused = !!G.invQueryFocus;
+  ctx.fillStyle = focused ? 'rgba(255,215,64,0.10)' : 'rgba(255,255,255,0.05)';
+  roundRect(s.x, s.y, s.w, s.h, 8); ctx.fill();
+  ctx.strokeStyle = focused ? '#ffd740' : 'rgba(255,255,255,0.22)'; ctx.lineWidth = focused ? 2 : 1;
+  roundRect(s.x, s.y, s.w, s.h, 8); ctx.stroke();
+  ctx.fillStyle = '#78909c'; ctx.font = `11px ${UI}`; ctx.textAlign = 'left';
+  ctx.fillText('🔍', s.x + 10, s.y + 20);
+  const q = G.invQuery || '';
+  ctx.fillStyle = q ? C_TEXT : '#546e7a'; ctx.font = `12px ${UI}`;
+  ctx.fillText(fitText(q || 'Rechercher un objet…', s.w - 24), s.x + 30, s.y + 20);
+  if (focused && Math.floor((G.time || 0) * 2) % 2 === 0) {
+    const tw = ctx.measureText(fitText(q, s.w - 40)).width;
+    ctx.fillStyle = '#ffd740'; ctx.fillRect(s.x + 30 + Math.min(tw, s.w - 44), s.y + 8, 2, 16);
   }
-  // liste pleine largeur scrollable, groupée par emplacement
-  const inv = invItems(L);
-  const vx = L.cx + 8, vy = L.cy + 142, vw = L.cw - 16, vh = L.ch - 158;
+  const sortNames = { name: '⇅ Tri : Nom', rar: '⇅ Tri : Rareté', slot: '⇅ Tri : Catégorie' };
+  chip(g.sortBtn, sortNames[invUI.sort], false);
+  const rarNames = { all: '◆ Toutes raretés', commun: '◆ Commun', rare: '◆ Rare', epique: '◆ Épique', legendaire: '◆ Légendaire' };
+  chip(g.rarBtn, rarNames[invUI.rar], invUI.rar !== 'all');
+  // compteur
+  ctx.fillStyle = C_MUTED; ctx.font = `11px ${UI}`; ctx.textAlign = 'left';
+  const nItems = invUI.cat === 'mats' ? Object.keys(MATS).length : invVisibleCount();
+  ctx.fillText(`${nItems} élément${nItems > 1 ? 's' : ''}`, g.countTxt.x, g.countTxt.y);
+  // ---------- grille (clip + scroll) ----------
   ctx.save();
-  ctx.beginPath(); ctx.rect(vx, vy, vw, vh); ctx.clip();
+  ctx.beginPath(); ctx.rect(g.view.x, g.view.y, g.view.w, g.view.h); ctx.clip();
   ctx.translate(0, -forgeScroll);
-  // en-têtes de slot
-  for (const h of inv.headers) {
-    ctx.fillStyle = '#ffd740'; ctx.font = 'bold 14px Georgia, serif'; ctx.textAlign = 'left';
-    ctx.fillText(h.label, h.x, h.y + 4);
-    ctx.strokeStyle = 'rgba(255,215,64,0.25)'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(h.x, h.y + 12); ctx.lineTo(h.x + inv.rows.find(r => r.slot === h.slot && !r.empty)?.w || L.cw - 60, h.y + 12); ctx.stroke();
-  }
-  for (const r of inv.rows) {
-    if (r.empty) {
-      ctx.fillStyle = '#546e7a'; ctx.font = 'italic 12px Inter, sans-serif'; ctx.textAlign = 'left';
-      ctx.fillText('— aucun objet forgé dans cet emplacement —', r.x + 10, r.y + 20);
-      continue;
+  if (invUI.cat === 'mats') {
+    g.cells.forEach(c => drawMatCell(c));
+  } else {
+    g.cells.forEach(c => drawInvCell(c));
+    if (!g.cells.length) {
+      ctx.fillStyle = '#546e7a'; ctx.font = `italic 13px ${UI}`; ctx.textAlign = 'center';
+      ctx.fillText(q ? 'Aucun objet ne correspond à la recherche' : 'Aucun objet dans cette catégorie', g.view.x + g.view.w / 2, g.view.y + 60);
     }
-    const it = ITEMS[r.id];
-    const slot = r.slot;
-    const eq = G.inv.equip[slot] === r.id;
-    const dur = getDur(G.inv, r.id);
-    const broken = dur <= 0;
-    ctx.fillStyle = broken ? 'rgba(255,60,60,0.10)' : eq ? 'rgba(255,215,64,0.14)' : 'rgba(255,255,255,0.04)';
-    roundRect(r.x, r.y, r.w, r.h - 6, 9); ctx.fill();
-    ctx.strokeStyle = broken ? '#ff5252' : eq ? '#ffd740' : 'rgba(255,255,255,0.14)';
-    ctx.lineWidth = broken || eq ? 2 : 1;
-    roundRect(r.x, r.y, r.w, r.h - 6, 9); ctx.stroke();
-    drawItemIcon(it, r.x + 30, r.y + 26, 19);
-    ctx.textAlign = 'left';
-    ctx.fillStyle = broken ? '#ff8a80' : eq ? '#ffe9a3' : '#e0e0e0'; ctx.font = 'bold 13px Inter, sans-serif';
-    ctx.fillText(it.name + (broken ? '  💥' : eq ? '  ✓' : ''), r.x + 56, r.y + 20);
-    ctx.fillStyle = '#9e9e9e'; ctx.font = '11px Inter, sans-serif';
-    ctx.fillText(fitText(it.desc, 420), r.x + 56, r.y + 37);
-    // barre de durabilité + %
-    const dbx = r.x + 56, dbw = 170, dby = r.y + 44;
-    ctx.fillStyle = 'rgba(255,255,255,0.12)';
-    roundRect(dbx, dby, dbw, 5, 2.5); ctx.fill();
-    const dc = dur > 50 ? '#69f0ae' : dur > 25 ? '#ffd740' : '#ff5252';
-    ctx.fillStyle = dc;
-    if (dur > 0) { roundRect(dbx, dby, dbw * dur / 100, 5, 2.5); ctx.fill(); }
-    ctx.fillStyle = broken ? '#ff8a80' : '#8d99ae'; ctx.font = 'bold 9px Inter, sans-serif'; ctx.textAlign = 'left';
-    ctx.fillText(broken ? 'CASSÉ' : `${Math.round(dur)}%`, dbx + dbw + 8, dby + 5);
-    // bouton RÉPARER (si usé) + coût
-    const rb = r.rbtn;
-    if (dur < 100) {
-      const okR = canRepair(G.inv, r.id);
-      ctx.fillStyle = okR ? 'rgba(255,140,0,0.4)' : 'rgba(255,255,255,0.06)';
-      roundRect(rb.x, rb.y, rb.w, rb.h, 8); ctx.fill();
-      ctx.strokeStyle = okR ? '#ff9800' : 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1.5;
-      roundRect(rb.x, rb.y, rb.w, rb.h, 8); ctx.stroke();
-      ctx.fillStyle = okR ? '#ffe0b2' : '#78909c'; ctx.font = 'bold 11px Inter, sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText('🔧 RÉPARER', rb.x + rb.w / 2, rb.y + rb.h / 2 + 4);
-      // le coût de réparation est affiché dans la fiche détail (clic sur l'objet)
-    }
-    // bouton ÉQUIPER / ÉQUIPÉ / CASSÉ
-    const b = r.btn;
-    ctx.fillStyle = broken ? 'rgba(255,82,82,0.15)' : eq ? 'rgba(255,215,64,0.3)' : 'rgba(92,107,192,0.55)';
-    roundRect(b.x, b.y, b.w, b.h, 8); ctx.fill();
-    ctx.strokeStyle = broken ? '#ff5252' : eq ? '#ffd740' : '#9fa8da'; ctx.lineWidth = 1.5;
-    roundRect(b.x, b.y, b.w, b.h, 8); ctx.stroke();
-    ctx.fillStyle = broken ? '#ff8a80' : eq ? '#ffe9a3' : '#fff'; ctx.font = 'bold 12px Inter, sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText(broken ? 'CASSÉ' : eq ? 'ÉQUIPÉ ✓' : 'ÉQUIPER', b.x + b.w / 2, b.y + 20);
-    ctx.textAlign = 'left';
   }
   ctx.restore();
   // scrollbar
   const smax = forgeScrollMax();
   if (smax > 0) {
-    const tx = L.cx + L.cw - 14, ty = vy, th = vh;
+    const tx = g.view.x + g.view.w - 12, ty = g.view.y, th = g.view.h;
     ctx.fillStyle = 'rgba(255,255,255,0.12)';
     roundRect(tx, ty, 6, th, 3); ctx.fill();
-    const thumbH = Math.max(24, th * (vh / (vh + smax)));
+    const thumbH = Math.max(24, th * (th / (th + smax)));
     const thumbY = ty + (th - thumbH) * (forgeScroll / smax);
     ctx.fillStyle = 'rgba(255,215,64,0.6)';
     roundRect(tx, thumbY, 6, thumbH, 3); ctx.fill();
   }
+}
+
+function invVisibleCount() { return invVisible().length; }
+
+// cellule objet de la grille inventaire
+function drawInvCell(c) {
+  const it = ITEMS[c.id];
+  if (!it) return;
+  const tier = itemTier(it);
+  const qty = it.conso ? (G.inv.items[c.id] || 0) : 0;
+  const equipped = !it.conso && Object.values(G.inv.equip).includes(c.id);
+  const dur = it.conso ? 100 : getDur(G.inv, c.id);
+  const broken = dur <= 0;
+  const hov = inR(c, G.mouse.x, G.mouse.y + forgeScroll);
+  // fond teinté rareté + survol
+  ctx.fillStyle = broken ? 'rgba(255,60,60,0.10)' : equipped ? hexA(tier, 0.16) : hov ? 'rgba(255,255,255,0.09)' : hexA(tier, 0.05);
+  roundRect(c.x, c.y, c.w, c.h, 9); ctx.fill();
+  ctx.strokeStyle = broken ? '#ff5252' : equipped ? tier : hov ? 'rgba(255,255,255,0.4)' : hexA(tier, 0.45);
+  ctx.lineWidth = equipped || hov ? 2 : 1.2;
+  roundRect(c.x, c.y, c.w, c.h, 9); ctx.stroke();
+  // icône
+  drawItemIcon(it, c.x + c.w / 2, c.y + 30, 20);
+  // nom + rareté
+  ctx.textAlign = 'center';
+  ctx.fillStyle = broken ? '#ff8a80' : '#ffe9a3'; ctx.font = `bold 10.5px ${UI}`;
+  ctx.fillText(fitText(it.name, c.w - 12), c.x + c.w / 2, c.y + 60);
+  ctx.fillStyle = tier; ctx.font = `8.5px ${UI}`;
+  ctx.fillText(ITEM_RARITY[it.rar] || '', c.x + c.w / 2, c.y + 73);
+  // badges : quantité conso / équipé / cassé / durabilité
+  if (it.conso) {
+    ctx.fillStyle = '#b9f6ca'; ctx.font = `bold 11px Consolas, monospace`;
+    ctx.fillText(`×${qty}`, c.x + c.w - 14, c.y + 16);
+  } else if (equipped) {
+    ctx.fillStyle = tier; ctx.font = `bold 10px ${UI}`;
+    ctx.fillText('✓ ÉQUIPÉ', c.x + c.w / 2, c.y + 86);
+  } else if (broken) {
+    ctx.fillStyle = '#ff8a80'; ctx.font = `bold 9.5px ${UI}`;
+    ctx.fillText('💥 CASSÉ', c.x + c.w / 2, c.y + 86);
+  } else if (dur < 100) {
+    ctx.fillStyle = '#8d99ae'; ctx.font = `9px ${UI}`;
+    ctx.fillText(`${Math.round(dur)} %`, c.x + c.w / 2, c.y + 86);
+  }
+}
+
+// cellule matériau (lecture seule : icône + nom + stock)
+function drawMatCell(c) {
+  const m = c.mat, info = MATS[m];
+  const n = G.inv.mats[m] || 0;
+  const hov = inR(c, G.mouse.x, G.mouse.y + forgeScroll);
+  ctx.fillStyle = hov ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.04)';
+  roundRect(c.x, c.y, c.w, c.h, 9); ctx.fill();
+  ctx.strokeStyle = hov ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.15)';
+  ctx.lineWidth = 1.2;
+  roundRect(c.x, c.y, c.w, c.h, 9); ctx.stroke();
+  drawMatIcon(m, c.x + c.w / 2, c.y + 26, 12);
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#e8e0c8'; ctx.font = `bold 11.5px ${UI}`;
+  ctx.fillText(info.name, c.x + c.w / 2, c.y + 56);
+  ctx.fillStyle = '#ffd740'; ctx.font = `bold 15px Consolas, monospace`;
+  ctx.fillText(`×${n.toLocaleString('fr-FR')}`, c.x + c.w / 2, c.y + 76);
 }
 

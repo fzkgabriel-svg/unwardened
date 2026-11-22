@@ -98,8 +98,10 @@ export function drawMatIcon(m, x, y, r) {
   ctx.restore();
 }
 
-// couleur de rareté d'un objet forgé, déduite de ses matériaux les plus rares
+// couleur de rareté d'un objet forgé : champ `rar` explicite, sinon déduit des matériaux
+const RAR_COLOR = { commun: '#b0bec5', rare: '#4fc3f7', epique: '#ce93d8', legendaire: '#ffd740' };
 export function itemTier(it) {
+  if (it.rar && RAR_COLOR[it.rar]) return RAR_COLOR[it.rar];
   const c = it.cost || {};
   if (c.cristal) return '#4fc3f7';
   if (c.essence) return '#ce93d8';

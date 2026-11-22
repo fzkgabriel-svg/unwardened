@@ -2,7 +2,7 @@ import { G, ctx, W, H, TAU, saveStats, finalWave } from '../state.js';
 import { roundRect, drawMatIcon, drawItemIcon, itemTier } from '../utils.js';
 import { regenerateDecor } from '../graphics.js';
 import { ACHIEVEMENTS, unlocked, achievementCount, checkAchievements, achInfo, isClaimed, claimReward, achTabList, unclaimedInTab, adminUnlockAll } from '../achievements.js';
-import { ITEMS, MATS, canCraft, craft, toggleEquip, equipBonuses, getDur, canRepair, repairItem, repairCost, loadInv, addMaterial, modeInfo, addWmodeXp, modeMult, MODE_MAX_LVL, setInvNoSave } from '../inventory.js';
+import { ITEMS, MATS, ITEM_RARITY, canCraft, craft, toggleEquip, equipBonuses, getDur, canRepair, repairItem, repairCost, loadInv, addMaterial, modeInfo, addWmodeXp, modeMult, MODE_MAX_LVL, setInvNoSave, itemBonuses } from '../inventory.js';
 import { spawnEnemy, spawnFinalBoss } from '../enemies.js';
 import { gainXp } from '../player.js';
 import { curWorld, syncCamera, regenerateWorld, reloadWorlds, campaignStart } from '../world.js';
@@ -10,7 +10,7 @@ import { sfxCraft, sfxRepair, sfxEquip, sfxConfirm, sfxClick } from '../audio.js
 import { MAX_SLOTS, activeSlot, allSlots, slotMeta, slotSummary, createChar, selectChar, deselectChar, resetChar, fmtPlaytime, fmtDate, checkAdminPass, adminOK as _adminOK, adminList, adminWipeAll, adminLock } from '../chars.js';
 import { inR, fitText, wrapLines, hexA, fmtTime, overline, panel, overlineCentered, drawMenuButton, drawAdminPwInput, menuButtons, menuButtonAt, adminUnlocked, campaignUnlocked, UI, SERIF, C_TEXT, C_MUTED, C_GOLD, MENU_X, MENU_W, MENU_ITEMS } from './common.js';
 
-import { craftCells, forgeScroll, forgeScrollMax, itemDetail, forgeTab, invItems, heroSlots, ultBtns } from './forge_state.js';
+import { craftTabs, craftZones, craftUI, forgeScroll, forgeScrollMax, upgradeCards, upgradeCost, upgradeXpGain } from './forge_state.js';
 
 // animation de forge cinématique : halo de foyer, braises, enclume sur souche,
 // lingot qui rougeoie, marteau avec traînée de mouvement, impacts étincelants
@@ -256,65 +256,212 @@ export function drawForgeAnim(L) {
   ctx.restore();
 }
 
+// chip de catégorie forge (même style que les sous-onglets personnage)
+function fchip(r, label, active, count) {
+  const hov = inR(r, G.mouse.x, G.mouse.y);
+  ctx.fillStyle = active ? 'rgba(255,215,64,0.22)' : hov ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.04)';
+  roundRect(r.x, r.y, r.w, r.h, 8); ctx.fill();
+  ctx.strokeStyle = active ? '#ffd740' : hov ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.16)';
+  ctx.lineWidth = active ? 2 : 1;
+  roundRect(r.x, r.y, r.w, r.h, 8); ctx.stroke();
+  ctx.fillStyle = active ? '#ffe9a3' : '#e8e0c8'; ctx.font = `bold 10.5px Inter, sans-serif`; ctx.textAlign = 'center';
+  ctx.fillText(`${label} · ${count}`, r.x + r.w / 2, r.y + r.h / 2 + 4);
+}
+
 export function drawForgeCraft(L) {
-  // zone de contenu scrollable (clip + décalage)
-  const vx = L.cx + 8, vy = L.cy + 104, vw = L.cw - 16, vh = L.ch - 114;
+  // ---------- chips de catégories ----------
+  for (const t of craftTabs(L)) fchip(t.r, t.label, craftUI.cat === t.key, t.n);
+  if (craftUI.cat === 'upgrade') { drawUpgradeTab(L); return; }
+
+  const Z = craftZones(L);
+  const { lx, lw, cx2, cw2, rx, rw, y0, y1 } = Z;
+  // ---------- GAUCHE : liste des recettes (scrollable) ----------
   ctx.save();
-  ctx.beginPath(); ctx.rect(vx, vy, vw, vh); ctx.clip();
-  ctx.translate(0, -forgeScroll);
-  for (const c of craftCells(L)) {
-    const it = ITEMS[c.id], ok = canCraft(G.inv, c.id), owned = !!G.inv.items[c.id];
-    // halo doré respirant sur les objets actuellement fabricables
-    if (ok && !owned) {
-      const pulse = 0.5 + Math.sin(G.time * 3 + c.x * 0.01) * 0.5;
-      const hg = ctx.createRadialGradient(c.x + c.w / 2, c.y + c.h / 2, 8, c.x + c.w / 2, c.y + c.h / 2, c.w * 0.75);
-      hg.addColorStop(0, `rgba(255,200,80,${0.05 + pulse * 0.05})`);
-      hg.addColorStop(1, 'rgba(255,180,40,0)');
-      ctx.fillStyle = hg;
-      roundRect(c.x, c.y, c.w, c.h, 10); ctx.fill();
-    }
-    ctx.fillStyle = owned ? 'rgba(105,240,174,0.08)' : 'rgba(255,255,255,0.04)';
-    roundRect(c.x, c.y, c.w, c.h, 10); ctx.fill();
-    ctx.strokeStyle = owned ? 'rgba(105,240,174,0.5)' : ok ? `rgba(255,215,64,${0.22 + 0.18 * (0.5 + Math.sin(G.time * 3 + c.x * 0.01) * 0.5)})` : 'rgba(255,255,255,0.14)';
-    ctx.lineWidth = 1.5;
-    roundRect(c.x, c.y, c.w, c.h, 10); ctx.stroke();
-    // icône + nom + desc (tuile d'équipement stylée)
-    drawItemIcon(it, c.x + 34, c.y + c.h / 2, 17);
+  ctx.beginPath(); ctx.rect(lx - 4, y0 - 6, lw + 8, y1 - y0 + 12); ctx.clip();
+  for (const r of Z.rows) {
+    const it = ITEMS[r.id];
+    const ok = canCraft(G.inv, r.id), owned = !!G.inv.items[r.id];
+    const sel = r.id === Z.selId;
+    const tier = itemTier(it);
+    ctx.fillStyle = sel ? hexA(tier, 0.20) : owned ? 'rgba(105,240,174,0.07)' : ok ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.03)';
+    roundRect(r.x, r.y, r.w, r.h, 8); ctx.fill();
+    ctx.strokeStyle = sel ? tier : owned ? 'rgba(105,240,174,0.45)' : ok ? `rgba(255,215,64,${0.3 + 0.15 * Math.sin(G.time * 3 + r.x * 0.02)})` : 'rgba(255,255,255,0.12)';
+    ctx.lineWidth = sel ? 2 : 1.2;
+    roundRect(r.x, r.y, r.w, r.h, 8); ctx.stroke();
+    drawItemIcon(it, r.x + 24, r.y + r.h / 2, 15);
     ctx.textAlign = 'left';
-    ctx.fillStyle = '#ffe9a3'; ctx.font = 'bold 13px Inter, sans-serif';
-    ctx.fillText(it.name, c.x + 62, c.y + 24);
-    ctx.fillStyle = '#9e9e9e'; ctx.font = '11px Inter, sans-serif';
-    ctx.fillText(it.desc, c.x + 62, c.y + 40);
-    // coût en matériaux (vert si suffisant, rouge sinon)
-    let cy = c.y + 58;
-    ctx.font = '10px Consolas, monospace';
-    for (const m in it.cost) {
-      const have = G.inv.mats[m] || 0, need = it.cost[m];
-      ctx.fillStyle = owned ? '#69f0ae' : have >= need ? '#a5d6a7' : '#ef9a9a';
-      ctx.fillText(`${MATS[m].name} ${have}/${need}`, c.x + 62, cy);
-      cy += 13;
-    }
-    // bouton FORGER / FORGÉ
-    const b = c.btn;
-    ctx.fillStyle = owned ? 'rgba(105,240,174,0.2)' : ok ? 'rgba(76,175,80,0.5)' : 'rgba(255,255,255,0.07)';
-    roundRect(b.x, b.y, b.w, b.h, 6); ctx.fill();
-    ctx.strokeStyle = owned ? '#69f0ae' : ok ? '#81c784' : 'rgba(255,255,255,0.2)';
-    ctx.lineWidth = 1.5; roundRect(b.x, b.y, b.w, b.h, 6); ctx.stroke();
-    ctx.fillStyle = owned ? '#69f0ae' : ok ? '#fff' : '#777';
-    ctx.font = 'bold 12px Inter, sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText(owned ? 'FORGÉ ✓' : 'FORGER', b.x + b.w / 2, b.y + 17);
+    ctx.fillStyle = owned ? '#69f0ae' : '#ffe9a3'; ctx.font = 'bold 11.5px Inter, sans-serif';
+    ctx.fillText(fitText(it.name, lw - 60), r.x + 44, r.y + 18);
+    ctx.fillStyle = tier; ctx.font = `9px Inter, sans-serif`;
+    ctx.fillText(`${ITEM_RARITY[it.rar] || ''}${owned ? ' · possédé' : ''}`, r.x + 44, r.y + 33);
+    // pastille état : ✓ok / ✗manque / ✓possédé
+    ctx.textAlign = 'right'; ctx.font = `bold 10px Inter, sans-serif`;
+    if (owned) ctx.fillStyle = '#69f0ae';
+    else if (ok) ctx.fillStyle = '#81c784';
+    else ctx.fillStyle = '#ef9a9a';
+    ctx.fillText(owned ? '✓' : ok ? '◆' : '✗', r.x + r.w - 12, r.y + 20);
   }
   ctx.restore();
-  // scrollbar à droite quand le contenu déborde
+  // scrollbar liste
   const smax = forgeScrollMax();
   if (smax > 0) {
-    const tx = L.cx + L.cw - 14, ty = vy, th = vh;
-    ctx.fillStyle = 'rgba(255,255,255,0.12)';
-    roundRect(tx, ty, 6, th, 3); ctx.fill();
-    const thumbH = Math.max(24, th * (vh / (vh + smax)));
+    const tx = lx + lw - 8, ty = y0, th = y1 - y0;
+    ctx.fillStyle = 'rgba(255,255,255,0.12)'; roundRect(tx, ty, 5, th, 2.5); ctx.fill();
+    const thumbH = Math.max(20, th * (th / (th + smax)));
     const thumbY = ty + (th - thumbH) * (forgeScroll / smax);
-    ctx.fillStyle = 'rgba(255,215,64,0.6)';
-    roundRect(tx, thumbY, 6, thumbH, 3); ctx.fill();
+    ctx.fillStyle = 'rgba(255,215,64,0.6)'; roundRect(tx, thumbY, 5, thumbH, 2.5); ctx.fill();
+  }
+
+  const it = Z.it;
+  if (!it) {
+    ctx.fillStyle = '#546e7a'; ctx.font = 'italic 13px Inter, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('Aucune recette dans cette catégorie', cx2 + cw2 / 2, y0 + 40);
+    return;
+  }
+  const id = Z.selId;
+  const ok = canCraft(G.inv, id), owned = !!G.inv.items[id];
+  const tier = itemTier(it);
+
+  // ---------- CENTRE : aperçu de l'équipement sélectionné ----------
+  panel(cx2, y0, cw2, y1 - y0);
+  const px = cx2 + cw2 / 2;
+  // halo de rareté
+  const hg = ctx.createRadialGradient(px, y0 + 90, 10, px, y0 + 90, 90);
+  hg.addColorStop(0, hexA(tier, 0.22)); hg.addColorStop(1, hexA(tier, 0));
+  ctx.fillStyle = hg;
+  ctx.beginPath(); ctx.arc(px, y0 + 90, 90, 0, TAU); ctx.fill();
+  drawItemIcon(it, px, y0 + 82, 34);
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#ffe9a3'; ctx.font = `bold 16px ${SERIF}`;
+  ctx.fillText(fitText(it.name, cw2 - 30), px, y0 + 142);
+  ctx.fillStyle = tier; ctx.font = `bold 11px Inter, sans-serif`;
+  ctx.fillText(`◆ ${ITEM_RARITY[it.rar] || 'Objet forgé'}`, px, y0 + 160);
+  // description
+  ctx.fillStyle = '#9e9e9e'; ctx.font = `12px Inter, sans-serif`;
+  const dLines = wrapLines(it.desc, cw2 - 50).slice(0, 3);
+  dLines.forEach((ln, i) => ctx.fillText(ln, px, y0 + 186 + i * 17));
+  // stats détaillées (bonus réels)
+  const fxY = y0 + 250;
+  ctx.fillStyle = '#ffd740'; ctx.font = `bold 11px Inter, sans-serif`; ctx.textAlign = 'left';
+  ctx.fillText('BONUS APPLIQUÉS', cx2 + 24, fxY);
+  const fxLines = itemFxLines(id);
+  ctx.font = `11.5px Inter, sans-serif`; ctx.fillStyle = '#a5d6a7';
+  fxLines.forEach((ln, i) => ctx.fillText(ln, cx2 + 24, fxY + 20 + i * 16));
+  // emplacement
+  ctx.fillStyle = '#90caf9'; ctx.font = `bold 10.5px Inter, sans-serif`; ctx.textAlign = 'center';
+  ctx.fillText(SLOT_TXT[it.slot] || it.slot.toUpperCase(), px, y1 - 14);
+
+  // ---------- DROITE : matériaux + coût + statut + fabrication ----------
+  panel(rx, y0, rw, y1 - y0);
+  const qx = rx + 18;
+  ctx.textAlign = 'left'; ctx.fillStyle = '#ffd740'; ctx.font = `bold 12px Inter, sans-serif`;
+  ctx.fillText('MATÉRIAUX REQUIS', qx, y0 + 26);
+  let my = y0 + 52;
+  for (const m in it.cost) {
+    const have = G.inv.mats[m] || 0, need = it.cost[m];
+    const enough = have >= need;
+    drawMatIcon(m, qx + 8, my - 4, 7);
+    ctx.fillStyle = '#e8e0c8'; ctx.font = `12px Inter, sans-serif`;
+    ctx.fillText(MATS[m].name, qx + 22, my);
+    ctx.font = `bold 12px Consolas, monospace`; ctx.textAlign = 'right';
+    ctx.fillStyle = owned ? '#69f0ae' : enough ? '#a5d6a7' : '#ef9a9a';
+    ctx.fillText(`${have.toLocaleString('fr-FR')} / ${need}`, rx + rw - 18, my);
+    ctx.textAlign = 'left';
+    my += 26;
+  }
+  // statut + bouton
+  const stY = y1 - 108;
+  ctx.textAlign = 'center'; ctx.font = `bold 12px Inter, sans-serif`;
+  if (owned) { ctx.fillStyle = '#69f0ae'; ctx.fillText('✓ DÉJÀ FORGÉ', rx + rw / 2, stY); }
+  else if (ok) { ctx.fillStyle = '#81c784'; ctx.fillText('◆ FABRICATION POSSIBLE', rx + rw / 2, stY); }
+  else { ctx.fillStyle = '#ef9a9a'; ctx.fillText('✗ MATÉRIAUX INSUFFISANTS', rx + rw / 2, stY); }
+  const b = Z.craftBtn;
+  ctx.fillStyle = owned ? 'rgba(105,240,174,0.2)' : ok ? 'rgba(76,175,80,0.55)' : 'rgba(255,255,255,0.07)';
+  roundRect(b.x, b.y, b.w, b.h, 9); ctx.fill();
+  ctx.strokeStyle = owned ? '#69f0ae' : ok ? '#81c784' : 'rgba(255,255,255,0.22)'; ctx.lineWidth = 2;
+  roundRect(b.x, b.y, b.w, b.h, 9); ctx.stroke();
+  ctx.fillStyle = owned ? '#69f0ae' : ok ? '#fff' : '#777'; ctx.font = `bold 14px Inter, sans-serif`; ctx.textAlign = 'center';
+  ctx.fillText(owned ? 'FORGÉ ✓' : ok ? '🔨  FORGER' : 'MATÉRIAUX MANQUANTS', b.x + b.w / 2, b.y + b.h / 2 + 5);
+}
+
+const SLOT_TXT = { weapon: '⚔️ EMPLACEMENT ARME', armor: '🛡️ EMPLACEMENT ARMURE', helm: '⛑️ EMPLACEMENT CASQUE', gloves: '🧤 EMPLACEMENT GANTS', charm: '🧿 EMPLACEMENT ACCESSOIRE', boots: '👢 EMPLACEMENT BOTTES', conso: '🧪 CONSOMMABLE' };
+
+// lignes de bonus réelles d'un objet (miroir de FX dans inventory.js)
+function itemFxLines(id) {
+  const fx = itemBonuses(id);
+  const out = [];
+  const p = v => `+${Math.round(v * 100)} %`;
+  if (fx.weaponMult) out.push(`⚔️ +${Math.round((fx.weaponMult - 1) * 100)} % de dégâts`);
+  if (fx.armorReduce) out.push(`🛡️ -${Math.round(fx.armorReduce * 100)} % de dégâts subis`);
+  if (fx.hp) out.push(`❤️ +${fx.hp} PV max`);
+  if (fx.speed) out.push(`👟 +${fx.speed.toFixed(2)} vitesse`);
+  if (fx.xp) out.push(`✨ +${Math.round((fx.xp - 1) * 100)} % d'XP`);
+  if (fx.potions) out.push(`🧪 +${fx.potions} fiole${fx.potions > 1 ? 's' : ''} max`);
+  if (fx.potionMult) out.push(`🍶 +${Math.round((fx.potionMult - 1) * 100)} % de soin`);
+  if (fx.ultR) out.push(`💥 +${Math.round((fx.ultR - 1) * 100)} % rayon ultime`);
+  if (fx.ultBoss) out.push(`👹 +${Math.round(fx.ultBoss * 100)} % dégâts boss (ult.)`);
+  if (!out.length) out.push('Aucun bonus — objet_cosmétique');
+  return out.slice(0, 5);
+}
+
+// ---------- AMÉLIORATIONS : niveau d'arme + achat d'XP aux matériaux ----------
+function drawUpgradeTab(L) {
+  const defs = [
+    { key: 'epee', icon: '⚔️', label: 'ÉPÉE', color: '#ffb74d' },
+    { key: 'lance', icon: '🔱', label: 'LANCE', color: '#4fc3f7' },
+    { key: 'arc', icon: '🏹', label: 'ARC CINÉTIQUE', color: '#b388ff' }
+  ];
+  const y0 = L.cy + 142;
+  ctx.fillStyle = C_MUTED; ctx.font = `italic 12px Inter, sans-serif`; ctx.textAlign = 'center';
+  ctx.fillText('Chaque amélioration ajoute 10 % de l\'XP nécessaire au niveau suivant — les matériaux sont consommés.', L.cx + L.cw / 2, y0 - 14);
+  for (const card of upgradeCards(L)) {
+    const def = defs.find(d => d.key === card.key);
+    const info = modeInfo(G.inv, card.key);
+    const locked = card.key === 'arc' && !(G.stats && G.stats.bowUnlocked);
+    const xpGain = upgradeXpGain(G.inv, card.key);
+    const cost = upgradeCost(info.lvl);
+    const canPay = Object.keys(cost).every(m => (G.inv.mats[m] || 0) >= cost[m]);
+    const maxed = info.lvl >= 100;
+    // carte
+    ctx.fillStyle = locked ? 'rgba(20,16,40,0.55)' : 'rgba(255,255,255,0.05)';
+    roundRect(card.x, card.y, card.w, card.h, 12); ctx.fill();
+    ctx.strokeStyle = locked ? 'rgba(124,77,255,0.4)' : def.color; ctx.lineWidth = 1.6;
+    roundRect(card.x, card.y, card.w, card.h, 12); ctx.stroke();
+    ctx.globalAlpha = locked ? 0.55 : 1;
+    ctx.textAlign = 'left'; ctx.font = `22px serif`;
+    ctx.fillText(def.icon, card.x + 18, card.y + 36);
+    ctx.fillStyle = def.color; ctx.font = `bold 16px Inter, sans-serif`;
+    ctx.fillText(def.label, card.x + 52, card.y + 34);
+    ctx.fillStyle = '#ffe9a3'; ctx.font = `bold 18px Consolas, monospace`; ctx.textAlign = 'right';
+    ctx.fillText(locked ? '???' : `NIV ${info.lvl}`, card.x + card.w - 16, card.y + 36);
+    // barre XP
+    const bx = card.x + 18, bw = card.w - 36, by = card.y + 58;
+    ctx.fillStyle = 'rgba(255,255,255,0.12)'; roundRect(bx, by, bw, 10, 5); ctx.fill();
+    ctx.fillStyle = def.color;
+    roundRect(bx, by, bw * info.pct, 10, 5); ctx.fill();
+    ctx.fillStyle = '#aab4c0'; ctx.font = `10px Inter, sans-serif`; ctx.textAlign = 'center';
+    ctx.fillText(maxed ? 'NIVEAU MAX' : `${Math.floor(info.xp).toLocaleString('fr-FR')} / ${info.need.toLocaleString('fr-FR')} XP`, card.x + card.w / 2, by - 6);
+    // coût
+    ctx.textAlign = 'left'; ctx.font = `11.5px Consolas, monospace`;
+    let cy = card.y + 92;
+    for (const m in cost) {
+      const have = G.inv.mats[m] || 0;
+      ctx.fillStyle = have >= cost[m] ? '#a5d6a7' : '#ef9a9a';
+      ctx.fillText(`${MATS[m].name} ${have}/${cost[m]}`, card.x + 18, cy);
+      cy += 17;
+    }
+    ctx.fillStyle = '#8d99ae'; ctx.font = `10.5px Inter, sans-serif`;
+    ctx.fillText(locked ? '🔒 Vaincre l\'Abomination Cosmique' : maxed ? 'Niveau maximum atteint' : `+${xpGain.toLocaleString('fr-FR')} XP par amélioration`, card.x + 18, cy + 2);
+    // bouton
+    const b = card.btn;
+    const ok = !locked && !maxed && canPay;
+    ctx.fillStyle = ok ? 'rgba(76,175,80,0.5)' : 'rgba(255,255,255,0.06)';
+    roundRect(b.x, b.y, b.w, b.h, 8); ctx.fill();
+    ctx.strokeStyle = ok ? '#81c784' : 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1.5;
+    roundRect(b.x, b.y, b.w, b.h, 8); ctx.stroke();
+    ctx.fillStyle = ok ? '#fff' : '#777'; ctx.font = `bold 12px Inter, sans-serif`; ctx.textAlign = 'center';
+    ctx.fillText(locked ? '🔒 VERROUILLÉ' : maxed ? 'MAX' : ok ? '⬆ AMÉLIORER' : 'MATÉRIAUX', b.x + b.w / 2, b.y + b.h / 2 + 4);
+    ctx.globalAlpha = 1;
   }
 }
 
