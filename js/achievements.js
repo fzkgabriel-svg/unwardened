@@ -1,5 +1,5 @@
 import { G, saveStats } from './state.js';
-import { addMaterial, loadInv } from './inventory.js';
+import { addMaterial, loadInv, saveInv, ITEMS, MATS } from './inventory.js';
 import { storeKey } from './chars.js';
 
 // Succès persistés par personnage (localStorage 'rpg2d_c{slot}_achievements')
@@ -261,15 +261,34 @@ export function unclaimedInTab(tab = -1) {
 // admin : débloque TOUT — toutes les campagnes, les ultimes et les succès
 // (avec leurs récompenses en matériaux réclamées d'office)
 export function adminUnlockAll() {
-  // campagnes + ultimes d'abord : sauvegardés même si une récompense échoue
+  // campagnes + ultimes + arc : sauvegardés même si une récompense échoue
   G.stats = G.stats || {};
   G.stats.campaignDone = { 0: true, 1: true, 2: true, 3: true, 4: true };
   G.stats.iceUlt = true;
   G.stats.hellUlt = true;
   G.stats.bowUnlocked = true; // arc cinétique cosmique
   saveStats();
-  // succès + matériaux : chaque bloc est isolé pour qu'un échec n'annule pas le reste
+  // inventaire : chaque bloc est isolé pour qu'un échec n'annule pas le reste
   if (!G.inv) { try { G.inv = loadInv(); } catch (e) {} }
+  if (G.inv) {
+    try {
+      // tous les objets forgés, durabilité pleine (visibles et équipables à la forge)
+      G.inv.items = G.inv.items || {};
+      G.inv.dur = G.inv.dur || {};
+      for (const id in ITEMS) { G.inv.items[id] = true; G.inv.dur[id] = 100; }
+      // stocks de matériaux complets (réparations, fabrications)
+      G.inv.mats = G.inv.mats || {};
+      for (const m in MATS) G.inv.mats[m] = Math.max(G.inv.mats[m] || 0, 999);
+      // niveau max des 3 types d'armes (épée / lance / arc)
+      G.inv.wmode = G.inv.wmode || {};
+      for (const k of ['epee', 'lance', 'arc']) {
+        const w = G.inv.wmode[k] = G.inv.wmode[k] || { xp: 0 };
+        w.xp = Math.max(w.xp || 0, 1e9); // -> niveau 100 (MAX)
+      }
+      saveInv(G.inv);
+    } catch (e) {}
+  }
+  // succès + matériaux de récompense : chaque bloc est isolé pour qu'un échec n'annule pas le reste
   for (const a of ACHIEVEMENTS) {
     try {
       if (!unlocked[a.id]) unlocked[a.id] = { claimed: false };

@@ -135,7 +135,7 @@ export function drawAdmin() {
     ctx.fillStyle = active ? color : '#90a4ae'; ctx.font = '11px Inter, sans-serif';
     ctx.fillText(sub, r.x + r.w / 2, r.y + 37);
   };
-  drawUtilBtn({ x: W / 2 - 280, y: H - 112, w: 270, h: 44 }, '🔓 TOUT DÉBLOQUER', 'campagnes + ultimes + succès', '#ffd740', false);
+  drawUtilBtn({ x: W / 2 - 280, y: H - 112, w: 270, h: 44 }, '🔓 TOUT DÉBLOQUER', 'mondes + armes + objets + succès', '#ffd740', false);
   drawUtilBtn({ x: W / 2 + 10, y: H - 112, w: 270, h: 44 },
     G.adminNoCd ? '⚡ COOLDOWNS : ON' : '⚡ COOLDOWNS : OFF',
     'clic = activer / désactiver', G.adminNoCd ? '#69f0ae' : '#78909c', G.adminNoCd);

@@ -125,7 +125,7 @@ export function loadInv() {
   try { localStorage.setItem(KEY(), JSON.stringify(d)); } catch (e) {}
   return d;
 }
-function saveInv(inv) { if (_noSave) return; try { localStorage.setItem(KEY(), JSON.stringify(inv)); } catch (e) {} }
+export function saveInv(inv) { if (_noSave) return; try { localStorage.setItem(KEY(), JSON.stringify(inv)); } catch (e) {} }
 // le tutoriel joue avec un inventaire jetable : rien n'est écrit sur disque
 let _noSave = false;
 export function setInvNoSave(v) { _noSave = !!v; }
