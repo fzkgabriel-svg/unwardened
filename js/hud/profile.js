@@ -1,13 +1,13 @@
 // js/hud/profile.js — panneau personnage haut-gauche : portrait, niveau,
 // PV rouge, XP or, charge d'ultime. Barre de vie avec traînée de dégât
 // et flash de soin — tout est relié aux vraies stats de G.player.
-import { G, ctx, W, TAU, finalWave } from '../state.js';
+import { G, ctx, TAU, finalWave } from '../state.js';
 import { roundRect } from '../utils.js';
 import { curWorld } from '../world.js';
 import { activeSlot, slotMeta } from '../chars.js';
 import { HPAL, metalFrame, medBar, engraved, gem } from './frame.js';
 
-const PW = 316, PH = 118, PX = 14, PY = 10;
+const PW = 360, PH = 160, PX = 16, PY = 12;
 
 // portrait de chevalier procédural (heaume + nasal + panache or)
 function drawPortrait(cx, cy, r) {
@@ -78,45 +78,50 @@ export function drawProfile() {
   const lowHp = hpFrac <= 0.3;
   metalFrame(PX, PY, PW, PH, 10, { glow: lowHp ? 'rgba(224,64,81,0.5)' : null });
   // gemme de statut en haut à droite du cadre (rouge si PV bas, or sinon)
-  gem(PX + PW - 16, PY + 12, 5, lowHp ? HPAL.redHi : HPAL.green, 0.4);
+  gem(PX + PW - 16, PY + 12, 5.5, lowHp ? HPAL.redHi : HPAL.green, 0.4);
 
   // ---- portrait + niveau ----
-  const pcx = PX + 52, pcy = PY + 52, pr = 34;
+  const pcx = PX + 56, pcy = PY + 74, pr = 40;
   drawPortrait(pcx, pcy, pr);
   // badge niveau sous le portrait
   ctx.fillStyle = 'rgba(0,0,0,0.6)';
-  roundRect(pcx - 24, pcy + pr + 3, 48, 15, 7); ctx.fill();
+  roundRect(pcx - 26, pcy + pr + 4, 52, 17, 8); ctx.fill();
   ctx.strokeStyle = HPAL.goldLo; ctx.lineWidth = 1;
-  roundRect(pcx - 24, pcy + pr + 3, 48, 15, 7); ctx.stroke();
-  engraved(`NIV ${p.level}`, pcx, pcy + pr + 14, 10, HPAL.goldHi, 'center', 'Consolas, monospace');
+  roundRect(pcx - 26, pcy + pr + 4, 52, 17, 8); ctx.stroke();
+  engraved(`NIV ${p.level}`, pcx, pcy + pr + 16, 11, HPAL.goldHi, 'center', 'Consolas, monospace');
 
-  // ---- texte héros : nom de campagne / monde + stats rapides ----
-  const bx = pcx + pr + 10; // x de départ du bloc droit
+  // ---- colonne droite : nom, monde/temps, vague/monstres ----
+  const bx = pcx + pr + 14; // x de départ du bloc droit
   const bw = PX + PW - 16 - bx;
   const heroName = (slotMeta(activeSlot()) || {}).name || 'HÉROS';
-  engraved(heroName.toUpperCase(), bx, PY + 24, 13, HPAL.parch, 'left');
-  ctx.font = '10px Georgia, serif'; ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(216,196,154,0.75)';
+  engraved(heroName.toUpperCase(), bx, PY + 30, 15, HPAL.parch, 'left');
+  // ligne 1 : monde + temps de partie
   const wdef = curWorld() && curWorld().def;
-  const waveTxt = G.wave >= finalWave() ? 'VAGUE FINALE' : `Vague ${G.wave}`;
   const t = Math.floor(G.runTime || 0);
-  const statLine = `${wdef ? wdef.name + ' · ' : ''}${waveTxt} · ${G.kills} kills · ${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
-  ctx.fillText(statLine, bx, PY + 38);
+  ctx.font = '10.5px Georgia, serif'; ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(216,196,154,0.8)';
+  ctx.fillText(`${wdef ? wdef.name : 'MONDE'}  ·  ${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`, bx, PY + 46);
+  // ligne 2 : vague + progression des monstres + kills (bien visible)
+  const bossAlive = G.enemies.some(en => en.type && en.type.startsWith('finalBoss'));
+  const waveTxt = G.wave >= finalWave() ? 'VAGUE FINALE' : `Vague ${G.wave}`;
+  ctx.font = 'bold 12.5px Georgia, serif';
+  ctx.fillStyle = bossAlive ? '#ffb3a6' : HPAL.goldHi;
+  ctx.fillText(`${waveTxt}  ·  ${bossAlive ? 'BOSS' : `${G.waveKills}/${G.waveTarget}`}  ·  ${G.kills} kills`, bx, PY + 64);
 
-  // ---- barre PV (rouge profond) avec traînée de dégât ----
-  const barX = bx, barW = bw, barY = PY + 46, barH = 17;
+  // ---- barre PV (rouge profond) : valeurs centrées sur la jauge ----
+  const barX = bx, barW = bw, barY = PY + 76, barH = 22;
   medBar(barX, barY, barW, barH, hpFrac, hurtA > 0 ? G._hudGhost : null,
     lowHp ? '#e0606a' : HPAL.redHi, lowHp ? '#6e1420' : HPAL.red,
     { glow: lowHp && hpFrac > 0.02 ? '#ff5a6a' : null });
-  engraved('PV', barX + 2, barY + barH - 3, 9, 'rgba(255,235,220,0.95)', 'left', 'Consolas, monospace');
-  engraved(`${Math.ceil(p.hp)}/${p.maxHp}`, barX + barW - 4, barY + barH - 3, 10, '#ffe9e9', 'right', 'Consolas, monospace');
+  engraved('PV', barX + 8, barY + barH / 2 + 4, 10, 'rgba(255,235,220,0.9)', 'left', 'Consolas, monospace');
+  engraved(`${Math.ceil(p.hp)}/${p.maxHp}`, barX + barW / 2, barY + barH / 2 + 4.5, 12, '#ffe9e9', 'center', 'Consolas, monospace');
 
-  // ---- barre XP (or fin) ----
-  const xpY = barY + barH + 7;
-  medBar(barX, xpY, barW, 8, p.xp / p.xpNext, null, '#f0d488', '#8a6a2f', { glow: '#d4a84b' });
-  engraved(`+${p.xpNext - p.xp} XP`, barX + 2, xpY + 8.5, 8.5, 'rgba(240,212,136,0.9)', 'left', 'Consolas, monospace');
+  // ---- barre XP (or fin) + XP restant ----
+  const xpY = barY + barH + 8;
+  medBar(barX, xpY, barW, 9, p.xp / p.xpNext, null, '#f0d488', '#8a6a2f', { glow: '#d4a84b' });
+  engraved(`+${p.xpNext - p.xp} XP`, barX + barW - 4, xpY + 8, 10, '#f0d488', 'right', 'Consolas, monospace');
 
-  // ---- barre d'ultime (bleu magique / couleur de l'ulti choisi) ----
-  const uY = xpY + 15;
+  // ---- barre d'ultime (couleur de l'ulti choisi) ----
+  const uY = xpY + 22;
   const ultSel = G.stats.ultSel || 'nuke';
   const ultInfo = ultSel === 'glace' && G.stats.iceUlt
     ? { name: 'PLUIE DE GLACE', barA: '#b3e5fc', barB: '#0277bd', glow: '#0288d1', ready: '#81d4fa' }
@@ -124,13 +129,13 @@ export function drawProfile() {
       ? { name: 'TITAN DE FEU', barA: '#ffab91', barB: '#bf360c', glow: '#e64a19', ready: '#ff7043' }
       : { name: 'BOMBE ATOMIQUE', barA: '#ffcc80', barB: '#7a2e0e', glow: '#ff5722', ready: '#ff8a65' };
   const ultReady = p.ultCharge >= 100;
-  medBar(barX, uY, barW, 13, p.ultCharge / 100, null, ultInfo.barA, ultInfo.barB,
+  medBar(barX, uY, barW, 16, p.ultCharge / 100, null, ultInfo.barA, ultInfo.barB,
     { glow: ultReady ? ultInfo.glow : null });
-  engraved(`[F] ${ultInfo.name}`, barX + 3, uY + 10.5, 9, ultReady ? ultInfo.ready : 'rgba(232,217,176,0.85)', 'left', 'Georgia, serif');
-  engraved(`${Math.floor(p.ultCharge)}%`, barX + barW - 4, uY + 10.5, 9.5, '#f5eeda', 'right', 'Consolas, monospace');
+  engraved(`[F] ${ultInfo.name}`, barX + 8, uY + 12, 10, ultReady ? ultInfo.ready : '#fff3d6', 'left', 'Georgia, serif');
+  engraved(`${Math.floor(p.ultCharge)}%`, barX + barW - 8, uY + 12, 11, '#fff', 'right', 'Consolas, monospace');
   if (ultReady) {
     ctx.globalAlpha = 0.65 + Math.sin(G.time * 6) * 0.35;
-    engraved('PRÊT !', barX + barW / 2, uY - 3, 10, ultInfo.ready, 'center', 'Consolas, monospace');
+    engraved('PRÊT !', barX + barW - 60, uY - 4, 11, ultInfo.ready, 'right', 'Consolas, monospace');
     ctx.globalAlpha = 1;
   }
 
@@ -148,54 +153,9 @@ export function drawProfile() {
     roundRect(PX + 1.5, PY + 1.5, PW - 3, PH - 3, 9); ctx.stroke();
     ctx.restore();
   }
-  // runes discrètes sous le panneau
-  // (supprimées : la ligne info est déjà dense — runes sur le cadre via metalFrame)
-}
 
-// ---------- Bouton fioles (haut droite) — style parchemin/cuivre ----------
-export function drawPotionButton() {
-  const p = G.player;
-  const bx = W - 150, by = 14, bw = 136, bh = 40;
-  const hasPotions = p.potions > 0, full = p.potions >= p.maxPotions;
-  const rim = full ? '#ff80ab' : hasPotions ? HPAL.gold : HPAL.steelD;
-  // cadre métal miniature
-  const bg = ctx.createLinearGradient(bx, by, bx, by + bh);
-  bg.addColorStop(0, '#4a2f3d'); bg.addColorStop(1, '#2c1a24');
-  ctx.fillStyle = bg;
-  roundRect(bx, by, bw, bh, 9); ctx.fill();
-  ctx.strokeStyle = rim; ctx.lineWidth = full || hasPotions ? 2 : 1.2;
-  if (hasPotions) { ctx.shadowColor = 'rgba(255,128,171,0.7)'; ctx.shadowBlur = 10; }
-  roundRect(bx + 1, by + 1, bw - 2, bh - 2, 8); ctx.stroke();
-  ctx.shadowBlur = 0;
-  // fiole stylisée : corps + goulot + lueur du liquide
-  const fx = bx + 24, fy = by + bh / 2;
-  ctx.save();
-  ctx.translate(fx, fy);
-  if (hasPotions) { ctx.shadowColor = '#ff8fb3'; ctx.shadowBlur = 8; }
-  ctx.fillStyle = hasPotions ? '#ff5f8f' : '#5a4a55';
-  // goulot
-  ctx.fillRect(-3, -14, 6, 5);
-  // corps rond
-  ctx.beginPath(); ctx.arc(0, 2, 10, 0, TAU); ctx.fill();
-  ctx.shadowBlur = 0;
-  // verre : reflet
-  ctx.fillStyle = 'rgba(255,255,255,0.35)';
-  ctx.beginPath(); ctx.arc(-3, -1, 3.2, 0, TAU); ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.arc(0, 2, 10, 0, TAU); ctx.stroke();
-  ctx.restore();
-  engraved('FIOLES', bx + 42, by + 16, 10, '#ffb3cd', 'left', 'Consolas, monospace');
-  engraved(`${p.potions}/${p.maxPotions}`, bx + 42, by + 32, 14, hasPotions ? '#fff' : '#8d7f8a', 'left', 'Consolas, monospace');
-  // touche W
-  ctx.fillStyle = 'rgba(0,0,0,0.4)';
-  roundRect(bx + bw - 32, by + 8, 24, 24, 6); ctx.fill();
-  ctx.strokeStyle = rim; ctx.lineWidth = 1.2;
-  roundRect(bx + bw - 32, by + 8, 24, 24, 6); ctx.stroke();
-  engraved('W', bx + bw - 20, by + 25, 13, '#ffb3cd', 'center', 'Consolas, monospace');
-  // cooldown
-  if (p.potionCooldown > 0) {
-    ctx.fillStyle = 'rgba(10,6,8,0.72)';
-    roundRect(bx, by, bw, bh, 9); ctx.fill();
-    engraved(`${p.potionCooldown.toFixed(1)}s`, bx + bw / 2, by + bh / 2 + 5, 14, '#ff9ebb', 'center', 'Consolas, monospace');
+  // ---- badge poison sous le panneau (statut joueur) ----
+  if (p.poisonT > 0) {
+    engraved(`☠ POISON ${p.poisonT.toFixed(1)}s`, PX + 6, PY + PH + 16, 11, '#a4d94e', 'left', 'Consolas, monospace');
   }
 }

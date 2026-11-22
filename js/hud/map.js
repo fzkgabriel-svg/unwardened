@@ -6,30 +6,30 @@ import { curWorld, RARITY_COLOR } from '../world.js';
 import { playerAngle } from '../attacks.js';
 import { HPAL, metalFrame, parchment, engraved, gem } from './frame.js';
 
-const MR = 62; // rayon de la carte
+const MR = 88; // rayon de la carte
 
 export function drawMinimap() {
   const w = curWorld();
   if (!w) return;
-  const cx = W - MR - 26, cy = H - MR - 46;
+  const cx = W - MR - 24, cy = H - MR - 42;
   const t = G.time || 0;
 
-  // ---- panneau objectif (parchemin, au-dessus de la carte) ----
-  const ow = 190, oh = 44, ox = cx + MR + 12 - ow, oy = cy - MR - 6 - oh;
-  parchment(ox, oy, ow, oh, 0.88);
+  // ---- panneau objectif (parchemin, à gauche de la carte) ----
+  const ow = 196, oh = 52, ox = cx - MR - 16 - ow, oy = cy - oh / 2;
+  parchment(ox, oy, ow, oh, 0.9);
   ctx.strokeStyle = HPAL.goldLo; ctx.lineWidth = 1;
   roundRect(ox + 2.5, oy + 2.5, ow - 5, oh - 5, 5); ctx.stroke();
-  engraved('OBJECTIF', ox + 10, oy + 16, 10, '#5a4526', 'left', 'Georgia, serif');
+  engraved('OBJECTIF', ox + 12, oy + 18, 10.5, '#5a4526', 'left', 'Georgia, serif');
   const bossAlive = G.enemies.some(en => en.type && en.type.startsWith('finalBoss'));
-  const waveTxt = G.wave >= finalWave() ? 'VAGUE FINALE' : `Vague ${G.wave} — ${G.waveKills}/${G.waveTarget}`;
-  engraved(bossAlive ? 'DÉTRUIRE LE BOSS' : waveTxt, ox + 10, oy + 33, 11, bossAlive ? '#8e2424' : '#3a2a14', 'left', 'Georgia, serif');
+  const waveTxt = G.wave >= finalWave() ? 'VAGUE FINALE' : `Vague ${G.wave} — ${G.waveKills}/${G.waveTarget} monstres`;
+  engraved(bossAlive ? 'DÉTRUIRE LE BOSS' : waveTxt, ox + 12, oy + 38, 11.5, bossAlive ? '#8e2424' : '#3a2a14', 'left', 'Georgia, serif');
   // progression de la vague en mini-jauge
   if (!bossAlive && G.waveTarget > 0) {
     const f = Math.min(1, G.waveKills / G.waveTarget);
     ctx.fillStyle = 'rgba(0,0,0,0.25)';
-    roundRect(ox + 10, oy + oh - 7, ow - 20, 4, 2); ctx.fill();
+    roundRect(ox + 12, oy + oh - 9, ow - 24, 5, 2.5); ctx.fill();
     ctx.fillStyle = HPAL.green;
-    if (f > 0.01) { roundRect(ox + 10, oy + oh - 7, (ow - 20) * f, 4, 2); ctx.fill(); }
+    if (f > 0.01) { roundRect(ox + 12, oy + oh - 9, (ow - 24) * f, 5, 2.5); ctx.fill(); }
   }
 
   // ---- cadre métallique de la carte ----
@@ -130,7 +130,7 @@ export function drawMinimap() {
   ctx.restore(); // fin clip
 
   // nom du monde gravé sous la carte
-  engraved((w.def && w.def.name || 'MONDE').toUpperCase(), cx, cy + MR + 22, 10, HPAL.parch, 'center', 'Georgia, serif');
+  engraved((w.def && w.def.name || 'MONDE').toUpperCase(), cx, cy + MR + 20, 11, HPAL.parch, 'center', 'Georgia, serif');
   // gemme centrale du cadre
-  gem(cx, cy - MR - 4, 4.5, HPAL.goldHi, t);
+  gem(cx, cy - MR - 5, 5, HPAL.goldHi, t);
 }

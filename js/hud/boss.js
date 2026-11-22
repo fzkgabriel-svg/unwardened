@@ -94,28 +94,20 @@ export function drawBossBar() {
   }
   const phaseFlash = G._bossPhaseT !== undefined ? Math.max(0, 1 - (t - G._bossPhaseT) / 1.2) : 0;
 
-  const bw = 660, bh = 26, bx = W / 2 - bw / 2, by = 50;
+  const bw = 660, bh = 24, bx = W / 2 - bw / 2, by = 68;
 
   // nom + emblème (légèrement agrandi pendant la transition)
   const pop = 1 + phaseFlash * 0.25;
   ctx.save();
-  ctx.translate(W / 2, by - 26);
+  ctx.translate(W / 2, 46);
   ctx.scale(pop, pop);
   bossEmblem(e.type, -bw / 2 - 6, 0, 13, t);
   ctx.restore();
-  engraved(`☠ ${b.short.toUpperCase()} ☠`, W / 2, by - 30, 14, b.hi, 'center', 'Georgia, serif');
-  if (e.shieldT > 0) {
-    engraved(`🛡 BOUCLIER ${e.shieldT.toFixed(0)}s — IMPOSSIBLE À BLESSER`, W / 2, by - 44, 10, '#ffd740', 'center', 'Consolas, monospace');
-  }
-  // nom de phase à droite
-  if (ph > 0) {
-    engraved(`PHASE ${ph + 1} — ${b.phase[ph]}`, W / 2, by + bh + 16, 11, b.col, 'center', 'Georgia, serif');
-  }
-
+  engraved(`☠ ${b.short.toUpperCase()} ☠`, W / 2, 56, 14, b.hi, 'center', 'Georgia, serif');
   // cadre métallique imposant (lueur de l'univers du boss)
-  metalFrame(bx - 10, by - 8, bw + 20, bh + 30, 10, { glow: `rgba(${hexToRgb(b.col)},${0.35 + phaseFlash * 0.5})` });
-  gem(bx - 2, by + bh / 2 + 7, 5, b.gemC, t);
-  gem(bx + bw + 2, by + bh / 2 + 7, 5, b.gemC, t + 2);
+  metalFrame(bx - 10, by - 8, bw + 20, bh + 34, 10, { glow: `rgba(${hexToRgb(b.col)},${0.35 + phaseFlash * 0.5})` });
+  gem(bx - 2, by + bh / 2, 5, b.gemC, t);
+  gem(bx + bw + 2, by + bh / 2, 5, b.gemC, t + 2);
 
   // barre de vie dégradée par univers + marqueurs de phase
   medBar(bx, by, bw, bh, e.shieldT > 0 ? 1 : f, null, b.c1, b.c2,
@@ -145,8 +137,17 @@ export function drawBossBar() {
     const mx = bx + bw * cut;
     ctx.fillRect(mx - 1, by - 3, 2, bh + 6);
   }
-  // PV numériques
+  // PV numériques (centrés sur la jauge)
   engraved(`${Math.ceil(e.hp)} / ${e.maxHp}`, W / 2, by + bh / 2 + 4, 11, '#fff', 'center', 'Consolas, monospace');
+
+  // ligne du bas du cadre : phase à gauche, bouclier à droite
+  const footY = by + bh + 16;
+  if (ph > 0) {
+    engraved(`PHASE ${ph + 1} — ${b.phase[ph]}`, W / 2 - 120, footY, 11, b.col, 'left', 'Georgia, serif');
+  }
+  if (e.shieldT > 0) {
+    engraved(`🛡 BOUCLIER ${e.shieldT.toFixed(0)}s`, W / 2 + 120, footY, 11, '#ffd740', 'right', 'Consolas, monospace');
+  }
 
   // onde de transition de phase
   if (phaseFlash > 0) {

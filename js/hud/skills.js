@@ -2,7 +2,7 @@
 // à cadres métalliques, icônes en relief, balayage de recharge radial,
 // animations de disponibilité. + plaque de l'arme active (nom, niveau, XP).
 import { G, ctx, W, H, TAU } from '../state.js';
-import { roundRect } from '../utils.js';
+import { roundRect, drawFlaskIcon } from '../utils.js';
 import { ITEMS, modeInfo, modeKey } from '../inventory.js';
 import { drawBowIcon } from '../gfx/bow_draw.js';
 import { HPAL, parchment, medBar, engraved, gem } from './frame.js';
@@ -171,28 +171,32 @@ export function drawSkillBar() {
   const titan = p.ultActive > 0;
   const slots = titan ? [
     { icon: 'laser', key: 'G', mode: -1, cd: p.attackCooldown, cdMax: CD_MAX.atk, cd2: 0, cd2Max: 0 },
-    { icon: 'volcano', key: 'D', mode: -2, cd: 0, cdMax: 1, cd2: p.handUsed ? 0 : p.handCd, cd2Max: CD_MAX.hand, used: p.handUsed }
+    { icon: 'volcano', key: 'D', mode: -2, cd: 0, cdMax: 1, cd2: p.handUsed ? 0 : p.handCd, cd2Max: CD_MAX.hand, used: p.handUsed },
+    { icon: 'potion', key: 'W', mode: -3, cd: p.potionCooldown, cdMax: 2.5, cd2: 0, cd2Max: 0, potion: true }
   ] : [
     { icon: 'sword', key: '&', mode: 1, cd: p.attackCooldown, cdMax: CD_MAX.atk, cd2: p.spinCooldown, cd2Max: CD_MAX.spin, sub: 'D', subColor: '#ff9100' },
     { icon: 'lance', key: 'é', mode: 3, cd: p.attackCooldown, cdMax: CD_MAX.atk, cd2: p.shieldCd, cd2Max: CD_MAX.shield, sub: 'D', subColor: '#4fc3f7' },
     ...(G.stats && G.stats.bowUnlocked ? [{
       icon: 'bow', key: 'X', mode: 5, cd: p.attackCooldown, cdMax: CD_MAX.atk, cd2: (G.bow ? G.bow.singCd : 0), cd2Max: CD_MAX.sing, sub: 'D', subColor: '#b388ff'
-    }] : [])
+    }] : []),
+    { icon: 'potion', key: 'W', mode: -3, cd: p.potionCooldown, cdMax: 2.5, cd2: 0, cd2Max: 0, potion: true }
   ];
 
-  const n = slots.length, r = 27, gap = 74;
-  const x0 = W / 2 - ((n - 1) * gap) / 2, cy = H - 52;
+  const n = slots.length, r = 30, gap = 80;
+  const x0 = W / 2 - ((n - 1) * gap) / 2, cy = H - 56;
 
   slots.forEach((s, i) => {
     const cx = x0 + i * gap;
-    const active = titan || p.attackMode === s.mode;
-    const spent = !!s.used;
+    const isPotion = !!s.potion;
+    // fioles : "actif" = une fiole utilisable (stock > 0 et hors recharge)
+    const active = isPotion ? (p.potions > 0 && p.potionCooldown <= 0) : (titan || p.attackMode === s.mode);
+    const spent = isPotion ? p.potions <= 0 : !!s.used;
     const cdFrac = s.cd > 0 ? Math.min(1, s.cd / s.cdMax) : 0;
     const subFrac = s.cd2Max ? (s.cd2 > 0 ? Math.min(1, s.cd2 / s.cd2Max) : 0) : undefined;
     const mkey = s.icon === 'sword' ? 'sword' : s.icon === 'lance' ? 'lance' : s.icon === 'bow' ? 'bow' : s.icon;
-    const st = MODE_STYLE[mkey] || MODE_STYLE.sword;
-    // verrou de changement d'arme (2 s sans attaque)
-    const locked = p.switchLock > 0;
+    const st = isPotion ? { name: 'Fioles', col: '#ff8fb3', glow: 'rgba(255,143,179,0.6)' } : (MODE_STYLE[mkey] || MODE_STYLE.sword);
+    // verrou de changement d'arme (2 s sans attaque) — ne concerne pas les fioles
+    const locked = !isPotion && p.switchLock > 0;
 
     slotFrame(cx, cy, r, active, st.col, spent, locked ? 1 : cdFrac,
       subFrac !== undefined && subFrac > 0 ? subFrac : undefined, s.subColor || st.col);
@@ -201,7 +205,13 @@ export function drawSkillBar() {
     ctx.save();
     ctx.globalAlpha = spent ? 0.35 : active ? 1 : 0.6;
     if (active && !spent) { ctx.shadowColor = st.glow; ctx.shadowBlur = 7; }
-    drawAttackIcon(s.icon, cx, cy + 1, active ? '#fff' : '#a8b0ba');
+    if (isPotion) {
+      drawFlaskIcon(cx, cy - 4, 1.0, p.potions > 0);
+      // compteur de fioles sous la fiole
+      engraved(`${p.potions}`, cx, cy + 13, 13, p.potions > 0 ? '#ffd7e4' : '#8d7f8a', 'center', 'Consolas, monospace');
+    } else {
+      drawAttackIcon(s.icon, cx, cy + 1, active ? '#fff' : '#a8b0ba');
+    }
     ctx.restore();
 
     // lettre de touche sous l'emblème
@@ -234,8 +244,9 @@ export function drawSkillBar() {
   });
 }
 
-// ---------- plaque de l'arme active (parchemin au-dessus de la barre) ----------
-export function drawWeaponPlaque() {
+// ---------- panneau arme active (parchemin en bas à gauche) ----------
+// nom, niveau, barre XP de l'arme + objet forgé équipé
+export function drawWeaponPanel() {
   const p = G.player;
   const titan = p.ultActive > 0;
   const key = modeKey(p.attackMode);
@@ -246,28 +257,33 @@ export function drawWeaponPlaque() {
   const eqId = G.inv && G.inv.equip ? G.inv.equip.weapon : null;
   const eqIt = eqId ? ITEMS[eqId] : null;
 
-  const pw = 300, ph = 46, px = W / 2 - pw / 2, py = H - 132;
-  parchment(px, py, pw, ph, 0.9);
-  // filet or sous la plaque
+  const pw = 258, ph = 70, px = 16, py = H - 118;
+  parchment(px, py, pw, ph, 0.92);
+  // filet or sous le panneau
   ctx.strokeStyle = HPAL.goldLo; ctx.lineWidth = 1;
-  roundRect(px + 3, py + 3, pw - 6, ph - 6, 5); ctx.stroke();
+  roundRect(px + 3, py + 3, pw - 6, ph - 6, 6); ctx.stroke();
 
   // gemme d'arme à gauche
-  gem(px + 20, py + ph / 2, 8, st.col, 1.7);
-  engraved(st.name.toUpperCase(), px + 36, py + 19, 13, '#3a2a14', 'left', 'Georgia, serif');
-  engraved(titan ? 'PUISSANCE INFERNALE' : `NIV ${mi.lvl} · +${((mi.lvl - 1) * 0.5).toFixed(1)}%`, px + 36, py + 35, 10, '#5a4526', 'left', 'Consolas, monospace');
-  // mini barre XP de l'arme
-  if (!titan) medBar(px + 36, py + ph - 12, 120, 5, mi.pct, null, '#c9a86a', '#7a5c2e');
-  // nom de l'objet équipé à droite
+  gem(px + 24, py + ph / 2, 9, st.col, 1.3);
+  engraved(st.name.toUpperCase(), px + 42, py + 26, 14, '#3a2a14', 'left', 'Georgia, serif');
+  engraved(titan ? 'PUISSANCE INFERNALE' : `NIV ${mi.lvl} · +${((mi.lvl - 1) * 0.5).toFixed(1)}%`, px + 42, py + 44, 10.5, '#5a4526', 'left', 'Consolas, monospace');
+  // barre XP de l'arme (bas du panneau)
+  if (!titan) {
+    medBar(px + 42, py + ph - 18, 132, 7, mi.pct, null, '#c9a86a', '#7a5c2e');
+    engraved('XP ARME', px + 42, py + ph - 24, 8, '#8a7654', 'left', 'Consolas, monospace');
+  }
+  // objet forgé équipé (colonne droite)
+  ctx.textAlign = 'right';
   if (eqIt) {
-    ctx.font = 'bold 10px Inter, sans-serif'; ctx.textAlign = 'right';
+    ctx.font = 'bold 10.5px Inter, sans-serif';
     ctx.fillStyle = '#4a3517';
-    const nm = eqIt.name.length > 22 ? eqIt.name.slice(0, 21) + '…' : eqIt.name;
-    ctx.fillText(nm, px + pw - 12, py + 20);
+    const nm = eqIt.name.length > 20 ? eqIt.name.slice(0, 19) + '…' : eqIt.name;
+    ctx.fillText(nm, px + pw - 12, py + 25);
     ctx.font = '9px Inter, sans-serif'; ctx.fillStyle = '#6d5a3a';
-    ctx.fillText(eqIt.desc || '', px + pw - 12, py + 34);
+    const ds = eqIt.desc || '';
+    ctx.fillText(ds.length > 30 ? ds.slice(0, 29) + '…' : ds, px + pw - 12, py + 41);
   } else {
-    ctx.font = 'italic 10px Inter, sans-serif'; ctx.textAlign = 'right'; ctx.fillStyle = '#8a7654';
-    ctx.fillText('aucun objet forgé équipé', px + pw - 12, py + 26);
+    ctx.font = 'italic 10px Inter, sans-serif'; ctx.fillStyle = '#8a7654';
+    ctx.fillText('aucun objet forgé', px + pw - 12, py + 33);
   }
 }

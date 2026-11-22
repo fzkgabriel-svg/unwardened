@@ -3,8 +3,8 @@
 // Aucune mécanique n'est modifiée : seuls les valeurs affichées changent de style.
 import { G, ctx, W, TAU } from './state.js';
 import { roundRect } from './utils.js';
-import { drawProfile, drawPotionButton } from './hud/profile.js';
-import { drawSkillBar, drawWeaponPlaque } from './hud/skills.js';
+import { drawProfile } from './hud/profile.js';
+import { drawSkillBar, drawWeaponPanel } from './hud/skills.js';
 import { drawBossBar } from './hud/boss.js';
 import { drawMinimap } from './hud/map.js';
 import { drawEquipPanel } from './hud/equip.js';
@@ -14,7 +14,6 @@ export const drawAchToast = _ach;
 export const drawWarnToast = _warn;
 
 export function drawHUD() {
-  const p = G.player;
   // halo supérieur : assombrit le haut de l'écran pour la lisibilité
   const band = ctx.createLinearGradient(0, 0, 0, 120);
   band.addColorStop(0, 'rgba(16,10,5,0.55)');
@@ -30,7 +29,7 @@ export function drawHUD() {
   const timeLabel = `⏱ ${mm}:${ss}`;
   ctx.font = 'bold 14px Consolas, monospace';
   const tw = ctx.measureText(timeLabel).width + 30;
-  const tx = W / 2 - tw / 2, ty = 10;
+  const tx = W / 2 - tw / 2, ty = 8;
   const tg = ctx.createLinearGradient(tx, ty, tx, ty + 30);
   tg.addColorStop(0, '#3d2f1e'); tg.addColorStop(1, '#1e150c');
   ctx.fillStyle = tg;
@@ -43,17 +42,10 @@ export function drawHUD() {
   ctx.textAlign = 'center'; ctx.fillStyle = '#e8d9b0';
   ctx.fillText(timeLabel, W / 2, ty + 20);
 
-  // indicateur de poison (sous le timer)
-  if (p.poisonT > 0) {
-    ctx.font = 'bold 11px Consolas, monospace'; ctx.fillStyle = '#a4d94e'; ctx.textAlign = 'center';
-    ctx.fillText(`☠ POISON ${p.poisonT.toFixed(1)}s`, W / 2, 48);
-  }
-
   // panneaux
   drawProfile();
-  drawPotionButton();
   drawSkillBar();
-  drawWeaponPlaque();
+  drawWeaponPanel();
   drawBossBar();
   drawMinimap();
   drawEquipPanel();
