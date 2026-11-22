@@ -132,8 +132,8 @@ export function initInput() {
     }
     // boutique ouverte : elle intercepte tous les clics
     if (G.shopOpen) { shopClickAt(G.mouse.x, G.mouse.y); return; }
-    // bouton 💰 boutique : à côté des pastilles son/effets (menu + en jeu)
-    if (['menu', 'playing', 'paused', 'gameover', 'victory'].includes(G.state) && shopButtonAt(G.mouse.x, G.mouse.y)) {
+    // bouton 💰 boutique : uniquement depuis le menu principal
+    if (G.state === 'menu' && shopButtonAt(G.mouse.x, G.mouse.y)) {
       G.shopOpen = true; G.shopQty = {}; G.shopConfirm = null; G.shopFlash = null;
       if (G.inv) shopDay(G.inv); // réinitialise le stock si nouveau jour
       sfxClick();

@@ -1,7 +1,7 @@
 // js/menu/modules.js — vue MODULES : écriture futuriste, slots + grille + fiche
 import { G, ctx, W, H, TAU } from '../state.js';
 import { roundRect, hexA } from '../utils.js';
-import { MODULES, MOD_IDS, modState, equippedMods, eqActive, modulesUnlocked, ownModule, ensureModules } from '../modules.js';
+import { MODULES, MOD_IDS, modState, equippedMods, eqActive, modulesUnlocked, ownModule, ensureModules, unlockPassSlot, PASS_SLOT_PRICE } from '../modules.js';
 import { saveInv } from '../inventory.js';
 import { inR, UI, SERIF, C_TEXT, C_MUTED, C_GOLD, menuButtons, drawMenuButton } from './common.js';
 import { sfxClick, sfxEquip } from '../audio.js';
@@ -9,13 +9,12 @@ import { sfxClick, sfxEquip } from '../audio.js';
 // ---------- layout ----------
 function layout() {
   const cw = 1080, ch = 560, cx = W / 2 - cw / 2, cy = H / 2 - ch / 2 + 10;
-  // slots en haut : ACTIF + 2 PASSIFS
-  const slotW = 220, slotH = 74, gap = 18;
-  const sx0 = cx + cw / 2 - (slotW * 3 + gap * 2) / 2, sy = cy + 66;
+  // 2 slots : ACTIF (toujours) + PASSIF (débloqué pour 500 ◆)
+  const slotW = 300, slotH = 74, gap = 18;
+  const sx0 = cx + cw / 2 - (slotW * 2 + gap) / 2, sy = cy + 66;
   const slots = [
-    { key: 'act', label: 'ACTIF', x: sx0, y: sy, w: slotW, h: slotH },
-    { key: 'p1', label: 'PASSIF 1', x: sx0 + slotW + gap, y: sy, w: slotW, h: slotH },
-    { key: 'p2', label: 'PASSIF 2', x: sx0 + (slotW + gap) * 2, y: sy, w: slotW, h: slotH },
+    { key: 'act', label: 'MODULE ACTIF', x: sx0, y: sy, w: slotW, h: slotH },
+    { key: 'pass', label: 'MODULE PASSIF', x: sx0 + slotW + gap, y: sy, w: slotW, h: slotH },
   ];
   // grille des modules possédés (2 lignes de 6)
   const gx = cx + 30, gy = cy + 168, gw = 560, gh = 330;
@@ -37,12 +36,19 @@ export function modClickAt(x, y) {
   const b = menuButtons().back;
   if (inR(b, x, y)) { G.menuView = 'main'; return 'back'; }
   if (!modulesUnlocked()) return 'locked';
-  // slots : clic = déséquipé
+  // slots : clic sur slot vide/verrouillé
   const eq = modState(G.inv).eq;
+  const ms = modState(G.inv);
   for (const s of L.slots) {
     if (inR(s, x, y)) {
       const id = eq[s.key];
       if (id) { eq[s.key] = null; saveInv(G.inv); sfxClick(); return 'unequip'; }
+      if (s.key === 'pass' && !ms.passUnlocked) {
+        const r = unlockPassSlot(G.inv);
+        G.modMsg = { msg: r.msg, t: G.time, bad: !r.ok };
+        if (r.ok) sfxEquip(); else sfxClick();
+        return r.ok ? 'unlock' : 'deny';
+      }
       return 'slot';
     }
   }
@@ -54,9 +60,14 @@ export function modClickAt(x, y) {
   const eqBtn = equipBtnRect(L);
   if (G.modSel && inR(eqBtn, x, y)) {
     const m = MODULES[G.modSel];
-    const target = m.type === 'actif' ? 'act' : (eq.p1 ? 'p2' : 'p1');
-    // si déjà équipé ailleurs, on le retire d'abord
-    for (const k of ['act', 'p1', 'p2']) if (eq[k] === G.modSel) eq[k] = null;
+    const target = m.type === 'actif' ? 'act' : 'pass';
+    if (target === 'pass' && !modState(G.inv).passUnlocked) {
+      const r = unlockPassSlot(G.inv);
+      G.modMsg = { msg: r.msg, t: G.time, bad: !r.ok };
+      if (r.ok) { eq.pass = G.modSel; saveInv(G.inv); sfxEquip(); }
+      else sfxClick();
+      return r.ok ? 'unlock' : 'deny';
+    }
     eq[target] = G.modSel;
     saveInv(G.inv); sfxEquip(); G.modSelFx = G.time;
     return 'equip';
@@ -93,11 +104,20 @@ export function drawModulesView() {
   ctx.fillText('SYSTÈME DE MODULES', W / 2, P.y + 66);
   ctx.letterSpacing = '0px';
   ctx.font = `12px ${UI}`; ctx.fillStyle = C_MUTED;
-  ctx.fillText('1 module actif (touche X) + 2 modules passifs — achetés à la boutique en émeraudes', W / 2, P.y + 88);
+  ctx.fillText('1 module ACTIF (touche X) + 1 PASSIF — le slot passif se débloque pour 500 ◆', W / 2, P.y + 88);
+  // message flash (achat slot passif, erreurs)
+  if (G.modMsg && G.time - G.modMsg.t < 2.5) {
+    ctx.globalAlpha = Math.min(1, 2.5 - (G.time - G.modMsg.t));
+    ctx.fillStyle = G.modMsg.bad ? '#ff8a80' : '#69f0ae';
+    ctx.font = 'bold 13px Inter, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(G.modMsg.msg, W / 2, P.y + P.h - 14);
+    ctx.globalAlpha = 1;
+  }
 
   // slots d'équipement
   const eq = modState(inv).eq;
-  for (const s of L.slots) drawSlot(s, eq[s.key]);
+  const ms = modState(inv);
+  for (const s of L.slots) drawSlot(s, eq[s.key], s.key === 'pass' && !ms.passUnlocked);
 
   // titre de la grille
   ctx.textAlign = 'left'; ctx.font = `600 11px ${UI}`; ctx.letterSpacing = '2px';
@@ -135,9 +155,11 @@ function drawLocked() {
   drawMenuButton(menuButtons().back, '← RETOUR', '#455a64', '#90a4ae', false);
 }
 
-function drawSlot(s, id) {
+function drawSlot(s, id, locked) {
   const hov = inR(s, G.mouse.x, G.mouse.y);
   const m = id ? MODULES[id] : null;
+  const ms = modState(G.inv);
+  const isLocked = s.key === 'pass' && !ms.passUnlocked;
   ctx.fillStyle = hov ? 'rgba(24,255,255,0.10)' : 'rgba(255,255,255,0.04)';
   roundRect(s.x, s.y, s.w, s.h, 10); ctx.fill();
   ctx.strokeStyle = m ? hexA(m.col, 0.7) : (hov ? 'rgba(24,255,255,0.4)' : 'rgba(255,255,255,0.12)');
@@ -153,6 +175,13 @@ function drawSlot(s, id) {
     ctx.fillText(m.name, s.x + 52, s.y + s.h / 2 - 2);
     ctx.font = `10px ${UI}`; ctx.fillStyle = m.col;
     ctx.fillText(`${m.type.toUpperCase()} · clic pour retirer`, s.x + 52, s.y + s.h / 2 + 16);
+  } else if (isLocked) {
+    ctx.font = '24px serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#ffd740';
+    ctx.fillText('🔒', s.x + s.w / 2 - 40, s.y + s.h / 2 + 2);
+    ctx.font = `600 12px ${UI}`; ctx.fillStyle = '#ffd740'; ctx.textAlign = 'left';
+    ctx.fillText(`DÉBLOQUER · ${PASS_SLOT_PRICE} ◆`, s.x + s.w / 2 - 22, s.y + s.h / 2 + 4);
+    ctx.font = `10px ${UI}`; ctx.fillStyle = C_MUTED;
+    ctx.fillText('slot passif — cliquez pour acheter', s.x + 52, s.y + s.h / 2 + 16);
   } else {
     ctx.font = '22px serif'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,0.15)';
     ctx.fillText('◇', s.x + s.w / 2, s.y + s.h / 2 + 2);
@@ -165,7 +194,7 @@ function drawModCard(c) {
   const id = c.id, m = MODULES[id];
   const sel = G.modSel === id;
   const eq = modState(G.inv).eq;
-  const equipped = eq.act === id || eq.p1 === id || eq.p2 === id;
+  const equipped = eq.act === id || eq.pass === id;
   const hov = inR(c, G.mouse.x, G.mouse.y);
   // carte holographique
   ctx.fillStyle = sel ? hexA(m.col, 0.14) : hov ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.03)';
@@ -202,7 +231,7 @@ function drawModDetail(L, id) {
   ctx.strokeStyle = hexA(m.col, 0.5); ctx.lineWidth = 1.4;
   roundRect(d.x, d.y, d.w, d.h, 12); ctx.stroke();
   const eq = modState(G.inv).eq;
-  const equipped = eq.act === id || eq.p1 === id || eq.p2 === id;
+  const equipped = eq.act === id || eq.pass === id;
   // grande icône animée
   const ix = d.x + d.w / 2, iy = d.y + 66;
   const bob = Math.sin(G.time * 2.4) * 4;
@@ -231,6 +260,7 @@ function drawModDetail(L, id) {
   statLines(m).forEach((l, i) => ctx.fillText(l, ix, d.y + d.h - 88 + i * 15));
   // bouton équiper / équipé
   const b = equipBtnRect(L), hov = inR(b, G.mouse.x, G.mouse.y);
+  const passLocked = m.type === 'passif' && !modState(G.inv).passUnlocked && !equipped;
   if (equipped) {
     ctx.fillStyle = 'rgba(255,255,255,0.06)';
     roundRect(b.x, b.y, b.w, b.h, 9); ctx.fill();
@@ -238,10 +268,10 @@ function drawModDetail(L, id) {
     ctx.fillStyle = m.col; ctx.font = `700 13px ${UI}`;
     ctx.fillText('✔ ÉQUIPÉ — cliquez un slot vide pour changer', ix, b.y + b.h / 2 + 5);
   } else {
-    ctx.fillStyle = hov ? hexA(m.col, 0.95) : hexA(m.col, 0.55);
+    ctx.fillStyle = passLocked ? (hov ? 'rgba(255,215,64,0.85)' : 'rgba(255,215,64,0.5)') : hov ? hexA(m.col, 0.95) : hexA(m.col, 0.55);
     roundRect(b.x, b.y, b.w, b.h, 9); ctx.fill();
-    ctx.fillStyle = '#0a0f1a'; ctx.font = `700 13px ${UI}`;
-    ctx.fillText(m.type === 'actif' ? '⚡ ÉQUIPER COMME MODULE ACTIF' : '⬡ ÉQUIPER COMME MODULE PASSIF', ix, b.y + b.h / 2 + 5);
+    ctx.fillStyle = passLocked ? '#16130c' : '#0a0f1a'; ctx.font = `700 13px ${UI}`;
+    ctx.fillText(passLocked ? `🔒 DÉBLOQUER L'EMPLACEMENT PASSIF — ${PASS_SLOT_PRICE} ◆` : (m.type === 'actif' ? '⚡ ÉQUIPER COMME MODULE ACTIF' : '⬡ ÉQUIPER COMME MODULE PASSIF'), ix, b.y + b.h / 2 + 5);
   }
 }
 function statLines(m) {

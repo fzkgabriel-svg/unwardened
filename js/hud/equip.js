@@ -5,7 +5,7 @@ import { G, ctx, W } from '../state.js';
 import { roundRect } from '../utils.js';
 import { ITEMS, getDur, durMaxOf, durState } from '../inventory.js';
 import { drawItemIcon } from '../utils.js';
-import { HPAL } from './frame.js';
+import { HPAL, crisp } from './frame.js';
 
 const SLOTS = ['weapon', 'armor', 'helm', 'gloves', 'charm', 'boots'];
 // couleur de l'anneau de sélection selon le mode d'attaque actif
@@ -48,11 +48,11 @@ export function drawEquipPanel() {
       const dc = st === 'ok' ? HPAL.green : st === 'warn' ? '#d4a84b' : HPAL.red;
       ctx.fillStyle = broken ? HPAL.red : dc;
       if (dur > 0) { roundRect(dbx, dby, dbw * dur / dmax, 2, 1); ctx.fill(); }
-      // % de durabilité miniature — pas sur l'arme (arme = niveaux, pas durabilité affichée)
+      // % de durabilité miniature à gauche du médaillon — pas sur l'arme
       if (slot !== 'weapon' && !broken) {
-        ctx.font = '600 6.5px Inter, sans-serif'; ctx.textAlign = 'center';
-        ctx.fillStyle = 'rgba(232,220,190,0.75)';
-        ctx.fillText(`${Math.round(dur / dmax * 100)}%`, cx, dby + 8);
+        crisp(`${Math.round(dur / dmax * 100)}%`, cx - 19, cy + 3, 9,
+          st === 'ok' ? 'rgba(232,220,190,0.8)' : st === 'warn' ? '#ffd740' : '#ff8a80',
+          'right', { weight: 700, spacing: 0.5 });
       }
     } else {
       // emplacement vide : cercle pointillé discret

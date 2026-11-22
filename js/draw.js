@@ -85,7 +85,7 @@ export function draw() {
     ctx.font = '11px Consolas, monospace';
     ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(232,217,176,0.45)';
     ctx.fillText(`v${VERSION}`, W - 14, H - 12);
-    drawMusicButton(); drawShopBtn();
+    drawMusicButton();
     ctx.restore();
     return;
   }
@@ -95,7 +95,7 @@ export function draw() {
     ctx.font = '11px Consolas, monospace';
     ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(232,217,176,0.45)';
     ctx.fillText(`v${VERSION}`, W - 14, H - 12);
-    drawMusicButton(); drawShopBtn();
+    drawMusicButton();
     ctx.restore();
     return;
   }
@@ -115,7 +115,7 @@ export function draw() {
   drawClouds(); // ouverture par les nuages au lancement
   drawBomber(); // B-2 + bombe en chute (coords écran, au-dessus du monde)
   drawGrain(); // grain photographique par-dessus le monde (pas le HUD)
-  drawMusicButton(); drawShopBtn(); // pastilles son/effets/boutique (coin haut-droit)
+  drawMusicButton(); // pastilles son/effets (coin haut-droit) — boutique : menu uniquement
   if (G.state === 'playing' || G.state === 'paused') {
     drawAdminButton(); // bouton 🛠 admin (actif seulement si mot de passe validé)
     drawAdminMenu();   // panneau de triche (se dessine si ouvert)

@@ -41,9 +41,36 @@ export const MOD_IDS = Object.keys(MODULES);
 // ---------- ÉTAT (persisté dans inv.modules) ----------
 export function modulesUnlocked() { return !!(G.stats && G.stats.campaignDone && G.stats.campaignDone[3]); }
 export function modState(inv) {
-  inv.modules = inv.modules || { owned: [], eq: { act: null, p1: null, p2: null } };
-  if (!inv.modules.eq) inv.modules.eq = { act: null, p1: null, p2: null };
-  return inv.modules;
+  inv.modules = inv.modules || { owned: [], eq: { act: null, pass: null }, passUnlocked: false };
+  const m = inv.modules;
+  m.eq = m.eq || {};
+  // migration : ancien slot unique {mod} -> actif ou passif selon le type
+  if (m.eq.mod !== undefined) {
+    const old = m.eq.mod;
+    m.eq.act = old && MODULES[old] && MODULES[old].type === 'actif' ? old : null;
+    m.eq.pass = old && m.eq.act !== old ? old : null;
+    delete m.eq.mod;
+  }
+  // migration : ancien format 3 slots {act,p1,p2} -> {act,pass}
+  if (m.eq.p1 !== undefined || m.eq.p2 !== undefined) {
+    m.eq.pass = m.eq.pass || m.eq.p1 || m.eq.p2 || null;
+    delete m.eq.p1; delete m.eq.p2;
+  }
+  if (m.eq.act === undefined) m.eq.act = null;
+  if (m.eq.pass === undefined) m.eq.pass = null;
+  if (m.passUnlocked === undefined) m.passUnlocked = false;
+  return m;
+}
+// débloque l'emplacement passif pour 500 émeraudes (achat unique)
+export const PASS_SLOT_PRICE = 500;
+export function unlockPassSlot(inv) {
+  const ms = modState(inv);
+  if (ms.passUnlocked) return { ok: false, msg: 'Emplacement déjà débloqué' };
+  if ((inv.mats.emeraude || 0) < PASS_SLOT_PRICE) return { ok: false, msg: `Il faut ${PASS_SLOT_PRICE} émeraudes` };
+  inv.mats.emeraude -= PASS_SLOT_PRICE;
+  ms.passUnlocked = true;
+  saveInv(inv);
+  return { ok: true, msg: 'Emplacement PASSIF débloqué !' };
 }
 // appelé à chaque frame/menu : débloque et offre les 2 modules après le boss du monde 4
 export function ensureModules() {
@@ -66,7 +93,7 @@ export function ownModule(inv, id) {
 export function equippedMods() {
   const inv = G.inv; if (!inv) return [];
   const eq = modState(inv).eq;
-  return [eq.act, eq.p1, eq.p2].filter(Boolean).map(id => MODULES[id]).filter(Boolean);
+  return [eq.act, eq.pass].filter(Boolean).map(id => MODULES[id]).filter(Boolean);
 }
 export function eqActive() { const inv = G.inv; return inv ? modState(inv).eq.act : null; }
 export function hasMod(id) { const inv = G.inv; return inv ? modState(inv).owned.includes(id) : false; }
