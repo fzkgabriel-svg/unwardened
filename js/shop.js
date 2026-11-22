@@ -181,7 +181,7 @@ export function shopLayout() {
     balance: { x: W - 320, y: 16, w: 210, h: 40 },
     timer: { x: W - 320, y: 62, w: 210, h: 24 },
     close: { x: W - 52, y: 14, w: 36, h: 36 },
-    minus: { x: dx + dw - 330, y: dy + 74, w: 34, h: 34 },
+    minus: { x: dx + dw - 360, y: dy + 74, w: 34, h: 34 },
     plus:  { x: dx + dw - 288, y: dy + 74, w: 34, h: 34 },
     buy:   { x: dx + dw - 240, y: dy + 68, w: 200, h: 44 },
     confirmBtn: { x: W / 2 - 130, y: H / 2 + 90, w: 120, h: 36 },
