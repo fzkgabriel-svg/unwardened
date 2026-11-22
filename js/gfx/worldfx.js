@@ -566,6 +566,30 @@ export function drawFalls() {
   }
 }
 
+// ---------- COLOR GRADING : voile teinté par biome (coordonnées écran) ----------
+const GRADE = {
+  plain:  ['rgba(255,236,170,0.10)', 'rgba(70,110,40,0.10)'],
+  ice:    ['rgba(190,225,255,0.12)', 'rgba(70,130,180,0.10)'],
+  hell:   ['rgba(255,130,60,0.09)',  'rgba(140,30,10,0.13)'],
+  sewer:  ['rgba(150,210,120,0.07)', 'rgba(15,35,15,0.15)'],
+  space:  ['rgba(150,120,255,0.11)', 'rgba(15,15,60,0.15)'],
+};
+export function drawBiomeGrade() {
+  const w = curWorld();
+  if (!w || G.state === 'menu') return;
+  const g = GRADE[w.def.biome];
+  if (!g) return;
+  const lg = ctx.createLinearGradient(0, 0, 0, H);
+  lg.addColorStop(0, g[0]); lg.addColorStop(1, g[1]);
+  ctx.fillStyle = lg;
+  ctx.fillRect(0, 0, W, H);
+  // léger halo chaud au centre pour la profondeur
+  const rg = ctx.createRadialGradient(W / 2, H * 0.45, H * 0.3, W / 2, H * 0.5, H * 0.9);
+  rg.addColorStop(0, 'rgba(255,255,255,0.03)'); rg.addColorStop(1, 'rgba(0,0,0,0.06)');
+  ctx.fillStyle = rg;
+  ctx.fillRect(0, 0, W, H);
+}
+
 // ---------- AMBIANCE PAR BIOME : particules d'ambiance dans le monde ----------
 // Positions calculées procéduralement (aucune allocation par frame).
 // Chaque biome a son propre climat : feuilles, neige, braises, spores, poussière cosmique.

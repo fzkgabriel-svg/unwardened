@@ -82,6 +82,31 @@ function buildTerrainCanvas(w) {
       g.beginPath(); g.ellipse(b.x, b.y, b.rx, b.ry, b.rot, 0, TAU); g.fill();
     }
   }
+  // texture du sol : millions de micro-grains déterministes (herbe, gravier, cendres)
+  {
+    const iceT = w.def.biome === 'ice', hellT = w.def.biome === 'hell', spaceT = w.def.biome === 'space';
+    const darkC = iceT ? 'rgba(90,130,170,0.20)' : hellT ? 'rgba(0,0,0,0.30)' : spaceT ? 'rgba(20,24,40,0.28)' : 'rgba(20,40,15,0.18)';
+    const liteC = iceT ? 'rgba(255,255,255,0.22)' : hellT ? 'rgba(255,120,60,0.12)' : spaceT ? 'rgba(140,160,255,0.14)' : 'rgba(200,230,140,0.16)';
+    let seedT = (w.idx * 7919 + 13) >>> 0;
+    const rnd = () => { seedT = (seedT * 1664525 + 1013904223) >>> 0; return seedT / 4294967296; };
+    const nSp = Math.floor(w.w * w.h / 2600);
+    for (let i = 0; i < nSp; i++) {
+      const px = rnd() * w.w, py = rnd() * w.h;
+      const lite = rnd() < 0.4;
+      g.fillStyle = lite ? liteC : darkC;
+      if (rnd() < 0.75) { g.fillRect(px, py, 1 + rnd() * 2, 1); }
+      else { g.fillRect(px, py, 1, 1 + rnd() * 3); } // micro-brins
+    }
+    // traînées d'herbe/fougères : courts segments colorés regroupés
+    if (!hellT && !spaceT) {
+      const bladeC = iceT ? 'rgba(230,245,255,0.20)' : 'rgba(140,200,90,0.18)';
+      for (let i = 0; i < nSp / 3; i++) {
+        const px = rnd() * w.w, py = rnd() * w.h;
+        g.strokeStyle = bladeC; g.lineWidth = 1;
+        g.beginPath(); g.moveTo(px, py); g.lineTo(px + (rnd() - 0.5) * 3, py - 2 - rnd() * 3); g.stroke();
+      }
+    }
+  }
   for (const d of w.decor) if (!d.sway) drawDecorItem(d, w.def, g);
   // lacs (eau détaillée) puis ponts en bois par-dessus
   for (const l of w.lakes || []) drawLake(g, l, w.def);
@@ -218,8 +243,12 @@ export function drawTerrain() {
   if (!w) return;
   if (!w._terrain) w._terrain = buildTerrainCanvas(w); // régénéré seulement si le monde change
   const cx = G.camX || 0, cy = G.camY || 0;
-  // sous la transform caméra : on ne blitte que la fenêtre visible
+  // sous la transform caméra : on ne blitte que la fenêtre visible.
+  // Filtre : couleurs plus saturées et contrastées (identité visuelle MAP 4.0).
+  ctx.save();
+  ctx.filter = 'saturate(1.32) contrast(1.07) brightness(1.03)';
   ctx.drawImage(w._terrain, cx, cy, W, H, cx, cy, W, H);
+  ctx.restore();
 }
 
 // ---------- SECRETS : petits sites cachés (cercles, puits, tombes, autels) ----------
@@ -487,6 +516,38 @@ export function drawSwayDecor() {
     drawDecorItem(d, w.def, ctx);
     ctx.restore();
   }
+}
+
+// lumières dynamiques : halos vacillants autour des éléments luminescents du décor
+const LIGHT_TYPES = {
+  lantern:      { c: '255,213,79',  r: 52,  a: 0.16 },
+  fire:         { c: '255,112,67',  r: 60,  a: 0.18 },
+  glowshroom:   { c: '156,204,101', r: 44,  a: 0.15 },
+  energycrystal:{ c: '77,208,225',  r: 56,  a: 0.16 },
+  holo:         { c: '100,181,246', r: 58,  a: 0.13 },
+  crystal:      { c: '179,229,252', r: 40,  a: 0.11 },
+};
+export function drawDecorLights() {
+  const w = curWorld();
+  if (!w || !w.decor) return;
+  const x0 = (G.camX || 0) - 120, y0 = (G.camY || 0) - 160, x1 = x0 + W + 240, y1 = y0 + H + 240;
+  const t = G.time;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  for (const d of w.decor) {
+    const L = LIGHT_TYPES[d.type];
+    if (!L) continue;
+    if (d.x < x0 || d.x > x1 || d.y < y0 || d.y > y1) continue;
+    const fl = 0.75 + Math.sin(t * 6 + d.c * 40) * 0.18 + Math.sin(t * 13 + d.x) * 0.07;
+    const r = L.r * (0.85 + d.s * 0.3);
+    const g2 = ctx.createRadialGradient(d.x, d.y - 8, 2, d.x, d.y - 8, r);
+    g2.addColorStop(0, `rgba(${L.c},${L.a * fl})`);
+    g2.addColorStop(0.55, `rgba(${L.c},${L.a * fl * 0.4})`);
+    g2.addColorStop(1, `rgba(${L.c},0)`);
+    ctx.fillStyle = g2;
+    ctx.beginPath(); ctx.arc(d.x, d.y - 8, r, 0, TAU); ctx.fill();
+  }
+  ctx.restore();
 }
 
 // secrets rendus par frame (leurs éléments sont animés : feu, artefact, autel)
