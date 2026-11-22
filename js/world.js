@@ -43,6 +43,17 @@ export function saveWorlds() {
   try { localStorage.setItem(SAVE_KEY(), JSON.stringify(worldSaves || loadSaves())); } catch (e) {}
 }
 
+// ---------- PROPS AUTOUR DES BÂTIMENTS ----------
+// Petits éléments disposés intentionnellement près des constructions
+// pour raconter l'histoire de chaque lieu (fûts, lanternes, débris, grilles...)
+const PROP_TYPES = {
+  plain:  ['fence', 'barrel', 'lantern', 'stump', 'path', 'fern', 'bush'],
+  ice:    ['snowdrift', 'icicle', 'frozenbush', 'rock', 'crystal', 'path'],
+  hell:   ['bone', 'skull', 'ash', 'fire', 'obsid', 'rock'],
+  sewer:  ['pipe', 'grate', 'bones', 'water', 'banner', 'cage', 'rat'],
+  space:  ['debris', 'meteor', 'star', 'shard', 'crystal', 'ruinpillar'],
+};
+
 // ---------- GÉNÉRATION ----------
 const worldCache = {}; // idx -> monde généré (non sérialisé, regén déterministe)
 
@@ -248,7 +259,7 @@ function freeSpot(rng, buildings, worldW, worldH, spawn) {
   return { x: worldW / 2, y: worldH / 2 };
 }
 
-function genWorld(idx) {
+export function genWorld(idx) {
   const camp = campaignOf(idx);
   const def = WORLDS[idx];
   const saves = loadSaves();
@@ -310,6 +321,17 @@ function genWorld(idx) {
         looted: !!(saves.worlds[idx].looted && saves.worlds[idx].looted[`${idx}-${bid - 1}`]),
       };
       buildings.push(b);
+      // props autour du bâtiment : clôtures, tonneaux, lanternes, débris
+      // (types propres au biome, filtrés comme le décor principal)
+      const props = PROP_TYPES[def.biome] || PROP_TYPES.plain;
+      const pn = ri(rng, 2, 4);
+      for (let pi = 0; pi < pn; pi++) {
+        const pt = pick(rng, props);
+        const pa = rng() * TAU, pr = Math.hypot(bw, bh) / 2 + rr(rng, 24, 70);
+        const px = pos.x + Math.cos(pa) * pr, py = pos.y + Math.sin(pa) * pr * 0.7;
+        if (px < 40 || py < 40 || px > w - 40 || py > h - 40) continue;
+        decor.push({ type: pt, x: px, y: py, h: 4 + rng() * 7, s: 0.7 + rng() * 0.7, c: rng(), rot: rng() * TAU });
+      }
     }
   }
 

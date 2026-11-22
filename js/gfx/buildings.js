@@ -162,6 +162,82 @@ function drawBuilding(b, def) {
       ctx.restore();
       break;
     }
+    case 'tower': {
+      // TOUR DE GUET : fût cylindrique + plateforme crénelée + toit conique
+      const tw = Math.min(hw, hh * 0.6);
+      // fût
+      const tg = ctx.createLinearGradient(-tw, 0, tw, 0);
+      tg.addColorStop(0, def.wallDark); tg.addColorStop(0.5, def.wall); tg.addColorStop(1, def.wallDark);
+      ctx.fillStyle = tg;
+      ctx.beginPath();
+      ctx.moveTo(-tw, H2 / 2);
+      ctx.quadraticCurveTo(-tw * 1.15, -H2 * 0.1, -tw * 0.8, -H2 / 2);
+      ctx.lineTo(tw * 0.8, -H2 / 2);
+      ctx.quadraticCurveTo(tw * 1.15, -H2 * 0.1, tw, H2 / 2);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.45)'; ctx.lineWidth = 2; ctx.stroke();
+      // assises de pierre
+      ctx.strokeStyle = 'rgba(0,0,0,0.2)'; ctx.lineWidth = 1.2;
+      for (let i = 1; i < 5; i++) {
+        const yy = H2 / 2 - (H2 + H2 / 2) * (i / 5);
+        const spread = tw * (0.55 + i * 0.12);
+        ctx.beginPath(); ctx.moveTo(-spread, yy); ctx.lineTo(spread, yy); ctx.stroke();
+      }
+      // plateforme + créneaux
+      ctx.fillStyle = def.wallDark;
+      ctx.fillRect(-tw * 1.25, -H2 / 2 - 12, tw * 2.5, 14);
+      for (let i = -3; i <= 3; i++) ctx.fillRect(i * tw * 0.36 - 3, -H2 / 2 - 22, 6, 10);
+      // toit conique
+      ctx.fillStyle = def.roof;
+      ctx.beginPath(); ctx.moveTo(-tw * 0.85, -H2 / 2 - 12); ctx.lineTo(0, -H2 / 2 - H2 * 0.5); ctx.lineTo(tw * 0.85, -H2 / 2 - 12); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.lineWidth = 2; ctx.stroke();
+      // flèche
+      ctx.strokeStyle = '#78909c'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(0, -H2 / 2 - H2 * 0.5); ctx.lineTo(0, -H2 / 2 - H2 * 0.72); ctx.stroke();
+      // fenêtres étroites + porte
+      win(0, -H2 * 0.18, 10, 18);
+      door(0);
+      break;
+    }
+    case 'arch': {
+      // ARCHE EN RUINE : deux piliers + linteau brisé
+      const aw = hw * 0.85;
+      // piliers
+      for (const side of [-1, 1]) {
+        const pg = ctx.createLinearGradient(side * aw - 10, 0, side * aw + 10, 0);
+        pg.addColorStop(0, def.wallDark); pg.addColorStop(0.5, def.wall); pg.addColorStop(1, def.wallDark);
+        ctx.fillStyle = pg;
+        ctx.fillRect(side * aw - 11, -hh * 0.7, 22, hh * 1.4);
+        ctx.strokeStyle = 'rgba(0,0,0,0.45)'; ctx.lineWidth = 2;
+        ctx.strokeRect(side * aw - 11, -hh * 0.7, 22, hh * 1.4);
+        // chapiteau
+        ctx.fillStyle = def.wallDark;
+        ctx.fillRect(side * aw - 14, -hh * 0.7 - 8, 28, 10);
+        // base
+        ctx.fillRect(side * aw - 14, hh * 0.55, 28, 12);
+      }
+      // linteau brisé (décalé, asymétrique)
+      ctx.fillStyle = def.wallDark;
+      ctx.beginPath();
+      ctx.moveTo(-aw - 16, -hh * 0.72);
+      ctx.lineTo(-aw + 10, -hh * 0.78);
+      ctx.lineTo(aw * 0.3, -hh * 0.7);
+      ctx.lineTo(aw + 14, -hh * 0.74);
+      ctx.lineTo(aw + 16, -hh * 0.62);
+      ctx.lineTo(-aw - 14, -hh * 0.6);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.45)'; ctx.lineWidth = 2; ctx.stroke();
+      // claveau central gravé
+      ctx.fillStyle = def.trim || '#ffd740';
+      ctx.beginPath(); ctx.arc(0, -hh * 0.68, 5, 0, TAU); ctx.fill();
+      // herbes sur les ruines
+      ctx.strokeStyle = 'rgba(100,160,80,0.7)'; ctx.lineWidth = 1.5;
+      for (let i = 0; i < 6; i++) {
+        const gx = -aw + i * (aw * 2 / 5);
+        ctx.beginPath(); ctx.moveTo(gx, hh * 0.62); ctx.lineTo(gx + 2, hh * 0.62 - 7); ctx.stroke();
+      }
+      break;
+    }
     case 'castle': {
       // CHÂTEAU : donjon central + 4 tours d'angle à créneaux, toits coniques.
       // Biome glace : calottes de neige · Biome enfer : toits de braise

@@ -509,6 +509,62 @@ export function drawLightnings() {
   }
 }
 
+// ---------- AMBIANCE PAR BIOME : particules d'ambiance dans le monde ----------
+// Positions calculées procéduralement (aucune allocation par frame).
+// Chaque biome a son propre climat : feuilles, neige, braises, spores, poussière cosmique.
+const AMB = {
+  plain:  { n: 34, col: ['rgba(180,220,120,', 'rgba(255,200,120,', 'rgba(150,190,255,'], spd: [14, 30], size: [1, 2.4], mode: 'leaf' },
+  ice:    { n: 55, col: ['rgba(255,255,255,', 'rgba(200,230,250,'],       spd: [30, 60], size: [1, 2.6], mode: 'snow' },
+  hell:   { n: 42, col: ['rgba(255,140,50,', 'rgba(255,210,90,', 'rgba(255,80,30,'], spd: [12, 34], size: [1.2, 2.8], mode: 'ember' },
+  sewer:  { n: 38, col: ['rgba(170,255,120,', 'rgba(140,230,160,'],       spd: [6, 18],  size: [1, 2.2], mode: 'spore' },
+  space:  { n: 46, col: ['rgba(140,200,255,', 'rgba(220,140,255,', 'rgba(160,255,220,'], spd: [8, 26], size: [1, 2.4], mode: 'mote' },
+};
+export function drawAmbient() {
+  const w = curWorld();
+  if (!w || G.state === 'menu') return;
+  const cfg = AMB[w.def.biome] || AMB.plain;
+  const cx = G.camX || 0, cy = G.camY || 0;
+  const t = G.time;
+  for (let i = 0; i < cfg.n; i++) {
+    // grille déterministe : chaque particule a une cellule qui défile
+    const cell = 140;
+    const gx = (i * 197 + ((i * 31) % 7) * 53) % Math.ceil((W + 280) / cell);
+    const gy = (i * 149 + ((i * 17) % 5) * 47) % Math.ceil((H + 280) / cell);
+    const seed = i * 0.6180339;
+    let px = cx - 140 + gx * cell + (seed * 97 % cell);
+    let py = cy - 140 + gy * cell + (seed * 89 % cell);
+    const tw = 0.4 + 0.6 * Math.abs(Math.sin(t * (1.2 + (i % 4) * 0.4) + i));
+    if (cfg.mode === 'snow' || cfg.mode === 'leaf' || cfg.mode === 'spore') {
+      // chute douce + balayage latéral
+      py += (t * cfg.spd[1] * (0.6 + (i % 3) * 0.3)) % (H + 280);
+      px += Math.sin(t * 0.9 + i * 2.3) * (cfg.mode === 'snow' ? 26 : 12);
+      if (py > cy + H + 140) py -= H + 280;
+    } else if (cfg.mode === 'ember') {
+      // braises : remontent en vacillant
+      py -= (t * cfg.spd[1] * (0.7 + (i % 3) * 0.25)) % (H + 280);
+      px += Math.sin(t * 2.2 + i * 3.1) * 18;
+      if (py < cy - 140) py += H + 280;
+    } else {
+      // motes cosmiques : dérive lente + scintillement
+      px += Math.sin(t * 0.4 + i * 1.7) * 30;
+      py += Math.cos(t * 0.33 + i * 2.1) * 24;
+    }
+    if (px < cx - 140) px += W + 280; else if (px > cx + W + 140) px -= W + 280;
+    const size = cfg.size[0] + (i % 3) * (cfg.size[1] - cfg.size[0]) / 2;
+    ctx.globalAlpha = tw * (cfg.mode === 'ember' ? 0.8 : 0.65);
+    ctx.fillStyle = cfg.col[i % cfg.col.length] + (cfg.mode === 'mote' ? '1)' : '0.85)');
+    if (cfg.mode === 'leaf') {
+      // feuilles/pétales : petites ellipses tournées
+      ctx.save(); ctx.translate(px, py); ctx.rotate(t * 1.5 + i);
+      ctx.beginPath(); ctx.ellipse(0, 0, size * 1.6, size * 0.7, 0, 0, TAU); ctx.fill();
+      ctx.restore();
+    } else {
+      ctx.beginPath(); ctx.arc(px, py, size, 0, TAU); ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
 export function drawEffects() {
   for (const r of G.rings) {
     ctx.globalAlpha = r.life / r.maxLife;
