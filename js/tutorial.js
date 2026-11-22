@@ -238,8 +238,8 @@ export function updateTutorial(dt) {
 // ---------- rendu ----------
 // Zones du HUD mises en évidence (zoom + contour) pendant les étapes
 const HUD_SPOT = {
-  wave: { x: 12, y: 5, w: 430, h: 38 },
-  xp:   { x: 40, y: 64, w: 310, h: 30 },
+  wave: { x: 14, y: 10, w: 330, h: 40 },  // ligne vague/monstres dans le profil
+  xp:   { x: 14, y: 98, w: 330, h: 20 },  // barre XP dans le profil
 };
 
 // contour pointillé pulsé autour de l'élément HUD + bulle zoom en bas d'écran
