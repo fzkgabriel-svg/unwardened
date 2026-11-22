@@ -293,10 +293,20 @@ function drawProgressionStrip(L) {
   const s = slotSummary(activeSlot()) || {};
   const done = Object.values(G.stats.campaignDone || {}).filter(Boolean).length;
   const ach = `${achievementCount()}/${ACHIEVEMENTS.length}`;
-  const txt = `🏆 ${ach} succès · 🗺️ ${done}/5 campagnes · 🌊 vag. ${s.bestWave || 0} · 💀 ${(s.totalKills || 0).toLocaleString('fr-FR')} · ⏱ ${fmtPlaytime(s.playtime || 0)}`;
-  const x = L.cx + L.cw - 24;
+  const items = [
+    `🏆 ${ach} succès`,
+    `🗺️ ${done}/5 campagnes`,
+    `🌊 vag. ${s.bestWave || 0}`,
+    `💀 ${(s.totalKills || 0).toLocaleString('fr-FR')} kills`,
+    `⏱ ${fmtPlaytime(s.playtime || 0)}`
+  ];
+  const x = L.cx + L.cw - 14;
+  const y0 = L.cy + L.ch - 160; // plus bas
+  const lh = 16;
   ctx.textAlign = 'right'; ctx.font = `bold 11px ${UI}`; ctx.fillStyle = '#c9b98a';
-  ctx.fillText(fitText(txt, 360), x, L.cy + L.ch - 38);
+  items.forEach((item, i) => {
+    ctx.fillText(item, x, y0 + i * lh);
+  });
   ctx.textAlign = 'left';
 }
 
