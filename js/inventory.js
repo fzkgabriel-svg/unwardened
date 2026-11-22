@@ -175,6 +175,11 @@ export function loadInv() {
       d.dur = d.dur || {}; d.wmode = d.wmode || {}; d.buffs = d.buffs || {}; d.weapons = d.weapons || ['epee', 'lance'];
       // migration durabilité : l'ancienne échelle 0-100 devient 0-DUR_MAX (×2)
       for (const k in d.dur) if (d.dur[k] > 0) d.dur[k] = Math.min(DUR_MAX, Math.round(d.dur[k] * (DUR_MAX / 100)));
+      // migration rareté : les durées 0-200 passent à l'échelle de chaque rareté (une seule fois)
+      if (!d.durV2) {
+        d.durV2 = 1;
+        for (const k in d.dur) if (d.dur[k] > 0 && d.dur[k] <= DUR_MAX) d.dur[k] = Math.round(d.dur[k] * durMaxOf(k) / DUR_MAX);
+      }
       return d;
     }
   } catch (e) {}
@@ -210,7 +215,7 @@ export function craft(inv, id) {
   for (const k in it.cost) inv.mats[k] -= it.cost[k];
   inv.items[id] = it.conso ? (inv.items[id] || 0) + 1 : true; // conso = compteur
   inv.dur = inv.dur || {};
-  inv.dur[id] = DUR_MAX; // tout objet forgé commence à durabilité maximale
+  inv.dur[id] = durMaxOf(id); // tout objet forgé commence à durabilité maximale (selon rareté)
   saveInv(inv);
   return true;
 }
@@ -241,17 +246,23 @@ export function useConsumable(inv, id) {
 }
 
 // ---------- DURABILITÉ ----------
-// inv.dur[id] = 0-DUR_MAX, persisté avec l'inventaire ; absent = DUR_MAX (objets anciens)
-export const DUR_MAX = 200;
+// inv.dur[id] = 0-durMaxOf(id), persisté avec l'inventaire ; absent = max
+export const DUR_MAX = 200; // base commune — la rareté multiplie la durabilité
+const RAR_DUR = { commun: 1, rare: 1.8, epique: 2.8, legendaire: 4 };
+// durabilité max selon la rareté : commun 200 · rare 360 · épique 560 · légendaire 800
+export function durMaxOf(id) {
+  const r = ITEMS[id] && ITEMS[id].rar;
+  return Math.round(DUR_MAX * (RAR_DUR[r] || 1));
+}
 export function getDur(inv, id) {
-  return inv.dur && inv.dur[id] !== undefined ? inv.dur[id] : DUR_MAX;
+  return inv.dur && inv.dur[id] !== undefined ? inv.dur[id] : durMaxOf(id);
 }
 function setDur(inv, id, v) {
   inv.dur = inv.dur || {};
-  inv.dur[id] = Math.max(0, Math.min(DUR_MAX, v));
+  inv.dur[id] = Math.max(0, Math.min(durMaxOf(id), v));
 }
 // couleur d'état d'une durabilité (partagée menus + HUD)
-export function durState(d) { return d <= 0 ? 'broken' : d < DUR_MAX * 0.3 ? 'crit' : d < DUR_MAX * 0.6 ? 'warn' : 'ok'; }
+export function durState(d, max = DUR_MAX) { return d <= 0 ? 'broken' : d < max * 0.3 ? 'crit' : d < max * 0.6 ? 'warn' : 'ok'; }
 
 // usure à chaque coup SUBI : l'armure trinque le plus, le casque et les gants moins.
 // L'arme ne use plus ici : elle s'use à l'attaque (wearWeaponUse).
@@ -298,11 +309,12 @@ export function wearWeaponUse(inv, pts) {
 // ---------- RÉPARATION ----------
 // coût : ~50 % du coût de forge, proportionnel à l'usure (réparation complète = 50 %)
 export function repairCost(inv, id) {
-  const missing = DUR_MAX - getDur(inv, id);
+  const dmax = durMaxOf(id);
+  const missing = dmax - getDur(inv, id);
   if (missing <= 0) return null;
   const cost = {};
   for (const m in ITEMS[id].cost) {
-    cost[m] = Math.max(1, Math.ceil(ITEMS[id].cost[m] * (missing / DUR_MAX) * 0.5));
+    cost[m] = Math.max(1, Math.ceil(ITEMS[id].cost[m] * (missing / dmax) * 0.5));
   }
   return cost;
 }
@@ -316,14 +328,14 @@ export function repairItem(inv, id) {
   if (!canRepair(inv, id)) return false;
   const c = repairCost(inv, id);
   for (const m in c) inv.mats[m] -= c[m];
-  setDur(inv, id, DUR_MAX);
+  setDur(inv, id, durMaxOf(id));
   saveInv(inv);
   return true;
 }
 // tous les équipements possédés endommagés (dur < max), cassés d'abord puis par usure
 export function damagedItems(inv) {
   return Object.keys(inv.items || {})
-    .filter(id => ITEMS[id] && !ITEMS[id].conso && getDur(inv, id) < DUR_MAX)
+    .filter(id => ITEMS[id] && !ITEMS[id].conso && getDur(inv, id) < durMaxOf(id))
     .sort((a, b) => getDur(inv, a) - getDur(inv, b));
 }
 // coût total pour tout réparer (null si rien à réparer)
@@ -346,7 +358,7 @@ export function repairAll(inv) {
     if (!canRepair(inv, id)) continue;
     const c = repairCost(inv, id);
     for (const m in c) { inv.mats[m] -= c[m]; cost[m] = (cost[m] || 0) + c[m]; }
-    setDur(inv, id, DUR_MAX);
+    setDur(inv, id, durMaxOf(id));
     repaired++;
   }
   const skipped = damagedItems(inv).length;
@@ -360,9 +372,9 @@ export function repairAll(inv) {
 // L'XP requise par niveau augmente fortement : 400 + 350 × niveau^1,5.
 // Niveau 1→2 = 750 XP, 10→11 ≈ 11 500, 50→51 ≈ 124 000, 99→100 ≈ 345 000.
 // Max 100 niveaux. Les dégâts suivent une courbe EXPONENTIELLE :
-// multiplicateur de 1,0 au niv. 1 jusqu'à 2,0 (200 % des dégâts de base) au niv. 100.
+// multiplicateur de 1,0 au niv. 1 jusqu'à 3,0 (+200 % des dégâts de base) au niv. 100.
 export const MODE_MAX_LVL = 100;
-export const MODE_DMG_MAX = 2.0;   // multiplicateur max de dégâts au niveau 100
+export const MODE_DMG_MAX = 3.0;   // multiplicateur max de dégâts au niveau 100 (+200 %)
 const MODE_DMG_EXPO = 2.6;         // exponentielle : la progression s'accélère avec le niveau
 export function modeNeed(lvl) { return Math.round(400 + 350 * Math.pow(lvl, 1.5)); }
 export function modeKey(attackMode) { return attackMode === 3 ? 'lance' : attackMode === 5 ? 'arc' : 'epee'; }
@@ -386,7 +398,7 @@ export function addWmodeXp(inv, key, xp) {
   saveInv(inv);
 }
 export function modeMult(inv, key) {
-  // exponentielle sur la progression de niveau : 1,0 -> MODE_DMG_MAX (2,0) au niv. 100
+  // exponentielle sur la progression de niveau : 1,0 -> MODE_DMG_MAX (3,0) au niv. 100
   const t = (modeInfo(inv, key).lvl - 1) / (MODE_MAX_LVL - 1);
   return 1 + (MODE_DMG_MAX - 1) * (Math.exp(MODE_DMG_EXPO * t) - 1) / (Math.exp(MODE_DMG_EXPO) - 1);
 }

@@ -4,6 +4,7 @@ import { addDamageText, spawnParticles } from './effects.js';
 import { gainXp } from './player.js';
 import { MATS, MATERIAL_DROPS, addMaterial, modeKey, modeMult } from './inventory.js';
 import { sfxHit, sfxDie, sfxBoss, sfxBossRoar, sfxBossDie, sfxBossHit } from './audio.js';
+import { modDmgMult, modCritBonus, modLifesteal } from './modules.js';
 
 export const enemyTypes = {
   slime:    { name: 'Slime',        hp: 30,  speed: 0.75, damage: 8,  xp: 10,  r: 13, aggro: Infinity, range: 17, color: '#4caf50', glow: '#69f0ae' },
@@ -176,8 +177,16 @@ export function damageEnemy(e, dmg, angle) {
     return;
   }
   const mk = modeKey(G.player.attackMode); // épée (mode 1) ou lance (mode 3)
-  const real = dmg * (G.equip ? G.equip.weaponMult : 1) * (G.inv ? modeMult(G.inv, mk) : 1);
+  let real = dmg * (G.equip ? G.equip.weaponMult : 1) * (G.inv ? modeMult(G.inv, mk) : 1) * modDmgMult();
+  // coup critique : instinct du chasseur (+12 %) sur une base de 5 %
+  const isCrit = Math.random() < 0.05 + modCritBonus();
+  if (isCrit) real *= 1.75;
   e.hp -= real;
+  // absorption : une partie des dégâts infligés soigne le héros
+  const ls = modLifesteal();
+  if (ls > 0 && G.player.alive && G.player.hp > 0) {
+    G.player.hp = Math.min(G.player.maxHp, G.player.hp + real * ls);
+  }
   (e.isBoss || e.isMini ? sfxBossHit : sfxHit)(); // les boss ont un impact plus lourd
   G.dmgDealt += real;
   // progression : le type d'arme (épée/lance) gagne l'XP des dégâts infligés
@@ -185,7 +194,7 @@ export function damageEnemy(e, dmg, angle) {
   G.runWmode[mk] = (G.runWmode[mk] || 0) + real;
   e.slow = Math.max(e.slow || 0, 1.5); // ralenti 1,5s quand on le frappe
   e.hitFlash = 0.12; // flash blanc à chaque coup subi
-  addDamageText(e.x + (Math.random() - 0.5) * 10, e.y - e.r - 6, Math.round(real), '#ffeb3b');
+  addDamageText(e.x + (Math.random() - 0.5) * 10, e.y - e.r - 6, (isCrit ? 'CRIT ' : '') + Math.round(real), isCrit ? '#ff5252' : '#ffeb3b');
   spawnParticles(e.x, e.y, e.glow, 5, 3);
   const idx = G.enemies.indexOf(e);
   if (e.hp <= 0) {

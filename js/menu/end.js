@@ -2,7 +2,7 @@ import { G, ctx, W, H, TAU, saveStats, finalWave } from '../state.js';
 import { roundRect, drawMatIcon, drawItemIcon, itemTier } from '../utils.js';
 import { regenerateDecor } from '../graphics.js';
 import { ACHIEVEMENTS, unlocked, achievementCount, checkAchievements, achInfo, isClaimed, claimReward, achTabList, unclaimedInTab, adminUnlockAll } from '../achievements.js';
-import { ITEMS, MATS, canCraft, craft, toggleEquip, equipBonuses, getDur, canRepair, repairItem, repairCost, loadInv, addMaterial, modeInfo, addWmodeXp, modeMult, MODE_MAX_LVL, setInvNoSave, DUR_MAX } from '../inventory.js';
+import { ITEMS, MATS, canCraft, craft, toggleEquip, equipBonuses, getDur, canRepair, repairItem, repairCost, loadInv, addMaterial, modeInfo, addWmodeXp, modeMult, MODE_MAX_LVL, setInvNoSave, DUR_MAX, durMaxOf } from '../inventory.js';
 import { spawnEnemy, spawnFinalBoss } from '../enemies.js';
 import { gainXp } from '../player.js';
 import { curWorld, syncCamera, regenerateWorld, reloadWorlds, campaignStart } from '../world.js';
@@ -77,7 +77,7 @@ function runLootRows() {
   const worn = [];
   for (const id in G.runWear) {
     wear += G.runWear[id];
-    if (G.runWear[id] > 0.5) { worn.push(id); wearPctSum += G.runWear[id] / DUR_MAX * 100; wornCount++; }
+    if (G.runWear[id] > 0.5) { worn.push(id); wearPctSum += G.runWear[id] / durMaxOf(id) * 100; wornCount++; }
   }
   const wearPct = wornCount ? wearPctSum / wornCount : 0; // % moyen de durabilité perdue par pièce
   worn.sort((a, b) => G.runWear[b] - G.runWear[a]);

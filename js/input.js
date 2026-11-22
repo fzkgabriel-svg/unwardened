@@ -9,6 +9,8 @@ import { shopButtonAt, shopClickAt, shopDay } from './shop.js';
 import { startTutorial, tutorialEnter } from './tutorial.js';
 import { bowUnlocked } from './bow.js';
 import { modeKey, weaponAllowed } from './inventory.js';
+import { activateModule, modulesUnlocked } from './modules.js';
+import { modClickAt } from './menu/modules.js';
 
 export function initInput() {
   window.addEventListener('keydown', e => {
@@ -67,20 +69,31 @@ export function initInput() {
       sfxClick();
     }
     if (k === 'f' && G.state === 'playing') G.ultQueued = true;
-    // modes d'attaque : & = épée + rotation, é/" = bouclier + lance
-    const modeKeys = { '&': 1, '1': 1, 'é': 3, '"': 3, "'": 3, '3': 3 };
-    if (modeKeys[k] && G.state === 'playing' && G.player.attackMode !== modeKeys[k]
-        && weaponAllowed(G.inv, modeKey(modeKeys[k]))) {
-      G.player.attackMode = modeKeys[k];
+    // modes d'attaque : & = épée, é = lance (ou arc si la lance n'est pas équipée)
+    // " = arc en priorité quand les deux sont possédés — le X est réservé aux modules
+    const meleeKeys = { '&': 1, '1': 1 };
+    if (meleeKeys[k] && G.state === 'playing' && G.player.attackMode !== meleeKeys[k]
+        && weaponAllowed(G.inv, modeKey(meleeKeys[k]))) {
+      G.player.attackMode = meleeKeys[k];
       G.player.switchLock = 1.25; // 1,25s sans attaque après le changement d'arme
     }
-    // X : arc cinétique cosmique (arme légendaire, débloquée après le boss du monde 9,
-    // et choisie dans le chargement du menu Personnage)
-    if (k === 'x' && G.state === 'playing' && bowUnlocked() && weaponAllowed(G.inv, 'arc')
-        && G.player.attackMode !== 5) {
-      G.player.attackMode = 5;
-      G.player.switchLock = 1.25;
+    const heavyKeys = { 'é': 3, '3': 3, "'": 3 };
+    if (heavyKeys[k] && G.state === 'playing') {
+      const target = weaponAllowed(G.inv, 'lance') ? 3 : weaponAllowed(G.inv, 'arc') ? 5 : null;
+      if (target && G.player.attackMode !== target) {
+        G.player.attackMode = target;
+        G.player.switchLock = 1.25;
+      }
     }
+    if (k === '"' && G.state === 'playing') {
+      const target = weaponAllowed(G.inv, 'arc') ? 5 : weaponAllowed(G.inv, 'lance') ? 3 : null;
+      if (target && G.player.attackMode !== target) {
+        G.player.attackMode = target;
+        G.player.switchLock = 1.25;
+      }
+    }
+    // X : module actif équipé (prioritaire — plus de changement d'arme)
+    if (k === 'x' && G.state === 'playing') activateModule();
     if (k === 'w' && G.state === 'playing') usePotion();
     if (k === 'e' && G.state === 'playing') tryInteract(); // fouiller un bâtiment / entrer dans un portail
     if ((k === 'r') && G.state === 'victory' && G.campaign < 4) nextWorld();
@@ -153,6 +166,11 @@ export function initInput() {
         return;
       }
       if (G.menuView === 'stats') { G.menuView = 'main'; sfxClick(); return; }
+      if (G.menuView === 'modules') {
+        const act = modClickAt(G.mouse.x, G.mouse.y);
+        if (act) sfxClick();
+        return;
+      }
       if (G.menuView === 'characters') {
         const act = charClickAt(G.mouse.x, G.mouse.y);
         if (act === 'play') { /* déjà géré dans charClickAt via startGame */ }
@@ -178,6 +196,11 @@ export function initInput() {
       if (btn === 'stats') { G.menuView = 'stats'; sfxClick(); return; }
       if (btn === 'ach') { G.menuView = 'achievements'; sfxClick(); return; }
       if (btn === 'forge') { G.menuView = 'forge'; sfxClick(); return; }
+      if (btn === 'modules') {
+        if (modulesUnlocked()) { G.menuView = 'modules'; G.modSel = null; sfxConfirm(); }
+        else sfxClick(); // verrouillé : boss du monde 4 non vaincu
+        return;
+      }
       // JOUER (ou clic ailleurs) : on choisit la campagne AVANT de lancer
       G.menuView = 'campaign'; G.campaignSel = G.campaign || 0; sfxClick();
       return;

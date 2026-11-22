@@ -1,5 +1,5 @@
 import { G, saveStats } from './state.js';
-import { addMaterial, loadInv, saveInv, ITEMS, MATS, DUR_MAX } from './inventory.js';
+import { addMaterial, loadInv, saveInv, ITEMS, MATS, DUR_MAX, durMaxOf } from './inventory.js';
 import { storeKey } from './chars.js';
 
 // Succès persistés par personnage (localStorage 'rpg2d_c{slot}_achievements')
@@ -275,7 +275,7 @@ export function adminUnlockAll() {
       // tous les objets forgés, durabilité pleine (visibles et équipables à la forge)
       G.inv.items = G.inv.items || {};
       G.inv.dur = G.inv.dur || {};
-      for (const id in ITEMS) { G.inv.items[id] = ITEMS[id].conso ? 5 : true; G.inv.dur[id] = DUR_MAX; }
+      for (const id in ITEMS) { G.inv.items[id] = ITEMS[id].conso ? 5 : true; G.inv.dur[id] = durMaxOf(id); }
       // stocks de matériaux complets (réparations, fabrications)
       G.inv.mats = G.inv.mats || {};
       for (const m in MATS) G.inv.mats[m] = Math.max(G.inv.mats[m] || 0, 999);

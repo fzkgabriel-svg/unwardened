@@ -3,7 +3,7 @@
 // sélection (l'arme active porte la couleur de son mode). Aucun panneau.
 import { G, ctx, W } from '../state.js';
 import { roundRect } from '../utils.js';
-import { ITEMS, getDur, DUR_MAX, durState } from '../inventory.js';
+import { ITEMS, getDur, durMaxOf, durState } from '../inventory.js';
 import { drawItemIcon } from '../utils.js';
 import { HPAL } from './frame.js';
 
@@ -39,14 +39,21 @@ export function drawEquipPanel() {
         ctx.strokeStyle = ringCol; ctx.lineWidth = 1.6;
         ctx.beginPath(); ctx.arc(cx, cy, 14.5, 0, Math.PI * 2); ctx.stroke();
       }
-      // micro-jauge de durabilité sous l'icône
+      // micro-jauge de durabilité sous l'icône (échelle propre à la rareté)
+      const dmax = durMaxOf(id);
       const dbw = 26, dbx = cx - dbw / 2, dby = cy + 17;
       ctx.fillStyle = 'rgba(0,0,0,0.6)';
       roundRect(dbx - 1, dby - 1, dbw + 2, 4, 2); ctx.fill();
-      const st = durState(dur);
+      const st = durState(dur, dmax);
       const dc = st === 'ok' ? HPAL.green : st === 'warn' ? '#d4a84b' : HPAL.red;
       ctx.fillStyle = broken ? HPAL.red : dc;
-      if (dur > 0) { roundRect(dbx, dby, dbw * dur / DUR_MAX, 2, 1); ctx.fill(); }
+      if (dur > 0) { roundRect(dbx, dby, dbw * dur / dmax, 2, 1); ctx.fill(); }
+      // % de durabilité miniature — pas sur l'arme (arme = niveaux, pas durabilité affichée)
+      if (slot !== 'weapon' && !broken) {
+        ctx.font = '600 6.5px Inter, sans-serif'; ctx.textAlign = 'center';
+        ctx.fillStyle = 'rgba(232,220,190,0.75)';
+        ctx.fillText(`${Math.round(dur / dmax * 100)}%`, cx, dby + 8);
+      }
     } else {
       // emplacement vide : cercle pointillé discret
       ctx.strokeStyle = 'rgba(216,196,154,0.22)'; ctx.lineWidth = 1;

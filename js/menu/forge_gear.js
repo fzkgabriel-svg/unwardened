@@ -2,7 +2,7 @@ import { G, ctx, W, H, TAU, saveStats, finalWave } from '../state.js';
 import { roundRect, drawMatIcon, drawItemIcon, itemTier } from '../utils.js';
 import { regenerateDecor } from '../graphics.js';
 import { ACHIEVEMENTS, unlocked, achievementCount, checkAchievements, achInfo, isClaimed, claimReward, achTabList, unclaimedInTab, adminUnlockAll } from '../achievements.js';
-import { ITEMS, MATS, ITEM_RARITY, canCraft, craft, toggleEquip, equipBonuses, getDur, canRepair, repairItem, repairCost, loadInv, addMaterial, modeInfo, addWmodeXp, modeMult, MODE_MAX_LVL, setInvNoSave, DUR_MAX, durState } from '../inventory.js';
+import { ITEMS, MATS, ITEM_RARITY, canCraft, craft, toggleEquip, equipBonuses, getDur, canRepair, repairItem, repairCost, loadInv, addMaterial, modeInfo, addWmodeXp, modeMult, MODE_MAX_LVL, setInvNoSave, DUR_MAX, durState, durMaxOf } from '../inventory.js';
 import { spawnEnemy, spawnFinalBoss } from '../enemies.js';
 import { gainXp } from '../player.js';
 import { curWorld, syncCamera, regenerateWorld, reloadWorlds, campaignStart } from '../world.js';
@@ -60,7 +60,7 @@ function drawEquipList(L, col) {
   rows.forEach(r => {
     const id = G.inv.equip[r.slot], it = id && ITEMS[id];
     const eq = !!it;
-    const dur = eq ? getDur(G.inv, id) : DUR_MAX;
+    const dur = eq ? getDur(G.inv, id) : durMaxOf(id);
     const broken = eq && dur <= 0;
     const tier = eq ? itemTier(it) : '#546e7a';
     const hov = inR(r, G.mouse.x, G.mouse.y);
@@ -78,9 +78,9 @@ function drawEquipList(L, col) {
       ctx.fillText(`${ITEM_RARITY[it.rar] || ''} · ${SLOT_LABEL[r.slot]}`, r.x + 46, r.y + 29);
       const dbx = r.x + 46, dbw = r.w - 66, dby = r.y + r.h - 8; // largeur réduite pour rester dans le cadre
       ctx.fillStyle = 'rgba(255,255,255,0.12)'; roundRect(dbx, dby, dbw, 4, 2); ctx.fill();
-      const dst = durState(dur);
+      const dst = durState(dur, durMaxOf(id));
       const dc = dst === 'ok' ? '#69f0ae' : dst === 'warn' ? '#ffd740' : '#ff5252';
-      if (dur > 0) { ctx.fillStyle = dc; roundRect(dbx, dby, dbw * dur / DUR_MAX, 4, 2); ctx.fill(); }
+      if (dur > 0) { ctx.fillStyle = dc; roundRect(dbx, dby, dbw * dur / durMaxOf(id), 4, 2); ctx.fill(); }
     } else {
       ctx.fillStyle = '#546e7a'; ctx.font = '15px serif';
       ctx.fillText('—', r.x + 24, r.y + r.h / 2 + 5);
@@ -435,6 +435,7 @@ function drawInvCell(c) {
   const tier = itemTier(it);
   const qty = it.conso ? (G.inv.items[c.id] || 0) : 0;
   const equipped = !it.conso && Object.values(G.inv.equip).includes(c.id);
+  const dmax = it.conso ? DUR_MAX : durMaxOf(c.id);
   const dur = it.conso ? DUR_MAX : getDur(G.inv, c.id);
   const broken = dur <= 0;
   const hov = inR(c, G.mouse.x, G.mouse.y + forgeScroll);
@@ -462,9 +463,9 @@ function drawInvCell(c) {
   } else if (broken) {
     ctx.fillStyle = '#ff8a80'; ctx.font = `bold 9.5px ${UI}`;
     ctx.fillText('💥 CASSÉ', c.x + c.w / 2, c.y + 86);
-  } else if (dur < DUR_MAX) {
+  } else if (dur < dmax) {
     ctx.fillStyle = '#8d99ae'; ctx.font = `9px ${UI}`;
-    ctx.fillText(`${Math.round(dur / DUR_MAX * 100)} %`, c.x + c.w / 2, c.y + 86);
+    ctx.fillText(`${Math.round(dur / dmax * 100)} %`, c.x + c.w / 2, c.y + 86);
   }
 }
 

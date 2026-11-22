@@ -4,7 +4,7 @@ import { doSlash, doSpin, doThrust, doUlt, doShield, doFireLaser, doFireHand, up
 import { updateEffects, addDamageText, spawnParticles } from './effects.js';
 import { drawBackground, drawEnemy, drawDrops, drawPlayer, drawSlashArc, drawUltFlash, drawMushroom, drawBomber, drawEffects, drawFireZones, drawCraters, drawPortals, drawProjectiles, drawLightnings, drawGrain, drawClouds, dayNight, drawTerrain, drawBuildings, drawWorldPortals, drawObstacle, drawIceStorm, drawLasers, drawHands, drawVolcanoes, drawAcidZones, drawBlackHoles, drawVoidHole } from './graphics.js';
 import { checkAchievements } from './achievements.js';
-import { wearEquipment, addMaterial, getDur, DUR_MAX, ITEMS } from './inventory.js';
+import { wearEquipment, addMaterial, getDur, durMaxOf, ITEMS } from './inventory.js';
 import { drawHUD, drawAchToast, drawWarnToast } from './hud.js';
 import { drawMenu, drawGameOver, drawPauseMenu, drawVictory, recordRun, drawAdminMenu, drawAdminButton, drawDurWarnPopup } from './menu.js';
 import { initWorlds, updateCamera, worldW, worldH, checkWavePortal, syncCamera, resolveObstacles, curWorld } from './world.js';
@@ -17,6 +17,7 @@ import { updateBow, doSingularity } from './bow.js';
 import { updateFinalBoss, updateBurrow, collideIceWalls } from './bosses.js';
 import { draw } from './draw.js';
 import { initInput } from './input.js';
+import { updateModules, moduleAbsorb, modSpeedMult } from './modules.js';
 
 // polices de l'interface (canvas) : chargement explicite au démarrage
 if (document.fonts) ['600 16px Inter', '600 38px Cinzel'].forEach(f => document.fonts.load(f));
@@ -38,6 +39,7 @@ export function damagePlayer(dmg, slow = 1.0, killer = null) {
   if (p.shieldT > 0) dmg *= 0.15;       // dôme de bouclier : -85% de dégâts subis
   dmg *= 1 - (G.equip ? G.equip.armorReduce : 0); // armure équipée
   if (G.iceStorm) dmg *= 0.5; // Pluie de Glace : les ennemis frappent 2× moins fort
+  dmg = moduleAbsorb(dmg);    // modules : bouclier énergétique + résistance
   p.hp -= dmg;
   G.dmgTaken += dmg;
   // tracking du dernier agresseur (pour l'écran de mort)
@@ -57,8 +59,9 @@ export function damagePlayer(dmg, slow = 1.0, killer = null) {
       const id = G.inv.equip[s];
       if (!id) continue;
       const d = getDur(G.inv, id);
-      if (d > 0 && d < DUR_MAX * 0.3) {
-        G.warnToast = { name: `⚠️ ${ITEMS[id] ? ITEMS[id].name : id} : durabilité critique (${Math.round(d / DUR_MAX * 100)} %) — répare à la forge !`, t: 5 };
+      const dmax = durMaxOf(id);
+      if (d > 0 && d < dmax * 0.3) {
+        G.warnToast = { name: `⚠️ ${ITEMS[id] ? ITEMS[id].name : id} : durabilité critique (${Math.round(d / dmax * 100)} %) — répare à la forge !`, t: 5 };
         break;
       }
     }
@@ -152,14 +155,16 @@ function update(dt) {
   if (keys['q'] || keys['arrowleft']) dx -= 1;
   if (keys['d'] || keys['arrowright']) dx += 1;
   if (p.slowT > 0) p.slowT = Math.max(0, p.slowT - dt);
-  const pSpeed = p.speed * (p.slowT > 0 ? 0.8 : 1) * (p.attackMode === 3 ? 0.7 : p.attackMode === 5 ? 0.97 : 0.93); // lance tank / arc léger / épée
+  const pSpeed = p.speed * (p.slowT > 0 ? 0.8 : 1) * (p.attackMode === 3 ? 0.7 : p.attackMode === 5 ? 0.97 : 0.93) * modSpeedMult(); // lance tank / arc léger / épée / module Impulsion
   if (dx || dy) {
     const len = Math.hypot(dx, dy);
+    p.lastDx = dx / len; p.lastDy = dy / len; // direction pour la Ruée dimensionnelle
     p.x = Math.max(p.r, Math.min(worldW() - p.r, p.x + dx / len * pSpeed));
     p.y = Math.max(p.r, Math.min(worldH() - p.r, p.y + dy / len * pSpeed));
   }
   resolveObstacles(p); // rochers et montagnes bloquent le joueur
   collideIceWalls(p);  // les murs de glace du Souverain bloquent aussi le joueur
+  updateModules(dt);   // modules équipés : dash, buffs, bouclier, régénération, rempart
 
   // découverte des bâtiments : visibles sur la minimap seulement une fois vus
   {
@@ -333,6 +338,7 @@ function update(dt) {
     if (e.graceT > 0) { e.graceT = Math.max(0, e.graceT - dt); continue; } // grace : ni ni attaque
     if (e.attackCooldown > 0) e.attackCooldown -= dt;
     if (e.slow > 0) e.slow = Math.max(0, e.slow - dt);
+    if (e.timeSlow > 0) e.timeSlow = Math.max(0, e.timeSlow - dt); // Distorsion temporelle
     if (e.shieldT > 0) e.shieldT = Math.max(0, e.shieldT - dt); // bouclier de phase
     if (e.hitFlash > 0) e.hitFlash = Math.max(0, e.hitFlash - dt);
     // ambiance : boss et mini-boss dégagent des particules de leur élément
@@ -376,7 +382,7 @@ function update(dt) {
     if (dist < e.aggro) {
       const nx = (p.x - e.x) / dist, ny = (p.y - e.y) / dist;
       const wob = e.type === 'slime' ? Math.sin(e.wobble) * 0.3 : 0;
-      const eSlow = e.slow > 0 ? 0.5 : 1; // ralenti quand on le frappe
+      const eSlow = (e.slow > 0 ? 0.5 : 1) * (e.timeSlow > 0 ? 0.55 : 1); // ralenti quand on le frappe / distorsion
       if ((e.type === 'spider' || e.type === 'hunter') && e.lunging > 0) {
         // en plein bond : trajectoire rapide vers la position visée
         e.lunging -= dt;

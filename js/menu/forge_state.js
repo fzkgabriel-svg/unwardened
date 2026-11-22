@@ -2,7 +2,7 @@ import { G, ctx, W, H, TAU, saveStats, finalWave } from '../state.js';
 import { roundRect, drawMatIcon, drawItemIcon, itemTier } from '../utils.js';
 import { regenerateDecor } from '../graphics.js';
 import { ACHIEVEMENTS, unlocked, achievementCount, checkAchievements, achInfo, isClaimed, claimReward, achTabList, unclaimedInTab, adminUnlockAll } from '../achievements.js';
-import { ITEMS, MATS, ITEM_RARITY, canCraft, craft, toggleEquip, useConsumable, equipBonuses, getDur, canRepair, repairItem, repairCost, loadInv, addMaterial, modeInfo, addWmodeXp, modeMult, MODE_MAX_LVL, setInvNoSave, toggleLoadoutWeapon, damagedItems, repairAll, repairAllCost, DUR_MAX, durState } from '../inventory.js';
+import { ITEMS, MATS, ITEM_RARITY, canCraft, craft, toggleEquip, useConsumable, equipBonuses, getDur, canRepair, repairItem, repairCost, loadInv, addMaterial, modeInfo, addWmodeXp, modeMult, MODE_MAX_LVL, setInvNoSave, toggleLoadoutWeapon, damagedItems, repairAll, repairAllCost, DUR_MAX, durState, durMaxOf } from '../inventory.js';
 import { spawnEnemy, spawnFinalBoss } from '../enemies.js';
 import { gainXp } from '../player.js';
 import { curWorld, syncCamera, regenerateWorld, reloadWorlds, campaignStart } from '../world.js';
@@ -265,10 +265,10 @@ export function invItems(L) {
 export const SLOT_LABEL = { weapon: '⚔️ ARME', armor: '🛡️ ARMURE', helm: '⛑️ CASQUE', gloves: '🧤 GANTS', charm: '🧿 ACCESSOIRE', boots: '👢 BOTTES', conso: '🧪 CONSOMMABLE' };
 
 // fiche équipement détaillée (modale) — géométrie partagée dessin / clic
-function itemDetailLayout(dur, conso) {
+function itemDetailLayout(dur, conso, dmax = DUR_MAX) {
   const cw = 620, ch = conso ? 470 : 500, cx = W / 2 - cw / 2, cy = H / 2 - ch / 2;
   const by = cy + ch - 66;
-  const two = dur < DUR_MAX && !conso;
+  const two = dur < dmax && !conso;
   return {
     cx, cy, cw, ch,
     close: { x: cx + cw - 48, y: cy + 12, w: 36, h: 32 },
@@ -284,12 +284,13 @@ export function drawItemDetail() {
   const it = id && ITEMS[id];
   if (!it) { itemDetail = null; return; }
   const dur = getDur(G.inv, id);
+  const dmax = durMaxOf(id);
   const broken = dur <= 0;
   const conso = !!it.conso;
   const qty = conso ? (G.inv.items[id] || 0) : 0;
   const equipped = !conso && Object.values(G.inv.equip).includes(id);
   const rc = conso ? null : repairCost(G.inv, id);
-  const L = itemDetailLayout(dur, conso);
+  const L = itemDetailLayout(dur, conso, dmax);
   const tier = itemTier(it);
   ctx.fillStyle = 'rgba(0,0,0,0.62)'; ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = 'rgba(14,12,8,0.97)';
@@ -348,11 +349,11 @@ export function drawItemDetail() {
     ctx.fillText('🔧 DURABILITÉ', L.cx + 42, dy);
     const dbx = L.cx + 42, dbw = L.cw - 84, dby = dy + 8;
     ctx.fillStyle = 'rgba(255,255,255,0.12)'; roundRect(dbx, dby, dbw, 12, 6); ctx.fill();
-    const st = durState(dur);
+    const st = durState(dur, dmax);
     const dc = st === 'ok' ? '#69f0ae' : st === 'warn' ? '#ffd740' : '#ff5252';
-    if (dur > 0) { ctx.fillStyle = dc; roundRect(dbx, dby, dbw * dur / DUR_MAX, 12, 6); ctx.fill(); }
+    if (dur > 0) { ctx.fillStyle = dc; roundRect(dbx, dby, dbw * dur / dmax, 12, 6); ctx.fill(); }
     ctx.fillStyle = '#fff'; ctx.font = 'bold 11px Inter, sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText(broken ? 'CASSÉ' : `${Math.round(dur)} / ${DUR_MAX}`, dbx + dbw / 2, dby + 10);
+    ctx.fillText(broken ? 'CASSÉ' : `${Math.round(dur)} / ${dmax}`, dbx + dbw / 2, dby + 10);
     ctx.textAlign = 'left';
     ctx.font = 'bold 13px Inter, sans-serif'; ctx.fillStyle = '#ffd740';
     ctx.fillText('💰 RÉPARATION', L.cx + 42, dy + 42);
@@ -362,12 +363,12 @@ export function drawItemDetail() {
       ctx.fillText(fitText(Object.keys(rc).map(m => `${MATS[m].name} ×${rc[m]}`).join('  ·  '), L.cw - 240), L.cx + 140, dy + 42);
     } else {
       ctx.fillStyle = '#69f0ae';
-      ctx.fillText(dur >= DUR_MAX ? 'Parfaite — aucune réparation nécessaire' : 'Matériaux insuffisants', L.cx + 140, dy + 42);
+      ctx.fillText(dur >= dmax ? 'Parfaite — aucune réparation nécessaire' : 'Matériaux insuffisants', L.cx + 140, dy + 42);
     }
   }
 
   // boutons : RÉPARER + ÉQUIPER (ou UTILISER pour un conso)
-  if (!conso && dur < DUR_MAX) {
+  if (!conso && dur < dmax) {
     const okR = canRepair(G.inv, id);
     const rb = L.repair;
     ctx.fillStyle = okR ? 'rgba(255,140,0,0.4)' : 'rgba(255,255,255,0.06)';
@@ -398,7 +399,7 @@ export function forgeClickAt(x, y) {
   // fiche équipement ouverte : elle intercepte tous les clics
   if (itemDetail) {
     const it = ITEMS[itemDetail];
-    const D = itemDetailLayout(getDur(G.inv, itemDetail), it && it.conso);
+    const D = itemDetailLayout(getDur(G.inv, itemDetail), it && it.conso, durMaxOf(itemDetail));
     if (inR(D.close, x, y)) { itemDetail = null; return 'close'; }
     const id = itemDetail;
     if (it && it.conso && D.use && inR(D.use, x, y)) {

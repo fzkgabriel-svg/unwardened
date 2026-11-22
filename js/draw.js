@@ -13,6 +13,7 @@ import { drawMusicButton, sfxHurt, sfxWave, sfxPickup, sfxBreak, sfxBoss, sfxWar
 import { updateTutorial, drawTutorial } from './tutorial.js';
 import { tickPlaytime } from './chars.js';
 import { drawShop, drawShopBtn } from './shop.js';
+import { drawModuleHUD } from './modules.js';
 
 // ---------- DESSIN ----------
 export function draw() {
@@ -120,6 +121,7 @@ export function draw() {
     drawAdminMenu();   // panneau de triche (se dessine si ouvert)
   }
   if (G.state !== 'intro') drawHUD(); // HUD caché pendant l'intro
+  drawModuleHUD(); // icône du module actif + cooldown (X)
   if (G.tutorial) drawTutorial(); // panneau d'objectif + flèche de cible
   drawAchToast(); // notification de succès débloqué
   drawWarnToast(); // avertissement équipement fragile

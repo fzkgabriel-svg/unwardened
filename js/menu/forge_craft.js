@@ -2,7 +2,7 @@ import { G, ctx, W, H, TAU, saveStats, finalWave } from '../state.js';
 import { roundRect, drawMatIcon, drawItemIcon, itemTier } from '../utils.js';
 import { regenerateDecor } from '../graphics.js';
 import { ACHIEVEMENTS, unlocked, achievementCount, checkAchievements, achInfo, isClaimed, claimReward, achTabList, unclaimedInTab, adminUnlockAll } from '../achievements.js';
-import { ITEMS, MATS, ITEM_RARITY, canCraft, craft, toggleEquip, equipBonuses, getDur, canRepair, repairItem, repairCost, loadInv, addMaterial, modeInfo, addWmodeXp, modeMult, MODE_MAX_LVL, setInvNoSave, itemBonuses, DUR_MAX, durState, damagedItems, repairAllCost } from '../inventory.js';
+import { ITEMS, MATS, ITEM_RARITY, canCraft, craft, toggleEquip, equipBonuses, getDur, canRepair, repairItem, repairCost, loadInv, addMaterial, modeInfo, addWmodeXp, modeMult, MODE_MAX_LVL, setInvNoSave, itemBonuses, DUR_MAX, durState, durMaxOf, damagedItems, repairAllCost } from '../inventory.js';
 import { spawnEnemy, spawnFinalBoss } from '../enemies.js';
 import { gainXp } from '../player.js';
 import { curWorld, syncCamera, regenerateWorld, reloadWorlds, campaignStart } from '../world.js';
@@ -517,7 +517,8 @@ function drawRepairTab(L) {
     const it = ITEMS[row.id];
     if (!it) continue;
     const dur = getDur(G.inv, row.id);
-    const st = durState(dur);
+    const dmax = durMaxOf(row.id);
+    const st = durState(dur, dmax);
     const col = DUR_COL[st];
     const hov = inR(row, G.mouse.x, G.mouse.y);
     // carte teintée par l'état
@@ -539,9 +540,9 @@ function drawRepairTab(L) {
     const bx = row.x + 300, bw = 190, by = cy - 7;
     ctx.fillStyle = 'rgba(0,0,0,0.4)'; roundRect(bx - 1, by - 1, bw + 2, 12, 6); ctx.fill();
     ctx.fillStyle = col;
-    if (dur > 0) roundRect(bx, by, bw * dur / DUR_MAX, 10, 5), ctx.fill();
+    if (dur > 0) roundRect(bx, by, bw * dur / dmax, 10, 5), ctx.fill();
     ctx.fillStyle = '#fff'; ctx.font = `bold 10px Consolas, monospace`; ctx.textAlign = 'center';
-    ctx.fillText(`${Math.round(dur)} / ${DUR_MAX}`, bx + bw / 2, by + 9);
+    ctx.fillText(`${Math.round(dur)} / ${dmax}`, bx + bw / 2, by + 9);
     // coût en matériaux
     const rc = repairCost(G.inv, row.id);
     const okR = canRepair(G.inv, row.id);

@@ -8,7 +8,7 @@ export function adminUnlocked() { return _adminOK; }
 export const MENU_X = 96, MENU_W = 300;
 export const MENU_ITEMS = [
   ['play', 'JOUER'], ['perso', 'HÉROS'], ['forge', 'FORGE'],
-  ['tutoriel', 'TUTORIEL'], ['stats', 'STATISTIQUES'], ['ach', 'SUCCÈS']
+  ['tutoriel', 'TUTORIEL'], ['stats', 'STATISTIQUES'], ['modules', 'MODULES'], ['ach', 'SUCCÈS']
 ];
 export function menuButtons() {
   const b = {};
@@ -24,7 +24,7 @@ export function menuButtons() {
 
 export function menuButtonAt(x, y) {
   const b = menuButtons();
-  if (G.menuView === 'stats' || G.menuView === 'achievements') {
+  if (G.menuView === 'stats' || G.menuView === 'achievements' || G.menuView === 'modules') {
     return inR(b.back, x, y) ? 'back' : null;
   }
   for (const [k] of MENU_ITEMS) if (inR(b[k], x, y)) return k;

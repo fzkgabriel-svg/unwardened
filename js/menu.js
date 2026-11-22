@@ -14,6 +14,8 @@ import { drawForgeView } from './menu/forge.js';
 import { drawCharacters } from './menu/heros.js';
 import { drawAdmin } from './menu/admin.js';
 import { drawCampaign } from './menu/campaign.js';
+import { drawModulesView } from './menu/modules.js';
+import { modulesUnlocked } from './modules.js';
 
 // ré-exporte toute l'API publique des sous-modules (contrat inchangé pour input.js / main.js / tutorial.js)
 export * from './menu/common.js';
@@ -24,6 +26,7 @@ export * from './menu/heros.js';
 export * from './menu/end.js';
 export * from './menu/admin.js';
 export * from './menu/campaign.js';
+export * from './menu/modules.js';
 
 // fond commun des écrans de menu : voile sombre + poussières discrètes
 function drawMenuBackdrop() {
@@ -70,6 +73,10 @@ export function drawMenu() {
     drawCampaign();
     return;
   }
+  if (G.menuView === 'modules') {
+    drawModulesView();
+    return;
+  }
 
   // ==== colonne gauche : titre + navigation ====
   ctx.textAlign = 'left';
@@ -82,10 +89,10 @@ export function drawMenu() {
   ctx.restore();
 
   const b = menuButtons();
-  MENU_ITEMS.forEach(([k, label], i) => drawNavItem(b[k], label, i === 0, k === 'ach' && unclaimedInTab(-1)));
-
-  ctx.font = `13px ${UI}`; ctx.fillStyle = C_MUTED;
-  ctx.fillText('Entrée pour choisir votre campagne', MENU_X, H - 40);
+  MENU_ITEMS.forEach(([k, label], i) => {
+    const locked = k === 'modules' && !modulesUnlocked();
+    drawNavItem(b[k], locked ? '🔒 MODULES' : label, i === 0, k === 'ach' && unclaimedInTab(-1));
+  });
 
   // ==== colonne droite : héros actif + contrôles ====
   const rx = 690, rw = 414;

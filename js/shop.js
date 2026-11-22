@@ -4,6 +4,7 @@
 import { G, ctx, W, H, TAU } from './state.js';
 import { roundRect, drawMatIcon, hexA } from './utils.js';
 import { MATS, addMaterial, loadInv, saveInv } from './inventory.js';
+import { MODULES, MOD_IDS, ownModule, modState, drawModuleIcon } from './modules.js';
 import { sfxClick, sfxPickup } from './audio.js';
 
 // catalogue : clef = matériau vendu (JAMAIS 'emeraude' — on n'achète pas la monnaie)
@@ -62,6 +63,19 @@ export function shopCountdown() {
   return Math.max(0, Math.floor((mid - n) / 1000));
 }
 
+// ---------- MODULES À VENTE (émeraudes, une seule fois chacun) ----------
+export const MODSHOP = MOD_IDS.filter(id => MODULES[id].price > 0);
+export function buyModule(inv, id) {
+  const m = MODULES[id];
+  if (!m || m.price <= 0) return { ok: false, msg: 'Module indisponible' };
+  const ms = modState(inv);
+  if (ms.owned.includes(id)) return { ok: false, msg: 'Déjà possédé' };
+  if ((inv.mats.emeraude || 0) < m.price) return { ok: false, msg: `Il faut ${m.price} émeraudes` };
+  inv.mats.emeraude -= m.price;
+  ownModule(inv, id);
+  return { ok: true, msg: `MODULE ${m.name.toUpperCase()} DÉBLOQUÉ !` };
+}
+
 // ---------- ACHAT ----------
 export function buyMaterial(inv, key, qty = 1) {
   const cfg = SHOP[key];
@@ -90,9 +104,9 @@ export function shopClickAt(x, y) {
   // confirmation d'achat : intercepte les clics
   if (G.shopConfirm) {
     if (inR(L.confirmBtn, x, y)) {
-      const { key, qty } = G.shopConfirm;
+      const cf = G.shopConfirm;
       G.shopConfirm = null;
-      const r = buyMaterial(inv, key, qty);
+      const r = cf.mod ? buyModule(inv, cf.mod) : buyMaterial(inv, cf.key, cf.qty);
       if (r.ok) {
         sfxPickup();
         G.shopFlash = { msg: r.msg, t: G.time };
@@ -107,6 +121,22 @@ export function shopClickAt(x, y) {
     }
     if (inR(L.confirmNo, x, y)) { G.shopConfirm = null; sfxClick(); return 'deny'; }
     return 'inside';
+  }
+  // puces de modules en bas de boutique
+  for (const ch of L.modChips) {
+    if (inR(ch, x, y)) {
+      const id = ch.id, m = MODULES[id];
+      if (modState(inv).owned.includes(id)) {
+        G.shopFlash = { msg: `${m.name} : déjà possédé`, t: G.time, bad: true };
+        sfxClick(); return 'deny';
+      }
+      if (emeralds(inv) < m.price) {
+        G.shopFlash = { msg: `Il faut ${m.price} émeraudes pour ${m.name}`, t: G.time, bad: true };
+        G.shopMood = 'sad'; G.shopMoodT = G.time; sfxClick(); return 'deny';
+      }
+      G.shopConfirm = { mod: id, cost: m.price };
+      sfxClick(); return 'buy';
+    }
   }
   // clic sur un piédestal -> sélection pour le panneau de détail
   for (const ped of L.peds) {
@@ -187,6 +217,14 @@ export function shopLayout() {
     confirmBtn: { x: W / 2 - 130, y: H / 2 + 90, w: 120, h: 36 },
     confirmNo:  { x: W / 2 + 10,  y: H / 2 + 90, w: 120, h: 36 },
     confirmPanel: { x: W / 2 - 230, y: H / 2 - 110, w: 460, h: 220 },
+    // rangée de modules en bas de l'écran
+    modChips: (() => {
+      const n = MODSHOP.length, cw = 106, gap = 8;
+      const total = n * cw + (n - 1) * gap;
+      const x0 = W / 2 - total / 2, y = 626, h = 74;
+      return MODSHOP.map((id, i) => ({ id, x: x0 + i * (cw + gap), y, w: cw, h }));
+    })(),
+    modLabel: { x: W / 2, y: 614 },
   };
 }
 
@@ -294,6 +332,9 @@ export function drawShop() {
   if (G.shopSel && SHOP[G.shopSel]) drawDetail(L, inv, t);
   else drawHint(L);
 
+  // ===== rangée MODULES (achat unique en émeraudes) =====
+  drawModStrip(L, inv, t);
+
   // ===== flash message =====
   const fl = G.shopFlash;
   if (fl && t - fl.t < 2.4) {
@@ -307,10 +348,9 @@ export function drawShop() {
 
   // ===== confirmation d'achat =====
   if (G.shopConfirm) {
-    const { key, qty, cost } = G.shopConfirm;
-    const info = MATS[key], cfg = SHOP[key];
-    ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, 0, W, H);
+    const cf = G.shopConfirm;
     const P = L.confirmPanel;
+    ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, 0, W, H);
     const cg = ctx.createLinearGradient(0, P.y, 0, P.y + P.h);
     cg.addColorStop(0, '#33271a'); cg.addColorStop(1, '#1c140c');
     ctx.fillStyle = cg; roundRect(P.x, P.y, P.w, P.h, 14); ctx.fill();
@@ -322,16 +362,30 @@ export function drawShop() {
     }
     ctx.textAlign = 'center';
     ctx.fillStyle = C_GOLD; ctx.font = 'bold 19px Cinzel, serif';
-    ctx.fillText('Confirmer l\'achat', W / 2, P.y + 42);
-    drawMatIcon(key, W / 2 - 130, P.y + 105, 16);
-    ctx.fillStyle = info.color || C_TXT; ctx.font = 'bold 16px Inter, sans-serif';
-    ctx.fillText(`${qty} × ${info.name}`, W / 2 - 60, P.y + 100);
-    ctx.fillStyle = C_MUT; ctx.font = '12px Inter, sans-serif';
-    ctx.fillText(`Coût : ${cost} émeraudes — solde après : ${emeralds(inv) - cost} ◆`,
-      W / 2, P.y + 132);
-    ctx.fillStyle = '#8d99ae'; ctx.font = '11px Inter, sans-serif';
-    ctx.fillText(`Stock restant : ${shopStockLeft(inv, key) - qty}/${cfg.stock == null ? '∞' : cfg.stock}`,
-      W / 2, P.y + 152);
+    ctx.fillText(cf.mod ? 'Confirmer l\'achat du module' : 'Confirmer l\'achat', W / 2, P.y + 42);
+    if (cf.mod) {
+      const m = MODULES[cf.mod];
+      drawModuleIcon(cf.mod, W / 2 - 130, P.y + 105, 1.4);
+      ctx.fillStyle = m.col; ctx.font = 'bold 16px Inter, sans-serif';
+      ctx.fillText(m.name, W / 2 - 60, P.y + 100);
+      ctx.fillStyle = C_MUT; ctx.font = '12px Inter, sans-serif';
+      ctx.fillText(`${m.rar} · ${m.type.toUpperCase()} — module unique`, W / 2, P.y + 126);
+      ctx.fillStyle = '#8d99ae'; ctx.font = '11px Inter, sans-serif';
+      ctx.fillText(`Coût : ${cf.cost} émeraudes — solde après : ${emeralds(inv) - cf.cost} ◆`, W / 2, P.y + 148);
+      ctx.fillText('Équipe-le ensuite dans le menu MODULES', W / 2, P.y + 166);
+    } else {
+      const { key, qty, cost } = cf;
+      const info = MATS[key], cfg = SHOP[key];
+      drawMatIcon(key, W / 2 - 130, P.y + 105, 16);
+      ctx.fillStyle = info.color || C_TXT; ctx.font = 'bold 16px Inter, sans-serif';
+      ctx.fillText(`${qty} × ${info.name}`, W / 2 - 60, P.y + 100);
+      ctx.fillStyle = C_MUT; ctx.font = '12px Inter, sans-serif';
+      ctx.fillText(`Coût : ${cost} émeraudes — solde après : ${emeralds(inv) - cost} ◆`,
+        W / 2, P.y + 132);
+      ctx.fillStyle = '#8d99ae'; ctx.font = '11px Inter, sans-serif';
+      ctx.fillText(`Stock restant : ${shopStockLeft(inv, key) - qty}/${cfg.stock == null ? '∞' : cfg.stock}`,
+        W / 2, P.y + 152);
+    }
     for (const [r, label, col] of [[L.confirmBtn, '✔ ACHETER', '#2ecc71'], [L.confirmNo, '✕ ANNULER', '#a55']]) {
       const h = inR(r, G.mouse.x, G.mouse.y);
       ctx.fillStyle = h ? hexA(col, 0.9) : hexA(col, 0.55);
@@ -629,4 +683,42 @@ function drawDetail(L, inv, t) {
   roundRect(b.x, b.y, b.w, b.h, 9); ctx.stroke();
   ctx.fillStyle = afford ? '#fff' : '#6f7378'; ctx.font = 'bold 13px Inter, sans-serif'; ctx.textAlign = 'center';
   ctx.fillText(left <= 0 ? 'ÉPUISÉ' : `🛒 ACHETER · ${cost} ◆`, b.x + b.w / 2, b.y + b.h / 2 + 5);
+}
+
+// ---------- RANGÉE MODULES (bas de boutique) ----------
+function drawModStrip(L, inv, t) {
+  const owned = modState(inv).owned;
+  // titre
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#18ffff'; ctx.font = '600 10px Inter, sans-serif'; ctx.letterSpacing = '2px';
+  ctx.fillText('MODULES DU HÉROS — ACHAT UNIQUE EN ÉMERAUDES', L.modLabel.x, L.modLabel.y);
+  ctx.letterSpacing = '0px';
+  for (const ch of L.modChips) {
+    const m = MODULES[ch.id];
+    const has = owned.includes(ch.id);
+    const hov = inR(ch, G.mouse.x, G.mouse.y) && !has;
+    const afford = emeralds(inv) >= m.price;
+    // puce technologique
+    ctx.fillStyle = has ? 'rgba(105,240,174,0.08)' : hov ? hexA(m.col, 0.16) : 'rgba(255,255,255,0.03)';
+    roundRect(ch.x, ch.y, ch.w, ch.h, 9); ctx.fill();
+    ctx.strokeStyle = has ? 'rgba(105,240,174,0.6)' : hov ? hexA(m.col, 0.8) : 'rgba(255,255,255,0.12)';
+    ctx.lineWidth = 1.3; roundRect(ch.x, ch.y, ch.w, ch.h, 9); ctx.stroke();
+    // icône + nom
+    drawModuleIcon(ch.id, ch.x + 22, ch.y + 26, 0.8);
+    ctx.textAlign = 'left';
+    ctx.fillStyle = has ? '#69f0ae' : C_TEXT; ctx.font = '600 10.5px Inter, sans-serif';
+    ctx.fillText(m.name, ch.x + 40, ch.y + 22);
+    ctx.fillStyle = has ? '#69f0ae' : afford ? '#ffd740' : '#6f7378';
+    ctx.font = 'bold 10.5px Consolas, monospace';
+    ctx.fillText(has ? '✔ POSSÉDÉ' : `${m.price} ◆`, ch.x + 40, ch.y + 40);
+    ctx.fillStyle = m.col; ctx.font = '8.5px Inter, sans-serif';
+    ctx.fillText(`${m.rar} · ${m.type === 'actif' ? 'ACTIF' : 'PASSIF'}`, ch.x + 40, ch.y + 55);
+    if (has) {
+      ctx.fillStyle = 'rgba(105,240,174,0.85)'; ctx.font = '700 9px Inter, sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('ÉQUIPABLE AU MENU MODULES', ch.x + ch.w / 2, ch.y + ch.h - 8);
+    } else if (!afford) {
+      ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.textAlign = 'center'; ctx.font = '8.5px Inter, sans-serif';
+      ctx.fillText('fonds insuffisants', ch.x + ch.w / 2, ch.y + ch.h - 8);
+    }
+  }
 }
