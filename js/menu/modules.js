@@ -43,6 +43,24 @@ export function modClickAt(x, y) {
     if (inR(s, x, y)) {
       const id = eq[s.key];
       if (id) { eq[s.key] = null; saveInv(G.inv); sfxClick(); return 'unequip'; }
+      // slot vide : équipe le module sélectionné s'il correspond au type du slot
+      const sel = G.modSel && MODULES[G.modSel];
+      if (sel) {
+        const want = s.key === 'act' ? 'actif' : 'passif';
+        if (sel.type !== want) {
+          G.modMsg = { msg: sel.type === 'actif' ? 'Module ACTIF — slot ACTIF requis' : 'Module PASSIF — slot PASSIF requis', t: G.time, bad: true };
+          sfxClick(); return 'deny';
+        }
+        if (s.key === 'pass' && !ms.passUnlocked) {
+          const r = unlockPassSlot(G.inv);
+          G.modMsg = { msg: r.msg, t: G.time, bad: !r.ok };
+          if (r.ok) { eq.pass = G.modSel; saveInv(G.inv); sfxEquip(); }
+          else sfxClick();
+          return r.ok ? 'unlock' : 'deny';
+        }
+        eq[s.key] = G.modSel; saveInv(G.inv); sfxEquip();
+        return 'equip';
+      }
       if (s.key === 'pass' && !ms.passUnlocked) {
         const r = unlockPassSlot(G.inv);
         G.modMsg = { msg: r.msg, t: G.time, bad: !r.ok };

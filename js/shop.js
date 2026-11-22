@@ -708,7 +708,7 @@ function drawModStrip(L, inv, t) {
     // icône + nom
     drawModuleIcon(ch.id, ch.x + 22, ch.y + 26, 0.8);
     ctx.textAlign = 'left';
-    ctx.fillStyle = has ? '#69f0ae' : C_TEXT; ctx.font = '600 10.5px Inter, sans-serif';
+    ctx.fillStyle = has ? '#69f0ae' : C_TXT; ctx.font = '600 10.5px Inter, sans-serif';
     ctx.fillText(m.name, ch.x + 40, ch.y + 22);
     ctx.fillStyle = has ? '#69f0ae' : afford ? '#ffd740' : '#6f7378';
     ctx.font = 'bold 10.5px Consolas, monospace';

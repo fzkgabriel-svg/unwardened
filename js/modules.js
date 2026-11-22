@@ -1,6 +1,6 @@
 // ---------- MODULES : personnalisation du héros (débloqué après le boss du monde 4) ----------
 // 12 modules : 2 offerts (bouclier, ruée) + 10 achetables à la boutique en émeraudes.
-// Équipement : 1 actif + 2 passifs. Persisté dans inv.modules via saveInv.
+// Équipement : 1 actif + 1 passif (slot passif débloqué pour 500 ◆). Persisté dans inv.modules via saveInv.
 import { G, ctx, TAU, H } from './state.js';
 import { roundRect, hexA } from './utils.js';
 import { saveInv } from './inventory.js';
@@ -59,6 +59,19 @@ export function modState(inv) {
   if (m.eq.act === undefined) m.eq.act = null;
   if (m.eq.pass === undefined) m.eq.pass = null;
   if (m.passUnlocked === undefined) m.passUnlocked = false;
+  // sanitisation : chaque slot n'accepte que son type — un module d'un
+  // mauvais type est déplacé vers l'autre slot s'il est libre, sinon retiré
+  const sanitize = (slot, want, other) => {
+    const id = m.eq[slot];
+    if (!id) return;
+    if (!MODULES[id]) { m.eq[slot] = null; return; }
+    if (MODULES[id].type === want) return;
+    const altType = want === 'actif' ? 'passif' : 'actif';
+    if (m.eq[other] == null && MODULES[id].type === altType) m.eq[other] = id;
+    m.eq[slot] = null;
+  };
+  sanitize('act', 'actif', 'pass');
+  sanitize('pass', 'passif', 'act');
   return m;
 }
 // débloque l'emplacement passif pour 500 émeraudes (achat unique)

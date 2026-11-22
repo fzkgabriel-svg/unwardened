@@ -1,0 +1,16 @@
+<!DOCTYPE html><html><body>
+<canvas id="game" width="1200" height="640"></canvas>
+<pre id="out">RUNNING</pre>
+<script type="module">
+try {
+  const { G } = await import('./js/state.js');
+  const { draw } = await import('./js/draw.js');
+  const { loadInv } = await import('./js/inventory.js');
+  G.inv = loadInv(); G.stats = {};
+  G.state = 'menu'; G.menuView = 'main';
+  draw();
+  G.shopOpen = true;
+  for (let i = 0; i < 30; i++) draw();
+  document.getElementById('out').textContent = 'SHOP DRAW OK';
+} catch (e) { document.getElementById('out').textContent = 'ERR ' + e.message + ' @ ' + (e.stack||'').split('\n')[1]; }
+</script></body></html>
