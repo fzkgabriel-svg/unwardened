@@ -78,6 +78,7 @@ export function draw() {
     ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(232,217,176,0.45)';
     ctx.fillText(`v${VERSION}`, W - 14, H - 12);
     drawMusicButton(); drawShopBtn();
+    if (G.shopOpen) drawShop(); // boutique par-dessus le menu
     ctx.restore();
     return;
   }
@@ -88,6 +89,7 @@ export function draw() {
     ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(232,217,176,0.45)';
     ctx.fillText(`v${VERSION}`, W - 14, H - 12);
     drawMusicButton(); drawShopBtn();
+    if (G.shopOpen) drawShop(); // boutique par-dessus l'écran de victoire
     ctx.restore();
     return;
   }
