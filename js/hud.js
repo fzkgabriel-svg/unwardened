@@ -15,32 +15,32 @@ export const drawWarnToast = _warn;
 
 export function drawHUD() {
   // halo supérieur : assombrit le haut de l'écran pour la lisibilité
-  const band = ctx.createLinearGradient(0, 0, 0, 120);
-  band.addColorStop(0, 'rgba(16,10,5,0.55)');
-  band.addColorStop(0.8, 'rgba(16,10,5,0.28)');
+  const band = ctx.createLinearGradient(0, 0, 0, 104);
+  band.addColorStop(0, 'rgba(16,10,5,0.5)');
+  band.addColorStop(0.8, 'rgba(16,10,5,0.24)');
   band.addColorStop(1, 'rgba(16,10,5,0)');
   ctx.fillStyle = band;
-  ctx.fillRect(0, 0, W, 120);
+  ctx.fillRect(0, 0, W, 104);
 
   // Timer de partie (haut au centre) — médaillon métallique
   const t = Math.floor(G.runTime || 0);
   const mm = String(Math.floor(t / 60)).padStart(2, '0');
   const ss = String(t % 60).padStart(2, '0');
   const timeLabel = `⏱ ${mm}:${ss}`;
-  ctx.font = 'bold 14px Consolas, monospace';
-  const tw = ctx.measureText(timeLabel).width + 30;
-  const tx = W / 2 - tw / 2, ty = 8;
-  const tg = ctx.createLinearGradient(tx, ty, tx, ty + 30);
+  ctx.font = 'bold 12.5px Consolas, monospace';
+  const tw = ctx.measureText(timeLabel).width + 26;
+  const tx = W / 2 - tw / 2, ty = 7;
+  const tg = ctx.createLinearGradient(tx, ty, tx, ty + 26);
   tg.addColorStop(0, '#3d2f1e'); tg.addColorStop(1, '#1e150c');
   ctx.fillStyle = tg;
-  roundRect(tx, ty, tw, 30, 15); ctx.fill();
-  ctx.strokeStyle = '#d4a84b'; ctx.lineWidth = 1.4;
-  roundRect(tx + 1, ty + 1, tw - 2, 28, 14); ctx.stroke();
+  roundRect(tx, ty, tw, 26, 13); ctx.fill();
+  ctx.strokeStyle = '#d4a84b'; ctx.lineWidth = 1.2;
+  roundRect(tx + 1, ty + 1, tw - 2, 24, 12); ctx.stroke();
   ctx.strokeStyle = 'rgba(240,212,136,0.3)'; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.arc(tx + 15, ty + 15, 3, 0, TAU); ctx.stroke();
-  ctx.beginPath(); ctx.arc(tx + tw - 15, ty + 15, 3, 0, TAU); ctx.stroke();
+  ctx.beginPath(); ctx.arc(tx + 13, ty + 13, 2.6, 0, TAU); ctx.stroke();
+  ctx.beginPath(); ctx.arc(tx + tw - 13, ty + 13, 2.6, 0, TAU); ctx.stroke();
   ctx.textAlign = 'center'; ctx.fillStyle = '#e8d9b0';
-  ctx.fillText(timeLabel, W / 2, ty + 20);
+  ctx.fillText(timeLabel, W / 2, ty + 17.5);
 
   // panneaux
   drawProfile();

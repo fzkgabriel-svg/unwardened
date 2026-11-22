@@ -3,9 +3,9 @@
 // animations de disponibilité. + plaque de l'arme active (nom, niveau, XP).
 import { G, ctx, W, H, TAU } from '../state.js';
 import { roundRect, drawFlaskIcon } from '../utils.js';
-import { ITEMS, modeInfo, modeKey, weaponAllowed } from '../inventory.js';
+import { ITEMS, modeInfo, modeKey, modeMult, weaponAllowed } from '../inventory.js';
 import { drawBowIcon } from '../gfx/bow_draw.js';
-import { HPAL, parchment, medBar, engraved, gem } from './frame.js';
+import { HPAL, parchment, engraved, gem } from './frame.js';
 
 // icônes détaillées des modes d'attaque (déplacées depuis hud.js)
 function drawAttackIcon(kind, x, y, color) {
@@ -182,8 +182,8 @@ export function drawSkillBar() {
     { icon: 'potion', key: 'W', mode: -3, cd: p.potionCooldown, cdMax: 2.5, cd2: 0, cd2Max: 0, potion: true }
   ];
 
-  const n = slots.length, r = 30, gap = 80;
-  const x0 = W / 2 - ((n - 1) * gap) / 2, cy = H - 56;
+  const n = slots.length, r = 26, gap = 68;
+  const x0 = W / 2 - ((n - 1) * gap) / 2, cy = H - 46;
 
   slots.forEach((s, i) => {
     const cx = x0 + i * gap;
@@ -244,46 +244,42 @@ export function drawSkillBar() {
   });
 }
 
-// ---------- panneau arme active (parchemin en bas à gauche) ----------
-// nom, niveau, barre XP de l'arme + objet forgé équipé
+// ---------- panneau arme active (parchemin compact en bas à gauche) ----------
+// nom, niveau réel de l'arme (+% exponentiel) + objet forgé équipé — sans barre XP
 export function drawWeaponPanel() {
   const p = G.player;
   const titan = p.ultActive > 0;
   const key = modeKey(p.attackMode);
   const st = titan ? { name: 'Titan de Feu', col: '#ff8a50' }
     : MODE_STYLE[p.attackMode === 5 ? 'bow' : p.attackMode === 3 ? 'lance' : 'sword'];
-  const mi = titan ? { lvl: 1, pct: 1 } : modeInfo(G.inv, key);
+  const mi = titan ? { lvl: 1 } : modeInfo(G.inv, key);
+  const dmgPct = titan ? 0 : Math.round((modeMult(G.inv, key) - 1) * 100);
   // objet équipé dans le slot arme (talismans / réceptacles)
   const eqId = G.inv && G.inv.equip ? G.inv.equip.weapon : null;
   const eqIt = eqId ? ITEMS[eqId] : null;
 
-  const pw = 258, ph = 70, px = 16, py = H - 118;
-  parchment(px, py, pw, ph, 0.92);
+  const pw = 236, ph = 56, px = 14, py = H - 100;
+  parchment(px, py, pw, ph, 0.9);
   // filet or sous le panneau
   ctx.strokeStyle = HPAL.goldLo; ctx.lineWidth = 1;
   roundRect(px + 3, py + 3, pw - 6, ph - 6, 6); ctx.stroke();
 
   // gemme d'arme à gauche
-  gem(px + 24, py + ph / 2, 9, st.col, 1.3);
-  engraved(st.name.toUpperCase(), px + 42, py + 26, 14, '#3a2a14', 'left', 'Georgia, serif');
-  engraved(titan ? 'PUISSANCE INFERNALE' : `NIV ${mi.lvl} · +${((mi.lvl - 1) * 0.5).toFixed(1)}%`, px + 42, py + 44, 10.5, '#5a4526', 'left', 'Consolas, monospace');
-  // barre XP de l'arme (bas du panneau)
-  if (!titan) {
-    medBar(px + 42, py + ph - 18, 132, 7, mi.pct, null, '#c9a86a', '#7a5c2e');
-    engraved('XP ARME', px + 42, py + ph - 24, 8, '#8a7654', 'left', 'Consolas, monospace');
-  }
+  gem(px + 22, py + ph / 2, 8, st.col, 1.2);
+  engraved(st.name.toUpperCase(), px + 38, py + 22, 13, '#3a2a14', 'left', 'Georgia, serif');
+  engraved(titan ? 'PUISSANCE INFERNALE' : `NIV ${mi.lvl} · +${dmgPct} %`, px + 38, py + 40, 10, '#5a4526', 'left', 'Consolas, monospace');
   // objet forgé équipé (colonne droite)
   ctx.textAlign = 'right';
   if (eqIt) {
-    ctx.font = 'bold 10.5px Inter, sans-serif';
+    ctx.font = 'bold 10px Inter, sans-serif';
     ctx.fillStyle = '#4a3517';
     const nm = eqIt.name.length > 20 ? eqIt.name.slice(0, 19) + '…' : eqIt.name;
-    ctx.fillText(nm, px + pw - 12, py + 25);
-    ctx.font = '9px Inter, sans-serif'; ctx.fillStyle = '#6d5a3a';
+    ctx.fillText(nm, px + pw - 12, py + 23);
+    ctx.font = '8.5px Inter, sans-serif'; ctx.fillStyle = '#6d5a3a';
     const ds = eqIt.desc || '';
-    ctx.fillText(ds.length > 30 ? ds.slice(0, 29) + '…' : ds, px + pw - 12, py + 41);
+    ctx.fillText(ds.length > 30 ? ds.slice(0, 29) + '…' : ds, px + pw - 12, py + 37);
   } else {
-    ctx.font = 'italic 10px Inter, sans-serif'; ctx.fillStyle = '#8a7654';
-    ctx.fillText('aucun objet forgé', px + pw - 12, py + 33);
+    ctx.font = 'italic 9.5px Inter, sans-serif'; ctx.fillStyle = '#8a7654';
+    ctx.fillText('aucun objet forgé', px + pw - 12, py + 30);
   }
 }

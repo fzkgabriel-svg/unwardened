@@ -94,18 +94,18 @@ export function drawBossBar() {
   }
   const phaseFlash = G._bossPhaseT !== undefined ? Math.max(0, 1 - (t - G._bossPhaseT) / 1.2) : 0;
 
-  const bw = 660, bh = 24, bx = W / 2 - bw / 2, by = 68;
+  const bw = 620, bh = 20, bx = W / 2 - bw / 2, by = 62;
 
   // nom + emblème (légèrement agrandi pendant la transition)
   const pop = 1 + phaseFlash * 0.25;
   ctx.save();
-  ctx.translate(W / 2, 46);
+  ctx.translate(W / 2, 42);
   ctx.scale(pop, pop);
-  bossEmblem(e.type, -bw / 2 - 6, 0, 13, t);
+  bossEmblem(e.type, -bw / 2 - 6, 0, 12, t);
   ctx.restore();
-  engraved(`☠ ${b.short.toUpperCase()} ☠`, W / 2, 56, 14, b.hi, 'center', 'Georgia, serif');
-  // cadre métallique imposant (lueur de l'univers du boss)
-  metalFrame(bx - 10, by - 8, bw + 20, bh + 34, 10, { glow: `rgba(${hexToRgb(b.col)},${0.35 + phaseFlash * 0.5})` });
+  engraved(`☠ ${b.short.toUpperCase()} ☠`, W / 2, 51, 13, b.hi, 'center', 'Georgia, serif');
+  // cadre métallique (lueur de l'univers du boss)
+  metalFrame(bx - 9, by - 7, bw + 18, bh + 30, 9, { glow: `rgba(${hexToRgb(b.col)},${0.35 + phaseFlash * 0.5})` });
   gem(bx - 2, by + bh / 2, 5, b.gemC, t);
   gem(bx + bw + 2, by + bh / 2, 5, b.gemC, t + 2);
 
@@ -141,7 +141,7 @@ export function drawBossBar() {
   engraved(`${Math.ceil(e.hp)} / ${e.maxHp}`, W / 2, by + bh / 2 + 4, 11, '#fff', 'center', 'Consolas, monospace');
 
   // ligne du bas du cadre : phase à gauche, bouclier à droite
-  const footY = by + bh + 16;
+  const footY = by + bh + 14;
   if (ph > 0) {
     engraved(`PHASE ${ph + 1} — ${b.phase[ph]}`, W / 2 - 120, footY, 11, b.col, 'left', 'Georgia, serif');
   }

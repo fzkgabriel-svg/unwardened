@@ -1,4 +1,5 @@
-// js/hud/map.js — mini-carte circulaire à cadre médiéval + panneau
+// js/hud/map.js — mini-carte CARRÉE : mêmes proportions que le monde
+// (échelle uniforme, aucun écrasement), cadre métallique, panneau
 // « objectif » sur parchemin (vraies données : vague, boss, portails).
 import { G, ctx, W, H, TAU, finalWave } from '../state.js';
 import { roundRect } from '../utils.js';
@@ -6,37 +7,36 @@ import { curWorld, RARITY_COLOR } from '../world.js';
 import { playerAngle } from '../attacks.js';
 import { HPAL, metalFrame, parchment, engraved, gem } from './frame.js';
 
-const MR = 88; // rayon de la carte
+const MS = 148; // côté de la carte carrée
 
 export function drawMinimap() {
   const w = curWorld();
   if (!w) return;
-  const cx = W - MR - 24, cy = H - MR - 42;
+  const mx = W - MS - 18, my = H - MS - 34; // cadre
   const t = G.time || 0;
 
   // ---- panneau objectif (parchemin, à gauche de la carte) ----
-  const ow = 196, oh = 52, ox = cx - MR - 16 - ow, oy = cy - oh / 2;
+  const ow = 190, oh = 48, ox = mx - 12 - ow, oy = my + MS / 2 - oh / 2;
   parchment(ox, oy, ow, oh, 0.9);
   ctx.strokeStyle = HPAL.goldLo; ctx.lineWidth = 1;
   roundRect(ox + 2.5, oy + 2.5, ow - 5, oh - 5, 5); ctx.stroke();
-  engraved('OBJECTIF', ox + 12, oy + 18, 10.5, '#5a4526', 'left', 'Georgia, serif');
   const bossAlive = G.enemies.some(en => en.type && en.type.startsWith('finalBoss'));
   const waveTxt = G.wave >= finalWave() ? 'VAGUE FINALE' : `Vague ${G.wave} — ${G.waveKills}/${G.waveTarget} monstres`;
-  engraved(bossAlive ? 'DÉTRUIRE LE BOSS' : waveTxt, ox + 12, oy + 38, 11.5, bossAlive ? '#8e2424' : '#3a2a14', 'left', 'Georgia, serif');
+  engraved(bossAlive ? 'DÉTRUIRE LE BOSS' : waveTxt, ox + 12, oy + oh / 2 + 4, 12, bossAlive ? '#8e2424' : '#3a2a14', 'left', 'Georgia, serif');
   // progression de la vague en mini-jauge
   if (!bossAlive && G.waveTarget > 0) {
     const f = Math.min(1, G.waveKills / G.waveTarget);
     ctx.fillStyle = 'rgba(0,0,0,0.25)';
-    roundRect(ox + 12, oy + oh - 9, ow - 24, 5, 2.5); ctx.fill();
+    roundRect(ox + 12, oy + oh - 9, ow - 24, 4, 2); ctx.fill();
     ctx.fillStyle = HPAL.green;
-    if (f > 0.01) { roundRect(ox + 12, oy + oh - 9, (ow - 24) * f, 5, 2.5); ctx.fill(); }
+    if (f > 0.01) { roundRect(ox + 12, oy + oh - 9, (ow - 24) * f, 4, 2); ctx.fill(); }
   }
 
-  // ---- cadre métallique de la carte ----
-  metalFrame(cx - MR - 9, cy - MR - 9, (MR + 9) * 2, (MR + 9) * 2, (MR + 9) / 2, {});
-  // contenu : disque clipé
+  // ---- cadre métallique carré ----
+  metalFrame(mx - 6, my - 6, MS + 12, MS + 12, 9, {});
+  // contenu : zone clipée
   ctx.save();
-  ctx.beginPath(); ctx.arc(cx, cy, MR, 0, TAU); ctx.clip();
+  ctx.beginPath(); ctx.rect(mx, my, MS, MS); ctx.clip();
   // fond du monde
   const hellMap = (w.def && w.def.biome === 'hell') || G.campaign === 2;
   const frozenMap = (w.def && w.def.biome === 'ice') || G.campaign === 1;
@@ -45,19 +45,19 @@ export function drawMinimap() {
   ctx.fillStyle = hellMap ? '#34100a' : frozenMap ? '#d6e8f4'
     : sewerMap ? '#262a1a' : spaceMap ? '#0a081e'
     : '#3c542e';
-  ctx.fillRect(cx - MR, cy - MR, MR * 2, MR * 2);
+  ctx.fillRect(mx, my, MS, MS);
   // vignette intérieure (profondeur)
-  const vg = ctx.createRadialGradient(cx, cy, MR * 0.4, cx, cy, MR);
-  vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.4)');
+  const vg = ctx.createRadialGradient(mx + MS / 2, my + MS / 2, MS * 0.35, mx + MS / 2, my + MS / 2, MS * 0.75);
+  vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.38)');
   ctx.fillStyle = vg;
-  ctx.fillRect(cx - MR, cy - MR, MR * 2, MR * 2);
+  ctx.fillRect(mx, my, MS, MS);
 
-  // échelle monde -> disque (légèrement écrasé : le monde est 1.5x plus large)
-  const k = MR / Math.max(w.w, w.h) * 1.35;
-  const ox2 = cx - (w.w * k) / 2, oy2 = cy - (w.h * k) / 2;
+  // échelle UNIFORME : le monde entier tient dans le carré, proportions réelles
+  const k = MS / Math.max(w.w, w.h);
+  const ox2 = mx + (MS - w.w * k) / 2, oy2 = my + (MS - w.h * k) / 2;
   const sx = wx => ox2 + wx * k;
   const sy = wy => oy2 + wy * k;
-  const inMap = (x, y) => x > cx - MR && x < cx + MR && y > cy - MR && y < cy + MR;
+  const inMap = (x, y) => x > mx && x < mx + MS && y > my && y < my + MS;
 
   // lacs
   for (const l of w.lakes || []) {
@@ -109,9 +109,9 @@ export function drawMinimap() {
     ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.arc(bx, by, pulse + 2.5, 0, TAU); ctx.stroke();
   }
-  // rectangle de la zone visible (caméra)
+  // rectangle de la zone visible (caméra) — écran W×H sans zoom
   ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 1;
-  ctx.strokeRect(sx(G.camX || 0), sy(G.camY || 0), (W / w.w) * w.w * k, (H / w.h) * w.h * k);
+  ctx.strokeRect(sx(G.camX || 0), sy(G.camY || 0), W * k, H * k);
   // joueur : flèche dorée orientée vers la visée
   const p = G.player;
   const px = sx(p.x), py = sy(p.y);
@@ -130,7 +130,7 @@ export function drawMinimap() {
   ctx.restore(); // fin clip
 
   // nom du monde gravé sous la carte
-  engraved((w.def && w.def.name || 'MONDE').toUpperCase(), cx, cy + MR + 20, 11, HPAL.parch, 'center', 'Georgia, serif');
-  // gemme centrale du cadre
-  gem(cx, cy - MR - 5, 5, HPAL.goldHi, t);
+  engraved((w.def && w.def.name || 'MONDE').toUpperCase(), mx + MS / 2, my + MS + 16, 10.5, HPAL.parch, 'center', 'Georgia, serif');
+  // gemme du cadre
+  gem(mx + MS / 2, my - 1, 4.5, HPAL.goldHi, t);
 }

@@ -7,7 +7,7 @@ import { curWorld } from '../world.js';
 import { activeSlot, slotMeta } from '../chars.js';
 import { HPAL, metalFrame, medBar, engraved, gem } from './frame.js';
 
-const PW = 360, PH = 160, PX = 16, PY = 12;
+const PW = 330, PH = 132, PX = 14, PY = 10;
 
 // portrait de chevalier procédural (heaume + nasal + panache or)
 function drawPortrait(cx, cy, r) {
@@ -81,47 +81,47 @@ export function drawProfile() {
   gem(PX + PW - 16, PY + 12, 5.5, lowHp ? HPAL.redHi : HPAL.green, 0.4);
 
   // ---- portrait + niveau ----
-  const pcx = PX + 56, pcy = PY + 74, pr = 40;
+  const pcx = PX + 46, pcy = PY + PH / 2 - 4, pr = 32;
   drawPortrait(pcx, pcy, pr);
   // badge niveau sous le portrait
   ctx.fillStyle = 'rgba(0,0,0,0.6)';
-  roundRect(pcx - 26, pcy + pr + 4, 52, 17, 8); ctx.fill();
+  roundRect(pcx - 24, pcy + pr + 3, 48, 15, 7); ctx.fill();
   ctx.strokeStyle = HPAL.goldLo; ctx.lineWidth = 1;
-  roundRect(pcx - 26, pcy + pr + 4, 52, 17, 8); ctx.stroke();
-  engraved(`NIV ${p.level}`, pcx, pcy + pr + 16, 11, HPAL.goldHi, 'center', 'Consolas, monospace');
+  roundRect(pcx - 24, pcy + pr + 3, 48, 15, 7); ctx.stroke();
+  engraved(`NIV ${p.level}`, pcx, pcy + pr + 14, 10.5, HPAL.goldHi, 'center', 'Consolas, monospace');
 
   // ---- colonne droite : nom, monde/temps, vague/monstres ----
-  const bx = pcx + pr + 14; // x de départ du bloc droit
-  const bw = PX + PW - 16 - bx;
+  const bx = pcx + pr + 12; // x de départ du bloc droit
+  const bw = PX + PW - 14 - bx;
   const heroName = (slotMeta(activeSlot()) || {}).name || 'HÉROS';
-  engraved(heroName.toUpperCase(), bx, PY + 30, 15, HPAL.parch, 'left');
+  engraved(heroName.toUpperCase(), bx, PY + 24, 13.5, HPAL.parch, 'left');
   // ligne 1 : monde + temps de partie
   const wdef = curWorld() && curWorld().def;
   const t = Math.floor(G.runTime || 0);
-  ctx.font = '10.5px Georgia, serif'; ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(216,196,154,0.8)';
-  ctx.fillText(`${wdef ? wdef.name : 'MONDE'}  ·  ${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`, bx, PY + 46);
+  ctx.font = '10px Georgia, serif'; ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(216,196,154,0.8)';
+  ctx.fillText(`${wdef ? wdef.name : 'MONDE'}  ·  ${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`, bx, PY + 38);
   // ligne 2 : vague + progression des monstres + kills (bien visible)
   const bossAlive = G.enemies.some(en => en.type && en.type.startsWith('finalBoss'));
   const waveTxt = G.wave >= finalWave() ? 'VAGUE FINALE' : `Vague ${G.wave}`;
-  ctx.font = 'bold 12.5px Georgia, serif';
+  ctx.font = 'bold 12px Georgia, serif';
   ctx.fillStyle = bossAlive ? '#ffb3a6' : HPAL.goldHi;
-  ctx.fillText(`${waveTxt}  ·  ${bossAlive ? 'BOSS' : `${G.waveKills}/${G.waveTarget}`}  ·  ${G.kills} kills`, bx, PY + 64);
+  ctx.fillText(`${waveTxt}  ·  ${bossAlive ? 'BOSS' : `${G.waveKills}/${G.waveTarget}`}  ·  ${G.kills} kills`, bx, PY + 53);
 
   // ---- barre PV (rouge profond) : valeurs centrées sur la jauge ----
-  const barX = bx, barW = bw, barY = PY + 76, barH = 22;
+  const barX = bx, barW = bw, barY = PY + 62, barH = 20;
   medBar(barX, barY, barW, barH, hpFrac, hurtA > 0 ? G._hudGhost : null,
     lowHp ? '#e0606a' : HPAL.redHi, lowHp ? '#6e1420' : HPAL.red,
     { glow: lowHp && hpFrac > 0.02 ? '#ff5a6a' : null });
-  engraved('PV', barX + 8, barY + barH / 2 + 4, 10, 'rgba(255,235,220,0.9)', 'left', 'Consolas, monospace');
-  engraved(`${Math.ceil(p.hp)}/${p.maxHp}`, barX + barW / 2, barY + barH / 2 + 4.5, 12, '#ffe9e9', 'center', 'Consolas, monospace');
+  engraved('PV', barX + 7, barY + barH / 2 + 3.5, 9.5, 'rgba(255,235,220,0.9)', 'left', 'Consolas, monospace');
+  engraved(`${Math.ceil(p.hp)}/${p.maxHp}`, barX + barW / 2, barY + barH / 2 + 4, 11.5, '#ffe9e9', 'center', 'Consolas, monospace');
 
   // ---- barre XP (or fin) + XP restant ----
-  const xpY = barY + barH + 8;
-  medBar(barX, xpY, barW, 9, p.xp / p.xpNext, null, '#f0d488', '#8a6a2f', { glow: '#d4a84b' });
-  engraved(`+${p.xpNext - p.xp} XP`, barX + barW - 4, xpY + 8, 10, '#f0d488', 'right', 'Consolas, monospace');
+  const xpY = barY + barH + 6;
+  medBar(barX, xpY, barW, 8, p.xp / p.xpNext, null, '#f0d488', '#8a6a2f', { glow: '#d4a84b' });
+  engraved(`+${p.xpNext - p.xp} XP`, barX + barW - 4, xpY + 7.5, 9.5, '#f0d488', 'right', 'Consolas, monospace');
 
   // ---- barre d'ultime (couleur de l'ulti choisi) ----
-  const uY = xpY + 22;
+  const uY = xpY + 18;
   const ultSel = G.stats.ultSel || 'nuke';
   const ultInfo = ultSel === 'glace' && G.stats.iceUlt
     ? { name: 'PLUIE DE GLACE', barA: '#b3e5fc', barB: '#0277bd', glow: '#0288d1', ready: '#81d4fa' }
@@ -129,13 +129,13 @@ export function drawProfile() {
       ? { name: 'TITAN DE FEU', barA: '#ffab91', barB: '#bf360c', glow: '#e64a19', ready: '#ff7043' }
       : { name: 'BOMBE ATOMIQUE', barA: '#ffcc80', barB: '#7a2e0e', glow: '#ff5722', ready: '#ff8a65' };
   const ultReady = p.ultCharge >= 100;
-  medBar(barX, uY, barW, 16, p.ultCharge / 100, null, ultInfo.barA, ultInfo.barB,
+  medBar(barX, uY, barW, 14, p.ultCharge / 100, null, ultInfo.barA, ultInfo.barB,
     { glow: ultReady ? ultInfo.glow : null });
-  engraved(`[F] ${ultInfo.name}`, barX + 8, uY + 12, 10, ultReady ? ultInfo.ready : '#fff3d6', 'left', 'Georgia, serif');
-  engraved(`${Math.floor(p.ultCharge)}%`, barX + barW - 8, uY + 12, 11, '#fff', 'right', 'Consolas, monospace');
+  engraved(`[F] ${ultInfo.name}`, barX + 7, uY + 10.5, 9.5, ultReady ? ultInfo.ready : '#fff3d6', 'left', 'Georgia, serif');
+  engraved(`${Math.floor(p.ultCharge)}%`, barX + barW - 7, uY + 10.5, 10.5, '#fff', 'right', 'Consolas, monospace');
   if (ultReady) {
     ctx.globalAlpha = 0.65 + Math.sin(G.time * 6) * 0.35;
-    engraved('PRÊT !', barX + barW - 60, uY - 4, 11, ultInfo.ready, 'right', 'Consolas, monospace');
+    engraved('PRÊT !', barX + barW - 56, uY - 3, 10.5, ultInfo.ready, 'right', 'Consolas, monospace');
     ctx.globalAlpha = 1;
   }
 
@@ -156,6 +156,6 @@ export function drawProfile() {
 
   // ---- badge poison sous le panneau (statut joueur) ----
   if (p.poisonT > 0) {
-    engraved(`☠ POISON ${p.poisonT.toFixed(1)}s`, PX + 6, PY + PH + 16, 11, '#a4d94e', 'left', 'Consolas, monospace');
+    engraved(`☠ POISON ${p.poisonT.toFixed(1)}s`, PX + 6, PY + PH + 14, 10.5, '#a4d94e', 'left', 'Consolas, monospace');
   }
 }

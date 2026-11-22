@@ -1,66 +1,57 @@
-// js/hud/equip.js — panneau équipement latéral droit : cadre cuir/or,
-// lignes parchemin, icônes d'objets, barres de durabilité.
+// js/hud/equip.js — équipement compact : une colonne fine d'icônes à
+// droite de l'écran. Icône + micro-jauge de durabilité + anneau de
+// sélection (l'arme active porte la couleur de son mode). Aucun panneau.
 import { G, ctx, W } from '../state.js';
 import { roundRect } from '../utils.js';
 import { ITEMS, getDur } from '../inventory.js';
 import { drawItemIcon } from '../utils.js';
-import { HPAL, metalFrame, parchment, engraved } from './frame.js';
+import { HPAL } from './frame.js';
+
+const SLOTS = ['weapon', 'armor', 'helm', 'gloves', 'charm', 'boots'];
+// couleur de l'anneau de sélection selon le mode d'attaque actif
+const MODE_COL = { 1: '#e8c96a', 3: '#7cc4f7', 5: '#b388ff' };
 
 export function drawEquipPanel() {
   const inv = G.inv;
   if (!inv || !inv.equip) return;
-  const slots = [['weapon', 'ARME'], ['armor', 'ARMURE'], ['helm', 'CASQUE'], ['gloves', 'GANTS'], ['charm', 'ACCESSOIRE'], ['boots', 'BOTTES']];
-  const px = W - 182, py = 66, pw = 168;
-  const rowH = 46, headerH = 26;
-  const ph = headerH + slots.length * rowH + 10;
+  const cx = W - 34;          // colonne collée au bord droit
+  const y0 = 72, gap = 33;
 
-  // cadre principal cuir + liseré or
-  metalFrame(px, py, pw, ph, 9, {});
-  // en-tête parchemin
-  parchment(px + 5, py + 4, pw - 10, headerH - 6, 0.95);
-  engraved('ÉQUIPEMENT', px + pw / 2, py + 21, 11, '#4a3517', 'center', 'Georgia, serif');
-
-  slots.forEach(([slot, label], i) => {
-    const ry = py + headerH + 4 + i * rowH;
+  SLOTS.forEach((slot, i) => {
+    const cy = y0 + i * gap;
     const id = inv.equip[slot], it = id ? ITEMS[id] : null;
-    // ligne : parchemin clair si occupé, bois sombre sinon
+    const selected = slot === 'weapon' && !!it;
+    const ringCol = selected ? (G.player.ultActive > 0 ? '#ff8a50' : (MODE_COL[G.player.attackMode] || HPAL.gold)) : null;
+
+    // médaillon sombre discret (restitue la lisibilité sur tout terrain)
+    ctx.fillStyle = 'rgba(10,7,4,0.55)';
+    ctx.beginPath(); ctx.arc(cx, cy, 14, 0, Math.PI * 2); ctx.fill();
+
     if (it) {
-      parchment(px + 7, ry, pw - 14, rowH - 8, 0.9);
-      ctx.strokeStyle = HPAL.goldLo; ctx.lineWidth = 0.8;
-      roundRect(px + 8.5, ry + 1.5, pw - 17, rowH - 11, 5); ctx.stroke();
-      // icône dans un médaillon
-      ctx.fillStyle = 'rgba(0,0,0,0.15)';
-      ctx.beginPath(); ctx.arc(px + 26, ry + (rowH - 8) / 2, 13, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = HPAL.goldLo; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.arc(px + 26, ry + (rowH - 8) / 2, 13, 0, Math.PI * 2); ctx.stroke();
-      drawItemIcon(it, px + 26, ry + (rowH - 8) / 2, 11);
-      // nom + label
-      ctx.textAlign = 'left';
-      const name = it.name.length > 16 ? it.name.slice(0, 15) + '…' : it.name;
-      engraved(name, px + 44, ry + 17, 10.5, '#3a2a14', 'left', 'Inter, sans-serif');
-      ctx.font = '8px Inter, sans-serif'; ctx.fillStyle = '#6d5a3a';
-      ctx.fillText(label, px + 44, ry + 29);
-      // barre de durabilité
       const dur = getDur(inv, id);
-      const dbx = px + 44, dbw = pw - 60, dby = ry + 35;
-      ctx.fillStyle = 'rgba(0,0,0,0.3)';
-      roundRect(dbx - 1, dby - 1, dbw + 2, 6, 3); ctx.fill();
+      const broken = dur <= 0;
+      // icône
+      ctx.globalAlpha = broken ? 0.45 : 1;
+      drawItemIcon(it, cx, cy - 1, 10);
+      ctx.globalAlpha = 1;
+      // anneau de sélection de l'arme active
+      if (ringCol) {
+        ctx.strokeStyle = ringCol; ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.arc(cx, cy, 14.5, 0, Math.PI * 2); ctx.stroke();
+      }
+      // micro-jauge de durabilité sous l'icône
+      const dbw = 26, dbx = cx - dbw / 2, dby = cy + 17;
+      ctx.fillStyle = 'rgba(0,0,0,0.6)';
+      roundRect(dbx - 1, dby - 1, dbw + 2, 4, 2); ctx.fill();
       const dc = dur > 50 ? HPAL.green : dur > 25 ? '#d4a84b' : HPAL.red;
-      ctx.fillStyle = dc;
-      if (dur > 0) { roundRect(dbx, dby, dbw * dur / 100, 4, 2); ctx.fill(); }
-      ctx.textAlign = 'right'; ctx.font = '8px Consolas, monospace';
-      ctx.fillStyle = dur <= 0 ? HPAL.red : '#5a4526';
-      ctx.fillText(dur <= 0 ? 'CASSÉ' : `${Math.round(dur)}%`, px + pw - 16, dby + 4);
-      ctx.textAlign = 'left';
+      ctx.fillStyle = broken ? HPAL.red : dc;
+      if (dur > 0) { roundRect(dbx, dby, dbw * dur / 100, 2, 1); ctx.fill(); }
     } else {
-      // emplacement vide : bois sombre + tirets
-      ctx.fillStyle = 'rgba(0,0,0,0.28)';
-      roundRect(px + 7, ry, pw - 14, rowH - 8, 6); ctx.fill();
-      ctx.strokeStyle = 'rgba(212,168,75,0.25)'; ctx.lineWidth = 1;
-      roundRect(px + 7.5, ry + 0.5, pw - 15, rowH - 9, 6); ctx.stroke();
-      ctx.font = 'italic 10px Inter, sans-serif';
-      ctx.fillStyle = 'rgba(216,196,154,0.4)';
-      ctx.fillText(`${label} : —`, px + 20, ry + (rowH - 8) / 2 + 3);
+      // emplacement vide : cercle pointillé discret
+      ctx.strokeStyle = 'rgba(216,196,154,0.22)'; ctx.lineWidth = 1;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.arc(cx, cy, 13, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]);
     }
   });
 }
