@@ -621,8 +621,6 @@ function update(dt) {
     G.stats.campaignDone[G.campaign] = true;
     if (G.campaign === 1) G.stats.iceUlt = true; // coffre : débloque la Pluie de Glace
     if (G.campaign === 2) G.stats.hellUlt = true; // trône : débloque la Colère Infernale
-    if (G.campaign === 3) G.stats.sewerUlt = true; // égoût royal : débloque la Déluge Acide
-    if (G.campaign === 4) G.stats.spaceUlt = true; // observatoire : débloque le Trou Noir
     saveStats();
     G.enemies.length = 0; G.drops.length = 0; G.fireZones.length = 0;
     G.portals.length = 0; G.projectiles.length = 0; G.lightnings.length = 0;
@@ -652,8 +650,8 @@ function update(dt) {
   updateIceUlt(rawDt); // pluie de pics de glace (ultime campagne 2)
   updateLasers(rawDt); // faisceaux de feu du Titan de Feu
   updateVolcanoes(rawDt); // volcans éruptifs
-  updateSewerUlt(rawDt);  // Déluge Acide (ultime campagne 3)
-  updateSpaceUlt(rawDt);  // Trou Noir (ultime campagne 4)
+  updateSewerUlt(rawDt);  // flaques d'acide + pluie de vase (boss/événements égouts)
+  updateSpaceUlt(rawDt);  // trous noirs + tempête de void (boss/événements espace)
   updateHands(rawDt);  // mains de feu en vol
   updateEffects(dt);
 }
@@ -815,10 +813,6 @@ function updateSewerEvents(dt) {
   if (Math.random() < dt * 10) {
     spawnParticles(p.x + (Math.random() - 0.5) * 1200, p.y - 280 - Math.random() * 160,
       Math.random() < 0.6 ? '#aeea00' : '#558b2f', 1, 3);
-  }
-  // pluie de vase en cours : décrément + gerbes vertes
-  if (G.acidRain > 0 && !G.sewerUltFlag) {
-    // (la pluie de l'ultime gère déjà son propre compteur ; ici rien)
   }
   // geyser : télégraphe 1,1 s puis zone acide au sol
   if (G.sewerGeyser) {

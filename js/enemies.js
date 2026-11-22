@@ -213,11 +213,9 @@ export function damageEnemy(e, dmg, angle) {
     addDamageText(e.x, e.y - 16, `+${e.xp} XP`, '#40c4ff');
     gainXp(e.xp);
     // charge de l'ultime selon la sélection : Titan de Feu très lent (×0,22),
-    // Pluie de Glace un peu plus simple (×1,4), Déluge Acide ×0,8, Trou Noir ×0,55
+    // Pluie de Glace un peu plus simple (×1,4)
     const sel = G.stats.ultSel || 'nuke';
     const ultMult = sel === 'hell' && G.stats.hellUlt ? 0.22
-      : sel === 'space' && G.stats.spaceUlt ? 0.55
-      : sel === 'sewer' && G.stats.sewerUlt ? 0.8
       : sel === 'glace' && G.stats.iceUlt ? 1.4 : 1;
     const gain = e.isBoss ? 30 : e.isMini ? 15 : 4;
     G.player.ultCharge = Math.min(100, G.player.ultCharge + gain * ultMult);

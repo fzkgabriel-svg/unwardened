@@ -126,10 +126,6 @@ export function doUlt() {
   if ((G.stats.ultSel || 'nuke') === 'glace' && G.stats.iceUlt) { doIceUlt(); return; }
   // Colère Infernale : ultime débloquée en finissant Les Enfers
   if ((G.stats.ultSel || 'nuke') === 'hell' && G.stats.hellUlt) { doHellUlt(); return; }
-  // Déluge Acide : ultime débloquée en finissant Les Égouts
-  if ((G.stats.ultSel || 'nuke') === 'sewer' && G.stats.sewerUlt) { doSewerUlt(); return; }
-  // Trou Noir : ultime débloquée en finissant L'Espace
-  if ((G.stats.ultSel || 'nuke') === 'space' && G.stats.spaceUlt) { doSpaceUlt(); return; }
   // BOMBE ATOMIQUE : un B-2 Spirit traverse l'écran et largue la bombe
   // au-dessus du joueur ; elle explose quand l'avion a quitté la carte
   if (G.bomber) return; // une frappe est déjà en cours
@@ -621,31 +617,7 @@ function explodeNuke(x, y) {
   addDamageText(x, y - 60, '☢ ARMAGEDDON', '#ffd740');
 }
 
-// ---------- ULTIME : DÉLUGE ACIDE (trône du Tyran des Profondeurs) ----------
-// Les égouts se vident sur le monde : geysers d'acide jaillissent autour du
-// joueur, la pluie de vase tombe du plafond et des flaques toxiques persistent.
-export function doSewerUlt() {
-  const p = G.player;
-  p.ultCharge = 0;
-  G.ultsUsed++;
-  G.sewerUlts = (G.sewerUlts || 0) + 1;
-  // gerbe initiale : geysers d'acide en couronne autour du joueur
-  for (let i = 0; i < 12; i++) {
-    const a = (i / 12) * TAU + Math.random() * 0.3;
-    const d = 70 + Math.random() * 170;
-    const x = Math.max(50, Math.min(worldW() - 50, p.x + Math.cos(a) * d));
-    const y = Math.max(50, Math.min(worldH() - 50, p.y + Math.sin(a) * d));
-    G.acidZones.push({ x, y, r: 85 + Math.random() * 45, life: 14, maxLife: 14, tick: Math.random() * 0.4 });
-    G.rings.push({ x, y, r: 6, maxR: 70, life: 22, maxLife: 22, color: '#aeea00' });
-    spawnParticles(x, y, '#aeea00', 22, 8);
-    spawnParticles(x, y, '#33691e', 14, 7); // vase sombre
-  }
-  G.acidRain = 12; // 12 s de pluie de vase
-  G.screenShake = Math.max(G.screenShake, 14);
-  G.screenFlash = Math.max(G.screenFlash, 0.4);
-  addDamageText(p.x, p.y - 90, '☣️ DÉLUGE ACIDE ☣️', '#dce775');
-}
-
+// ---------- EFFETS : DÉLUGE ACIDE (zones et pluie partagées boss/événements) ----------
 export function updateSewerUlt(dt) {
   const p = G.player;
   // pluie de vase : gouttelettes acides tombent du plafond
@@ -699,21 +671,7 @@ export function updateSewerUlt(dt) {
   }
 }
 
-// ---------- ULTIME : TROU NOIR (trône de l'Abomination Cosmique) ----------
-// Un puits de gravité s'ouvre sur le joueur : les ennemis sont aspirés vers
-// lui, déchirés par les forces de marée, puis le trou s'effondre en explosion.
-export function doSpaceUlt() {
-  const p = G.player;
-  p.ultCharge = 0;
-  G.ultsUsed++;
-  G.spaceUlts = (G.spaceUlts || 0) + 1;
-  G.voidStorm = 10; // 10 s de tempête de void
-  G.blackHoles.push({ x: p.x, y: p.y, r: 120, life: 10, maxLife: 10, tick: 0, pull: 0 });
-  G.screenShake = Math.max(G.screenShake, 16);
-  G.screenFlash = Math.max(G.screenFlash, 0.45);
-  addDamageText(p.x, p.y - 90, '🕳️ TROU NOIR 🕳️', '#b388ff');
-}
-
+// ---------- EFFETS : TROU NOIR (aspiration et effondrement partagés boss/événements) ----------
 export function updateSpaceUlt(dt) {
   const p = G.player;
   // tempête de void : micro-trous noirs orbitaux qui tirent des rayons

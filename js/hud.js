@@ -97,11 +97,7 @@ export function drawHUD() {
     ? { name: 'PLUIE DE GLACE', col: '#b3e5fc', ready: '#81d4fa', barA: '#e1f5fe', barB: '#0277bd', glow: '#0288d1' }
     : ultSel === 'hell' && G.stats.hellUlt
       ? { name: 'TITAN DE FEU', col: '#ffab91', ready: '#ff7043', barA: '#ffe0b2', barB: '#bf360c', glow: '#e64a19' }
-      : ultSel === 'sewer' && G.stats.sewerUlt
-        ? { name: 'DÉLUGE ACIDE', col: '#dce775', ready: '#aeea00', barA: '#f4ff81', barB: '#33691e', glow: '#76ff03' }
-        : ultSel === 'space' && G.stats.spaceUlt
-          ? { name: 'TROU NOIR', col: '#e1bee7', ready: '#b388ff', barA: '#e1bee7', barB: '#4a148c', glow: '#7e57c2' }
-          : { name: 'BOMBE ATOMIQUE', col: '#b0a488', ready: '#ff8a65', barA: '#ffcc80', barB: '#7a2e0e', glow: '#ff5722' };
+      : { name: 'BOMBE ATOMIQUE', col: '#b0a488', ready: '#ff8a65', barA: '#ffcc80', barB: '#7a2e0e', glow: '#ff5722' };
   const ultName = ultInfo.name, ultCol = ultInfo.col;
   ctx.textAlign = 'left'; ctx.font = '12px Georgia, serif';
   const ultReady = p.ultCharge >= 100;

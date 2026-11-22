@@ -75,7 +75,7 @@ export const G = {
   lasers: [],      // faisceaux de feu du Titan de Feu {x, y, angle, len, w, life, tick}
   hands: [],       // mains de feu en vol vers leur cible {x, y, tx, ty, t, dur}
   volcanoes: [],   // volcans éruptifs créés par les mains de feu {x, y, r, life, tick, eruptT, burst}
-  acidZones: [],   // flaques d'acide de la Déluge Acide {x, y, r, life, maxLife, tick}
+  acidZones: [],   // flaques d'acide (boss égouts / geysers) {x, y, r, life, maxLife, tick}
   blackHoles: [],  // trous noirs de l'ultime spatiale {x, y, r, life, maxLife, tick}
   iceWalls: [],    // murs de glace du Souverain {x, y, r, life} : obstacles temporaires
   shockwaves: [],  // ondes de choc au sol {x, y, r, maxR, speed, dmg, hit, color, slow}
@@ -105,7 +105,7 @@ export const G = {
   nightTime: 0,      // temps passé la nuit (succès)
   typeKills: {},     // ennemis tués par type (succès)
   ultsUsed: 0,       // bombes atomiques utilisées (succès)
-  nukeUlts: 0, iceUlts: 0, hellUlts: 0, sewerUlts: 0, spaceUlts: 0, // compteurs par type d'ultime (succès par monde)
+  nukeUlts: 0, iceUlts: 0, hellUlts: 0, // compteurs par type d'ultime (succès par monde)
   spinUsed: 0,       // attaques rotatives effectuées (tutoriel)
   shieldUsed: 0,     // dômes de bouclier utilisés (tutoriel)
   achToast: null,    // notification de succès débloqué

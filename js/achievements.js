@@ -75,22 +75,18 @@ export const ACHIEVEMENTS = [
   { id: 'sew_wave_25', icon: '🗑️', name: 'Descendeur des égouts', desc: 'Atteindre la vague 25 en Égouts',               t: (G) => G.campaign === 3 && G.wave >= 25, tab: 3 },
   { id: 'sew_wave_35', icon: '👑', name: 'Le fond des profondeurs', desc: 'Atteindre la vague 35 en Égouts (finale)',      t: (G) => G.campaign === 3 && G.wave >= 35, tab: 3 },
   { id: 'sew_boss',    icon: '🐀', name: 'Roi des rats vaincu',   desc: 'Vaincre le Tyran des Profondeurs',                t: (G, s) => !!(s.campaignDone || {})[3], tab: 3 },
-  { id: 'sew_flood',   icon: '☣️', name: 'Maître des flots',      desc: 'Ouvrir le trône des égouts : Déluge Acide débloquée', t: (G, s) => !!s.sewerUlt, tab: 3 },
   { id: 'sew_rat_40',  icon: '🐀', name: 'Exterminateur de rats', desc: 'Tuer 40 rats géants au total',                    t: (G, s) => ((s.typeKills || {}).rat || 0) >= 40, tab: 3 },
   { id: 'sew_crapaud_20',icon:'🐸',name: 'Chasseur de crapauds',  desc: 'Tuer 20 crapauds des égouts au total',            t: (G, s) => ((s.typeKills || {}).crapaud || 0) >= 20, tab: 3 },
   { id: 'sew_ver_15',  icon: '🪱', name: 'Fendeur de vers',       desc: 'Tuer 15 vers des profondeurs au total',           t: (G, s) => ((s.typeKills || {}).ver || 0) >= 15, tab: 3 },
-  { id: 'sew_ult_3',   icon: '☣️', name: 'Déluge dompté',         desc: 'Utiliser la Déluge Acide 3 fois',                 t: (G, s) => (s.sewerUlts || 0) >= 3, tab: 3 },
   { id: 'sew_flawless',icon: '🛡️', name: 'Nez pincé',             desc: 'Atteindre la vague 30 en Égouts en subissant < 1200 dégâts', t: (G) => G.campaign === 3 && G.wave >= 30 && G.dmgTaken < 1200, tab: 3 },
   { id: 'sew_marathon',icon: '⏳', name: 'Souterrain',            desc: 'Survivre 10 minutes en Égouts',                   t: (G) => G.campaign === 3 && G.runTime >= 600, tab: 3 },
   // ---------- MONDE 5 : L'ESPACE (onglet 4) ----------
   { id: 'spa_wave_30', icon: '🛸', name: 'Pionnier stellaire',    desc: 'Atteindre la vague 30 en Espace',                 t: (G) => G.campaign === 4 && G.wave >= 30, tab: 4 },
   { id: 'spa_wave_40', icon: '👑', name: 'Le dernier horizon',    desc: 'Atteindre la vague 40 en Espace (finale)',         t: (G) => G.campaign === 4 && G.wave >= 40, tab: 4 },
   { id: 'spa_boss',    icon: '👽', name: 'Sauveur des étoiles',   desc: 'Vaincre l\'Abomination Cosmique',                 t: (G, s) => !!(s.campaignDone || {})[4], tab: 4 },
-  { id: 'spa_hole',    icon: '🕳️', name: 'Maître des horizons',   desc: 'Ouvrir l\'observatoire : Trou Noir débloqué',       t: (G, s) => !!s.spaceUlt, tab: 4 },
   { id: 'spa_alien_40',icon: '👽', name: 'Chasse aux aliens',     desc: 'Tuer 40 aliens rampants au total',                 t: (G, s) => ((s.typeKills || {}).alien || 0) >= 40, tab: 4 },
   { id: 'spa_drone_25',icon: '🛸', name: 'Intercepteur',          desc: 'Tuer 25 drones de chasse au total',                t: (G, s) => ((s.typeKills || {}).drone || 0) >= 25, tab: 4 },
   { id: 'spa_tentacule_15',icon:'🦑',name:'Lutte tentaculaire',  desc: 'Tuer 15 tentacules stellaires au total',           t: (G, s) => ((s.typeKills || {}).tentacule || 0) >= 15, tab: 4 },
-  { id: 'spa_ult_3',   icon: '🕳️', name: 'Singularité',          desc: 'Utiliser le Trou Noir 3 fois',                     t: (G, s) => (s.spaceUlts || 0) >= 3, tab: 4 },
   { id: 'spa_flawless',icon: '🛡️', name: 'Combinaison intacte',   desc: 'Atteindre la vague 35 en Espace en subissant < 1500 dégâts', t: (G) => G.campaign === 4 && G.wave >= 35 && G.dmgTaken < 1500, tab: 4 },
   { id: 'spa_marathon',icon: '⌛', name: 'Cosmonaute',            desc: 'Survivre 12 minutes en Espace',                    t: (G) => G.campaign === 4 && G.runTime >= 720, tab: 4 },
 ];
@@ -227,8 +223,6 @@ function effStats() {
   s.nukeUlts = (s.nukeUlts || 0) + (G.nukeUlts || 0);
   s.iceUlts = (s.iceUlts || 0) + (G.iceUlts || 0);
   s.hellUlts = (s.hellUlts || 0) + (G.hellUlts || 0);
-  s.sewerUlts = (s.sewerUlts || 0) + (G.sewerUlts || 0);
-  s.spaceUlts = (s.spaceUlts || 0) + (G.spaceUlts || 0);
   s.typeKills = { ...(s.typeKills || {}) };
   for (const k in (G.typeKills || {})) s.typeKills[k] = (s.typeKills[k] || 0) + G.typeKills[k];
   return s;

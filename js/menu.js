@@ -310,9 +310,7 @@ export function drawMenu() {
   // nom de l'ultime selon la sélection du héros (même logique que le HUD)
   const _us = G.stats.ultSel || 'nuke';
   const ultName = _us === 'glace' && G.stats.iceUlt ? 'Pluie de glace'
-    : _us === 'hell' && G.stats.hellUlt ? 'Titan de feu'
-    : _us === 'sewer' && G.stats.sewerUlt ? 'Déluge acide'
-    : _us === 'space' && G.stats.spaceUlt ? 'Trou noir' : 'Bombe atomique';
+    : _us === 'hell' && G.stats.hellUlt ? 'Titan de feu' : 'Bombe atomique';
   const controls = [
     ['ZQSD', 'Se déplacer'],
     ['Clic gauche', 'Attaque principale'],
@@ -950,8 +948,6 @@ export function forgeClickAt(x, y) {
     if (inR(ub.nuke, x, y)) { G.stats.ultSel = 'nuke'; saveStats(); return 'ult'; }
     if (inR(ub.glace, x, y) && G.stats.iceUlt) { G.stats.ultSel = 'glace'; saveStats(); return 'ult'; }
     if (inR(ub.hell, x, y) && G.stats.hellUlt) { G.stats.ultSel = 'hell'; saveStats(); return 'ult'; }
-    if (inR(ub.sewer, x, y) && G.stats.sewerUlt) { G.stats.ultSel = 'sewer'; saveStats(); return 'ult'; }
-    if (inR(ub.space, x, y) && G.stats.spaceUlt) { G.stats.ultSel = 'space'; saveStats(); return 'ult'; }
     // clic sur une embase du personnage -> fiche de l'objet équipé (ou rien)
     for (const slot of ['weapon', 'armor', 'charm', 'boots']) {
       const r = heroSlots(L)[slot];
@@ -1460,17 +1456,13 @@ function ultBtns(L) {
   return {
     nuke:  { x, y, w: 232, h: 40 },
     glace: { x, y: y + 48, w: 232, h: 40 },
-    hell:  { x, y: y + 96, w: 232, h: 40 },
-    sewer: { x, y: y + 144, w: 232, h: 40 },
-    space: { x, y: y + 192, w: 232, h: 40 }
+    hell:  { x, y: y + 96, w: 232, h: 40 }
   };
 }
 function drawUltSelect(L) {
   const sel = G.stats.ultSel || 'nuke';
   const iceOk = !!G.stats.iceUlt;
   const hellOk = !!G.stats.hellUlt;
-  const sewerOk = !!G.stats.sewerUlt;
-  const spaceOk = !!G.stats.spaceUlt;
   const ub = ultBtns(L);
   ctx.textAlign = 'center';
   ctx.fillStyle = '#ffd740'; ctx.font = 'bold 11px Inter, sans-serif';
@@ -1496,8 +1488,6 @@ function drawUltSelect(L) {
   drawOne('nuke', '💣', 'BOMBE ATOMIQUE', 'B-2 + explosion nucléaire', '#ffd740', false);
   drawOne('glace', '❄️', 'PLUIE DE GLACE', iceOk ? 'pics gelés : ralenti + -50% dégâts ennemis' : 'coffre du Souverain de Glace', '#80d8ff', !iceOk);
   drawOne('hell', '🔥', 'TITAN DE FEU', hellOk ? 'titan 10 s : laser de feu dévastateur · charge lente' : 'trône du Baron de l\'Enfer', '#ff7043', !hellOk);
-  drawOne('sewer', '☣️', 'DÉLUGE ACIDE', sewerOk ? 'geyser + pluie de vase : zones toxiques' : 'trône du Tyran des Profondeurs', '#aeea00', !sewerOk);
-  drawOne('space', '🕳️', 'TROU NOIR', spaceOk ? 'puits gravitationnel : aspiration + effondrement' : 'observatoire de l\'Abomination', '#b388ff', !spaceOk);
 }
 
 // carte de progression d'un type d'arme (épée / lance)
@@ -1769,7 +1759,6 @@ export function resetToMenu() {
   G.deathT = 0; G.deathDir = 1;
   G.dmgDealt = 0; G.dmgTaken = 0; G.potionsUsed = 0; G.bossesKilled = 0; G.runTime = 0;
   G.nightTime = 0; G.typeKills = {}; G.ultsUsed = 0; G.nukeUlts = 0; G.iceUlts = 0; G.hellUlts = 0;
-  G.sewerUlts = 0; G.spaceUlts = 0;
   G.achToast = null; G.achT = 0;
   G.menuView = 'main';
   G.state = 'menu';
@@ -1836,14 +1825,14 @@ export function drawVictory() {
     ctx.save();
     ctx.shadowColor = 'rgba(174,234,0,0.9)'; ctx.shadowBlur = 16;
     ctx.fillStyle = '#dce775'; ctx.font = 'bold 19px Inter, sans-serif';
-    ctx.fillText('☣ TRÔNE DES ÉGOUTS : ULTIME « DÉLUGE ACIDE » — choisis-la dans la forge (onglet Héros)', W / 2, H / 2 - 100);
+    ctx.fillText('☣ LES ÉGOUTS LIBÉRÉS — la prochaine campagne vous attend', W / 2, H / 2 - 100);
     ctx.restore();
   }
   if (G.campaign === 4) {
     ctx.save();
     ctx.shadowColor = 'rgba(179,157,219,0.9)'; ctx.shadowBlur = 16;
     ctx.fillStyle = '#e1bee7'; ctx.font = 'bold 19px Inter, sans-serif';
-    ctx.fillText('🕳 OBSERVATOIRE CONQUIS : ULTIME « TROU NOIR » — choisis-la dans la forge (onglet Héros)', W / 2, H / 2 - 100);
+    ctx.fillText('🕳 LES ÉTOILES SAUVEES — la prochaine campagne vous attend', W / 2, H / 2 - 100);
     ctx.restore();
   }
 
@@ -2674,12 +2663,12 @@ const CAMPAIGN_INFO = {
   },
   3: {
     icon: '🗑️', diff: '★★★★ TRÈS DIFFICILE', diffColor: '#aeea00',
-    desc: 'Les Égouts : les profondeurs putrides sous la ville. Rats géants, crapauds, vers des profondeurs, vases toxiques et chanters démoniaques. Le Tyran des Profondeurs règne sur les flots d\'acide — et la Déluge Acide vous attend après lui.',
+    desc: 'Les Égouts : les profondeurs putrides sous la ville. Rats géants, crapauds, vers des profondeurs, vases toxiques et chanters démoniaques. Le Tyran des Profondeurs règne sur les flots d\'acide.',
     boss: 'Le Tyran des Profondeurs', worlds: '2 mondes · 35 vagues · boss dès la vague 25'
   },
   4: {
     icon: '🛸', diff: '★★★★★ EXPERT', diffColor: '#b388ff',
-    desc: 'L\'Espace : un avant-poste perdu à des années-lumière de la Terre. Aliens rampants, drones de chasse, tentacules stellaires et cristaux vivants. L\'Abomination Cosmique dévore les étoiles — et le Trou Noir vous attend après elle.',
+    desc: 'L\'Espace : un avant-poste perdu à des années-lumière de la Terre. Aliens rampants, drones de chasse, tentacules stellaires et cristaux vivants. L\'Abomination Cosmique dévore les étoiles.',
     boss: 'L\'Abomination Cosmique', worlds: '2 mondes · 40 vagues · boss dès la vague 30'
   }
 };
