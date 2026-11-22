@@ -1,4 +1,4 @@
-import { G } from './state.js';
+import { G, saveStats } from './state.js';
 import { addMaterial } from './inventory.js';
 import { storeKey } from './chars.js';
 
@@ -256,4 +256,19 @@ export function achTabList(tab) {
 export function unclaimedInTab(tab = -1) {
   return ACHIEVEMENTS.some(a =>
     (tab < 0 || (a.tab || 0) === tab) && unlocked[a.id] && !isClaimed(a.id));
+}
+
+// admin : débloque TOUT — toutes les campagnes, les ultimes et les succès
+// (avec leurs récompenses en matériaux réclamées d'office)
+export function adminUnlockAll() {
+  for (const a of ACHIEVEMENTS) {
+    if (!unlocked[a.id]) unlocked[a.id] = { claimed: false };
+    claimReward(a.id);
+  }
+  save(unlocked);
+  G.stats = G.stats || {};
+  G.stats.campaignDone = { 0: true, 1: true, 2: true, 3: true, 4: true };
+  G.stats.iceUlt = true;
+  G.stats.hellUlt = true;
+  saveStats();
 }

@@ -91,6 +91,7 @@ export const G = {
   // fin / effets d'écran
   gameOver: false,
   pendingVictory: false, // le boss final vient d'être vaincu -> cinématique de victoire
+  adminNoCd: false, // admin : désactive tous les cooldowns du joueur
   tutorial: null,    // mode tutoriel en cours ({i,t,endT})
   lastInteract: null, // dernier type d'interaction (building/portal) — tutoriel
   deathT: 0,       // compte à rebours de la cinématique de mort

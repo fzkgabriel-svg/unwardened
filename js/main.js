@@ -189,6 +189,11 @@ function update(dt) {
   p.shieldT = Math.max(0, p.shieldT - dt);
   p.shieldCd = Math.max(0, p.shieldCd - dt);
   p.switchLock = Math.max(0, p.switchLock - dt);
+  // admin : pas de cooldowns — toutes les actions sont immédiatement disponibles
+  if (G.adminNoCd) {
+    p.attackCooldown = 0; p.spinCooldown = 0; p.shieldCd = 0;
+    p.handCd = 0; p.potionCooldown = 0; p.switchLock = 0;
+  }
   G.cloudT = Math.max(0, G.cloudT - dt);
   G.screenFlash = Math.max(0, G.screenFlash - dt);
   G.screenShake = Math.max(0, G.screenShake - dt * 45);

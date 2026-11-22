@@ -1,7 +1,7 @@
 import { G, ctx, W, H, TAU, saveStats, finalWave } from './state.js';
 import { roundRect, drawMatIcon, drawItemIcon, itemTier } from './utils.js';
 import { regenerateDecor } from './graphics.js';
-import { ACHIEVEMENTS, unlocked, achievementCount, checkAchievements, achInfo, isClaimed, claimReward, achTabList, unclaimedInTab } from './achievements.js';
+import { ACHIEVEMENTS, unlocked, achievementCount, checkAchievements, achInfo, isClaimed, claimReward, achTabList, unclaimedInTab, adminUnlockAll } from './achievements.js';
 import { ITEMS, MATS, canCraft, craft, toggleEquip, equipBonuses, getDur, canRepair, repairItem, repairCost, loadInv, addMaterial, modeInfo, addWmodeXp, modeMult, MODE_MAX_LVL, setInvNoSave } from './inventory.js';
 import { spawnEnemy, spawnFinalBoss } from './enemies.js';
 import { gainXp } from './player.js';
@@ -2245,6 +2245,11 @@ export function adminClickAt(x, y) {
     if (G.resetConfirm === 99) { adminWipeAll(); G.resetConfirm = -1; return 'wipe'; }
     G.resetConfirm = 99; return 'askwipe';
   }
+  // boutons « tout débloquer » et « sans cooldowns »
+  const ub = { x: W / 2 - 280, y: H - 112, w: 270, h: 44 };
+  if (inR(ub, x, y)) { adminUnlockAll(); return 'unlockall'; }
+  const nb = { x: W / 2 + 10, y: H - 112, w: 270, h: 44 };
+  if (inR(nb, x, y)) { G.adminNoCd = !G.adminNoCd; return 'nocd'; }
   // reset individuel d'un slot
   for (let i = 0; i < MAX_SLOTS; i++) {
     const r = { x: W / 2 - 330, y: 330 + i * 78, w: 120, h: 36 };
@@ -2338,6 +2343,24 @@ function drawAdmin() {
   ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1.5; roundRect(back.x, back.y, back.w, back.h, 8); ctx.stroke();
   ctx.fillStyle = '#e0e0e0'; ctx.font = 'bold 13px Inter, sans-serif';
   ctx.fillText('← PERSONNAGES', back.x + back.w / 2, back.y + 26);
+
+  // ---- boutons utilitaires : tout débloquer + cooldowns désactivés ----
+  const drawUtilBtn = (r, label, sub, color, active) => {
+    const hov = G.mouse.x >= r.x && G.mouse.x <= r.x + r.w && G.mouse.y >= r.y && G.mouse.y <= r.y + r.h;
+    ctx.fillStyle = active ? hexA(color, 0.35) : (hov ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.06)');
+    roundRect(r.x, r.y, r.w, r.h, 10); ctx.fill();
+    ctx.strokeStyle = active ? color : (hov ? '#fff' : 'rgba(255,255,255,0.25)');
+    ctx.lineWidth = active ? 2.5 : 1.5;
+    roundRect(r.x, r.y, r.w, r.h, 10); ctx.stroke();
+    ctx.fillStyle = active ? color : '#fff'; ctx.font = 'bold 15px Inter, sans-serif';
+    ctx.fillText(label, r.x + r.w / 2, r.y + 20);
+    ctx.fillStyle = active ? color : '#90a4ae'; ctx.font = '11px Inter, sans-serif';
+    ctx.fillText(sub, r.x + r.w / 2, r.y + 37);
+  };
+  drawUtilBtn({ x: W / 2 - 280, y: H - 112, w: 270, h: 44 }, '🔓 TOUT DÉBLOQUER', 'campagnes + ultimes + succès', '#ffd740', false);
+  drawUtilBtn({ x: W / 2 + 10, y: H - 112, w: 270, h: 44 },
+    G.adminNoCd ? '⚡ COOLDOWNS : ON' : '⚡ COOLDOWNS : OFF',
+    'clic = activer / désactiver', G.adminNoCd ? '#69f0ae' : '#78909c', G.adminNoCd);
   drawPadlockAnim(); // cadenas qui s'ouvre si le mot de passe vient d'être validé
 }
 function slots_playtime_total() {
