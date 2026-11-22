@@ -10,7 +10,7 @@ import { sfxCraft, sfxRepair, sfxEquip, sfxConfirm, sfxClick } from '../audio.js
 import { MAX_SLOTS, activeSlot, allSlots, slotMeta, slotSummary, createChar, selectChar, deselectChar, resetChar, fmtPlaytime, fmtDate, checkAdminPass, adminOK as _adminOK, adminList, adminWipeAll, adminLock } from '../chars.js';
 import { inR, fitText, wrapLines, hexA, fmtTime, overline, panel, overlineCentered, drawMenuButton, drawAdminPwInput, menuButtons, menuButtonAt, adminUnlocked, campaignUnlocked, UI, SERIF, C_TEXT, C_MUTED, C_GOLD, MENU_X, MENU_W, MENU_ITEMS } from './common.js';
 
-import { invCells, invUI, invVisible, INV_CATS, forgeScroll, forgeScrollMax, itemDetail, forgeTab, heroColLayout, heroTabs, heroEquipRows, heroDoll, ultBtns, SLOT_LABEL, craftTabs, craftZones, craftUI, heroUI, upgradeCards, upgradeCost, upgradeXpGain } from './forge_state.js';
+import { invCells, invUI, invVisible, INV_CATS, forgeScroll, forgeScrollMax, itemDetail, forgeTab, heroColLayout, heroTabs, heroEquipRows, heroSkillCards, heroDoll, ultBtns, SLOT_LABEL, craftTabs, craftZones, craftUI, heroUI, upgradeCards, upgradeCost, upgradeXpGain } from './forge_state.js';
 
 // ---------- ONGLET PERSONNAGE — refonte « Forge 2.0 » ----------
 // 3 colonnes : PERSONNAGE + STATISTIQUES | mannequin + ÉQUIPEMENT | COMPÉTENCES
@@ -43,7 +43,7 @@ export function drawHeroPaperdoll(L) {
   const CL = heroColLayout(L);
   drawEquipList(L, CL.left);
   drawHeroCenter(L, CL);
-  drawSkillsColumn(CL.right);
+  drawSkillsColumn(L, CL.right);
   drawBuffsNote(CL.right);
   drawUltStrip(L);
   drawProgressionStrip(L);
@@ -195,33 +195,36 @@ const SKILL_DEF = [
   { key: 'lance',icon: '🔱', label: 'LANCE',color: '#4fc3f7', mode: 3 }
 ];
 
-function drawSkillsColumn(col) {
+function drawSkillsColumn(L, col) {
   const x = col.x + 14, w = col.w - 28;
   secHead('COMPÉTENCES', x, col.y + 20, w);
   ctx.fillStyle = C_MUTED; ctx.font = `italic 11px ${UI}`; ctx.textAlign = 'left';
   ctx.fillText('niveaux gagnés en combattant', x, col.y + 38);
-  const cw = w, ch = 68, gap = 10;
-  let y = col.y + 50;
-  for (const sd of SKILL_DEF) {
+  ctx.fillStyle = '#8d99ae'; ctx.font = `italic 10px ${UI}`;
+  ctx.fillText('clique une carte pour l\'emporter — 2 armes max par partie', x, col.y + 50);
+  const cards = heroSkillCards(L);
+  for (const card of cards) {
+    const sd = SKILL_DEF.find(d => d.key === card.key);
     const locked = sd.key === 'arc' && !(G.stats && G.stats.bowUnlocked);
-    drawSkillCard(x, y, cw, ch, sd, locked);
-    y += ch + gap;
+    drawSkillCard(card.x, card.y, card.w, card.h, sd, locked);
   }
   // note de bas de colonne
+  const yEnd = cards[cards.length - 1].y + cards[cards.length - 1].h;
   ctx.fillStyle = '#78909c'; ctx.font = `italic 10px ${UI}`; ctx.textAlign = 'center';
-  ctx.fillText('chaque niveau : +0,5 % de dégâts', x + w / 2, y + 12);
+  ctx.fillText('dégâts ×2 au niv. 100 (progression exponentielle)', x + w / 2, yEnd + 14);
 }
 
 function drawSkillCard(x, y, w, h, sd, locked) {
   const info = modeInfo(G.inv, sd.key);
   const hov = !locked && inR({ x, y, w, h }, G.mouse.x, G.mouse.y);
   const active = !locked && G.player.attackMode === sd.mode;
-  ctx.fillStyle = locked ? 'rgba(20,16,40,0.55)' : (active ? hexA(sd.color, 0.16) : hov ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.04)');
+  const carried = !locked && (G.inv.weapons || []).includes(sd.key);
+  ctx.fillStyle = locked ? 'rgba(20,16,40,0.55)' : (active ? hexA(sd.color, 0.16) : carried ? hexA(sd.color, 0.08) : hov ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.04)');
   roundRect(x, y, w, h, 10); ctx.fill();
-  ctx.strokeStyle = active ? sd.color : (locked ? 'rgba(124,77,255,0.4)' : hov ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.15)');
-  ctx.lineWidth = active ? 2 : 1;
+  ctx.strokeStyle = active ? sd.color : carried ? hexA(sd.color, 0.7) : (locked ? 'rgba(124,77,255,0.4)' : hov ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.15)');
+  ctx.lineWidth = active || carried ? 2 : 1;
   roundRect(x, y, w, h, 10); ctx.stroke();
-  ctx.globalAlpha = locked ? 0.55 : 1;
+  ctx.globalAlpha = locked || (!carried && !active) ? 0.55 : 1;
   // icône + nom + niveau
   ctx.textAlign = 'left'; ctx.font = `20px serif`;
   ctx.fillText(sd.icon, x + 12, y + 26);
@@ -231,10 +234,13 @@ function drawSkillCard(x, y, w, h, sd, locked) {
   ctx.fillText(locked ? '???' : `NIV. ${info.lvl}`, x + w - 12, y + 25);
   ctx.fillStyle = locked ? '#5a5470' : '#8d99ae'; ctx.font = `10px ${UI}`; ctx.textAlign = 'left';
   ctx.fillText(locked ? 'arme légendaire' : `+${Math.round((modeMult(G.inv, sd.key) - 1) * 100)} % de dégâts`, x + 44, y + 41);
-  // badge « en cours » si c'est l'arme sélectionnée en jeu
-  if (active) {
-    ctx.fillStyle = sd.color; ctx.font = `bold 9px ${UI}`; ctx.textAlign = 'right';
-    ctx.fillText('EN COURS', x + w - 12, y + 41);
+  // badge d'état : EN COURS (arme active) > EMPORTÉE (chargement) > NON EMPORTÉE
+  if (active || carried) {
+    ctx.fillStyle = active ? sd.color : '#81c784'; ctx.font = `bold 9px ${UI}`; ctx.textAlign = 'right';
+    ctx.fillText(active ? 'EN COURS' : 'EMPORTÉE', x + w - 12, y + 41);
+  } else {
+    ctx.fillStyle = '#546e7a'; ctx.font = `bold 9px ${UI}`; ctx.textAlign = 'right';
+    ctx.fillText('NON EMPORTÉE', x + w - 12, y + 41);
   }
   if (locked) {
     ctx.fillStyle = 'rgba(0,0,0,0.4)';

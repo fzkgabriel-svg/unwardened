@@ -2,7 +2,7 @@ import { G, ctx, W, H, TAU, saveStats, finalWave } from '../state.js';
 import { roundRect, drawMatIcon, drawItemIcon, itemTier } from '../utils.js';
 import { regenerateDecor } from '../graphics.js';
 import { ACHIEVEMENTS, unlocked, achievementCount, checkAchievements, achInfo, isClaimed, claimReward, achTabList, unclaimedInTab, adminUnlockAll } from '../achievements.js';
-import { ITEMS, MATS, ITEM_RARITY, canCraft, craft, toggleEquip, useConsumable, equipBonuses, getDur, canRepair, repairItem, repairCost, loadInv, addMaterial, modeInfo, addWmodeXp, modeMult, MODE_MAX_LVL, setInvNoSave } from '../inventory.js';
+import { ITEMS, MATS, ITEM_RARITY, canCraft, craft, toggleEquip, useConsumable, equipBonuses, getDur, canRepair, repairItem, repairCost, loadInv, addMaterial, modeInfo, addWmodeXp, modeMult, MODE_MAX_LVL, setInvNoSave, toggleLoadoutWeapon } from '../inventory.js';
 import { spawnEnemy, spawnFinalBoss } from '../enemies.js';
 import { gainXp } from '../player.js';
 import { curWorld, syncCamera, regenerateWorld, reloadWorlds, campaignStart } from '../world.js';
@@ -406,6 +406,14 @@ export function forgeClickAt(x, y) {
     if (inR(ht.apercu, x, y)) { heroUI.tab = 'apercu'; return 'htab'; }
     if (inR(ht.stats, x, y)) { heroUI.tab = 'stats'; return 'htab'; }
     if (heroUI.tab === 'stats') return null; // l'onglet caractéristiques est en lecture seule
+    // choix des 2 armes emportées en partie (carte d'arme cliquable)
+    for (const card of heroSkillCards(L)) {
+      if (!inR(card, x, y)) continue;
+      if (card.key === 'arc' && !(G.stats && G.stats.bowUnlocked)) return null; // verrouillée
+      toggleLoadoutWeapon(G.inv, card.key);
+      sfxClick();
+      return 'wsel';
+    }
     // choix de l'ultime
     const ub = ultBtns(L);
     if (inR(ub.nuke, x, y)) { G.stats.ultSel = 'nuke'; saveStats(); return 'ult'; }
@@ -517,6 +525,15 @@ export function heroTabs(L) {
     stats:  { x: x1 - w, y, w, h },
     apercu: { x: x1 - 2 * w - 8, y, w, h }
   };
+}
+
+// cartes d'armes de la colonne COMPÉTENCES (personnage) : ordre = SKILL_DEF de forge_gear.js
+export function heroSkillCards(L) {
+  const col = heroColLayout(L).right;
+  const x = col.x + 14, w = col.w - 28, ch = 68, gap = 10, y0 = col.y + 64;
+  return ['epee', 'arc', 'lance'].map((key, i) => ({
+    key, x, y: y0 + i * (ch + gap), w, h: ch
+  }));
 }
 
 // lignes cliquables de la liste d'équipement (colonne gauche) : 6 emplacements

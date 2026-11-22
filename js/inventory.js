@@ -169,13 +169,13 @@ const KEY = () => storeKey('inv_v3');
 export function loadInv() {
   try {
     const d = JSON.parse(localStorage.getItem(KEY()));
-    if (d && d.mats && d.items && d.equip) { d.dur = d.dur || {}; d.wmode = d.wmode || {}; d.buffs = d.buffs || {}; return d; }
+    if (d && d.mats && d.items && d.equip) { d.dur = d.dur || {}; d.wmode = d.wmode || {}; d.buffs = d.buffs || {}; d.weapons = d.weapons || ['epee', 'lance']; return d; }
   } catch (e) {}
   // reset complet : on efface toutes les anciennes sauvegardes d'inventaire
   for (const k of ['rpg2d_inv', 'rpg2d_inv_v2', 'rpg2d_inv_v3', KEY()]) {
     try { localStorage.removeItem(k); } catch (e) {}
   }
-  const d = { mats: {}, items: {}, equip: {}, dur: {}, wmode: {}, buffs: {} };
+  const d = { mats: {}, items: {}, equip: {}, dur: {}, wmode: {}, buffs: {}, weapons: ['epee', 'lance'] };
   try { localStorage.setItem(KEY(), JSON.stringify(d)); } catch (e) {}
   return d;
 }
@@ -297,8 +297,11 @@ export function repairItem(inv, id) {
 // (attaque de base + rotation pour l'épée, attaque + bouclier pour la lance).
 // L'XP requise par niveau augmente fortement : 400 + 350 × niveau^1,5.
 // Niveau 1→2 = 750 XP, 10→11 ≈ 11 500, 50→51 ≈ 124 000, 99→100 ≈ 345 000.
-// Max 100 niveaux. Chaque niveau : +0,5 % de dégâts pour ce type d'arme.
+// Max 100 niveaux. Les dégâts suivent une courbe EXPONENTIELLE :
+// multiplicateur de 1,0 au niv. 1 jusqu'à 2,0 (200 % des dégâts de base) au niv. 100.
 export const MODE_MAX_LVL = 100;
+export const MODE_DMG_MAX = 2.0;   // multiplicateur max de dégâts au niveau 100
+const MODE_DMG_EXPO = 2.6;         // exponentielle : la progression s'accélère avec le niveau
 export function modeNeed(lvl) { return Math.round(400 + 350 * Math.pow(lvl, 1.5)); }
 export function modeKey(attackMode) { return attackMode === 3 ? 'lance' : attackMode === 5 ? 'arc' : 'epee'; }
 export function modeInfo(inv, key) {
@@ -321,7 +324,25 @@ export function addWmodeXp(inv, key, xp) {
   saveInv(inv);
 }
 export function modeMult(inv, key) {
-  return 1 + 0.005 * (modeInfo(inv, key).lvl - 1); // +0,5 % de dégâts par niveau (max +49,5 % au niv. 100)
+  // exponentielle sur la progression de niveau : 1,0 -> MODE_DMG_MAX (2,0) au niv. 100
+  const t = (modeInfo(inv, key).lvl - 1) / (MODE_MAX_LVL - 1);
+  return 1 + (MODE_DMG_MAX - 1) * (Math.exp(MODE_DMG_EXPO * t) - 1) / (Math.exp(MODE_DMG_EXPO) - 1);
+}
+
+// ---------- chargement d'armes : 2 armes max par personnage ----------
+export const WEAPON_MODES = { epee: 1, lance: 3, arc: 5 };
+export function weaponAllowed(inv, key) {
+  if (!inv || !inv.weapons || !inv.weapons.length) return true; // pas de choix enregistré : tout permis
+  return inv.weapons.includes(key);
+}
+// sélection/désélection d'une arme pour les prochaines parties (2 max, 1 min)
+export function toggleLoadoutWeapon(inv, key) {
+  inv.weapons = (inv.weapons || ['epee', 'lance']).slice();
+  const i = inv.weapons.indexOf(key);
+  if (i >= 0) { if (inv.weapons.length > 1) inv.weapons.splice(i, 1); }
+  else if (inv.weapons.length < 2) inv.weapons.push(key);
+  saveInv(inv);
+  return inv.weapons.slice();
 }
 
 // bonus dérivés de l'équipement actuel (level = niveau du personnage pour l'enchantement)

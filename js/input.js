@@ -7,6 +7,7 @@ import { tryInteract } from './world.js';
 import { ensureAudio, toggleMusic, toggleSfx, audioButtonAt, sfxClick, sfxConfirm } from './audio.js';
 import { startTutorial, tutorialEnter } from './tutorial.js';
 import { bowUnlocked } from './bow.js';
+import { modeKey, weaponAllowed } from './inventory.js';
 
 export function initInput() {
   window.addEventListener('keydown', e => {
@@ -67,12 +68,15 @@ export function initInput() {
     if (k === 'f' && G.state === 'playing') G.ultQueued = true;
     // modes d'attaque : & = épée + rotation, é/" = bouclier + lance
     const modeKeys = { '&': 1, '1': 1, 'é': 3, '"': 3, "'": 3, '3': 3 };
-    if (modeKeys[k] && G.state === 'playing' && G.player.attackMode !== modeKeys[k]) {
+    if (modeKeys[k] && G.state === 'playing' && G.player.attackMode !== modeKeys[k]
+        && weaponAllowed(G.inv, modeKey(modeKeys[k]))) {
       G.player.attackMode = modeKeys[k];
       G.player.switchLock = 1.25; // 1,25s sans attaque après le changement d'arme
     }
-    // X : arc cinétique cosmique (arme légendaire, débloquée après le boss du monde 9)
-    if (k === 'x' && G.state === 'playing' && bowUnlocked() && G.player.attackMode !== 5) {
+    // X : arc cinétique cosmique (arme légendaire, débloquée après le boss du monde 9,
+    // et choisie dans le chargement du menu Personnage)
+    if (k === 'x' && G.state === 'playing' && bowUnlocked() && weaponAllowed(G.inv, 'arc')
+        && G.player.attackMode !== 5) {
       G.player.attackMode = 5;
       G.player.switchLock = 1.25;
     }

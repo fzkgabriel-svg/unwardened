@@ -2,7 +2,7 @@ import { G, ctx, W, H, TAU, saveStats, finalWave } from '../state.js';
 import { roundRect, drawMatIcon, drawItemIcon, itemTier } from '../utils.js';
 import { regenerateDecor } from '../graphics.js';
 import { ACHIEVEMENTS, unlocked, achievementCount, checkAchievements, achInfo, isClaimed, claimReward, achTabList, unclaimedInTab, adminUnlockAll } from '../achievements.js';
-import { ITEMS, MATS, canCraft, craft, toggleEquip, equipBonuses, getDur, canRepair, repairItem, repairCost, loadInv, addMaterial, modeInfo, addWmodeXp, modeMult, MODE_MAX_LVL, setInvNoSave } from '../inventory.js';
+import { ITEMS, MATS, canCraft, craft, toggleEquip, equipBonuses, getDur, canRepair, repairItem, repairCost, loadInv, addMaterial, modeInfo, addWmodeXp, modeMult, MODE_MAX_LVL, setInvNoSave, modeKey, WEAPON_MODES } from '../inventory.js';
 import { spawnEnemy, spawnFinalBoss } from '../enemies.js';
 import { gainXp } from '../player.js';
 import { curWorld, syncCamera, regenerateWorld, reloadWorlds, campaignStart } from '../world.js';
@@ -198,6 +198,11 @@ export function resetToMenu() {
     alive: true, lastHurt: -99, potions: 0, maxPotions: 3, slowT: 0, potionCooldown: 0,
     poisonT: 0, poisonDps: 0, _titanMax: 0, handCd: 0, handUsed: false
   });
+  // chargement d'armes (menu Personnage) : la partie démarre avec la 1re arme choisie
+  {
+    const wl = (G.inv && G.inv.weapons && G.inv.weapons.length) ? G.inv.weapons : ['epee', 'lance'];
+    p.attackMode = WEAPON_MODES[wl[0]] || 1;
+  }
   G.enemies.length = 0; G.drops.length = 0; G.fireZones.length = 0; G.craters.length = 0; G.portals.length = 0;
   G.lightnings.length = 0; G.projectiles.length = 0;
   G.particles.length = 0; G.damageTexts.length = 0; G.rings.length = 0;

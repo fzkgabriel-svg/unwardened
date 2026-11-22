@@ -11,6 +11,7 @@ import { sfxBowFire, sfxSingularity } from './audio.js';
 export const BOW_SING_CD = 22;          // recharge de la singularité
 const CHARGE_TIME = 1.15;               // temps de charge max (s)
 const MIN_DMG = 0.55, MAX_DMG = 2.6;    // multiplicateur de dégâts selon la charge
+const BOW_SHOT_CD = 0.25;               // cadence mini entre deux tirs (anti-spam)
 
 export function bowUnlocked() { return !!(G.stats && G.stats.bowUnlocked); }
 
@@ -37,7 +38,7 @@ function fireBolt() {
     dmg: p.attackDamage * dmgMul * waveBonus(),
     type, life: 2.2, t: 0, trail: [],
   });
-  p.attackCooldown = 0.28; // cadence max de l'arc
+  p.attackCooldown = BOW_SHOT_CD; // cadence de tir de l'arc (anti-spam)
   b.recoil = 1;            // recul visuel de l'arc
   sfxBowFire(charge);
   // buée d'énergie au départ
@@ -122,9 +123,13 @@ export function updateBow(dt) {
       b.charge = Math.min(1, b.charge + dt / CHARGE_TIME);
       // cristaux aspirés pendant la charge (feedback visuel dans draw)
     } else if (b.charging) {
-      b.charging = false;
-      fireBolt();
-      b.charge = 0;
+      // anti-spam : pas de tir pendant le cooldown — le coup est retenu
+      // et part automatiquement dès que les 0,25 s sont écoulées
+      if (p.attackCooldown <= 0) {
+        b.charging = false;
+        fireBolt();
+        b.charge = 0;
+      }
     }
   } else if (b.charging) {
     b.charging = false; b.charge = 0; // changement d'arme pendant la charge : annule

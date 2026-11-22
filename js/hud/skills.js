@@ -3,7 +3,7 @@
 // animations de disponibilité. + plaque de l'arme active (nom, niveau, XP).
 import { G, ctx, W, H, TAU } from '../state.js';
 import { roundRect, drawFlaskIcon } from '../utils.js';
-import { ITEMS, modeInfo, modeKey } from '../inventory.js';
+import { ITEMS, modeInfo, modeKey, weaponAllowed } from '../inventory.js';
 import { drawBowIcon } from '../gfx/bow_draw.js';
 import { HPAL, parchment, medBar, engraved, gem } from './frame.js';
 
@@ -174,9 +174,9 @@ export function drawSkillBar() {
     { icon: 'volcano', key: 'D', mode: -2, cd: 0, cdMax: 1, cd2: p.handUsed ? 0 : p.handCd, cd2Max: CD_MAX.hand, used: p.handUsed },
     { icon: 'potion', key: 'W', mode: -3, cd: p.potionCooldown, cdMax: 2.5, cd2: 0, cd2Max: 0, potion: true }
   ] : [
-    { icon: 'sword', key: '&', mode: 1, cd: p.attackCooldown, cdMax: CD_MAX.atk, cd2: p.spinCooldown, cd2Max: CD_MAX.spin, sub: 'D', subColor: '#ff9100' },
-    { icon: 'lance', key: 'é', mode: 3, cd: p.attackCooldown, cdMax: CD_MAX.atk, cd2: p.shieldCd, cd2Max: CD_MAX.shield, sub: 'D', subColor: '#4fc3f7' },
-    ...(G.stats && G.stats.bowUnlocked ? [{
+    ...(weaponAllowed(G.inv, 'epee') ? [{ icon: 'sword', key: '&', mode: 1, cd: p.attackCooldown, cdMax: CD_MAX.atk, cd2: p.spinCooldown, cd2Max: CD_MAX.spin, sub: 'D', subColor: '#ff9100' }] : []),
+    ...(weaponAllowed(G.inv, 'lance') ? [{ icon: 'lance', key: 'é', mode: 3, cd: p.attackCooldown, cdMax: CD_MAX.atk, cd2: p.shieldCd, cd2Max: CD_MAX.shield, sub: 'D', subColor: '#4fc3f7' }] : []),
+    ...(G.stats && G.stats.bowUnlocked && weaponAllowed(G.inv, 'arc') ? [{
       icon: 'bow', key: 'X', mode: 5, cd: p.attackCooldown, cdMax: CD_MAX.atk, cd2: (G.bow ? G.bow.singCd : 0), cd2Max: CD_MAX.sing, sub: 'D', subColor: '#b388ff'
     }] : []),
     { icon: 'potion', key: 'W', mode: -3, cd: p.potionCooldown, cdMax: 2.5, cd2: 0, cd2Max: 0, potion: true }
