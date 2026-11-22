@@ -5,7 +5,7 @@ import { G, ctx, W, H, TAU } from '../state.js';
 import { roundRect, drawFlaskIcon } from '../utils.js';
 import { ITEMS, modeInfo, modeKey, modeMult, weaponAllowed } from '../inventory.js';
 import { drawBowIcon } from '../gfx/bow_draw.js';
-import { HPAL, parchment, engraved, gem } from './frame.js';
+import { HPAL, parchment, engraved, gem, crisp, HUD_CINZEL } from './frame.js';
 
 // icônes détaillées des modes d'attaque (déplacées depuis hud.js)
 function drawAttackIcon(kind, x, y, color) {
@@ -266,20 +266,14 @@ export function drawWeaponPanel() {
 
   // gemme d'arme à gauche
   gem(px + 22, py + ph / 2, 8, st.col, 1.2);
-  engraved(st.name.toUpperCase(), px + 38, py + 22, 13, '#3a2a14', 'left', 'Georgia, serif');
-  engraved(titan ? 'PUISSANCE INFERNALE' : `NIV ${mi.lvl} · +${dmgPct} %`, px + 38, py + 40, 10, '#5a4526', 'left', 'Consolas, monospace');
+  crisp(st.name.toUpperCase(), px + 38, py + 23, 16, '#33240f', 'left', { font: HUD_CINZEL, weight: 700, spacing: 1 });
+  crisp(titan ? 'PUISSANCE INFERNALE' : `NIV ${mi.lvl} · +${dmgPct} %`, px + 38, py + 41, 11.5, '#5a4526', 'left', { weight: 700, spacing: 0.8 });
   // objet forgé équipé (colonne droite)
-  ctx.textAlign = 'right';
   if (eqIt) {
-    ctx.font = 'bold 10px Inter, sans-serif';
-    ctx.fillStyle = '#4a3517';
-    const nm = eqIt.name.length > 20 ? eqIt.name.slice(0, 19) + '…' : eqIt.name;
-    ctx.fillText(nm, px + pw - 12, py + 23);
-    ctx.font = '8.5px Inter, sans-serif'; ctx.fillStyle = '#6d5a3a';
+    crisp(eqIt.name.length > 20 ? eqIt.name.slice(0, 19) + '…' : eqIt.name, px + pw - 12, py + 24, 10.5, '#4a3517', 'right', { weight: 600 });
     const ds = eqIt.desc || '';
-    ctx.fillText(ds.length > 30 ? ds.slice(0, 29) + '…' : ds, px + pw - 12, py + 37);
+    crisp(ds.length > 30 ? ds.slice(0, 29) + '…' : ds, px + pw - 12, py + 38, 9.5, '#6d5a3a', 'right', { weight: 500 });
   } else {
-    ctx.font = 'italic 9.5px Inter, sans-serif'; ctx.fillStyle = '#8a7654';
-    ctx.fillText('aucun objet forgé', px + pw - 12, py + 30);
+    crisp('aucun objet forgé', px + pw - 12, py + 31, 10, '#8a7654', 'right', { weight: 500, spacing: 0.3 });
   }
 }

@@ -187,6 +187,20 @@ export function medBar(x, y, w, h, frac, ghost, c1, c2, opts = {}) {
   }
 }
 
+// ---------- texte net style menu (Inter / Cinzel + letterSpacing) ----------
+// Rendu net pour les petits libellés : même famille typographique que le menu principal.
+export function crisp(text, x, y, size, color, align = 'left', opts = {}) {
+  const { font = 'Inter, sans-serif', weight = 600, spacing = 0 } = opts;
+  ctx.save();
+  ctx.font = `${weight} ${size}px ${font}`;
+  ctx.textAlign = align;
+  ctx.fillStyle = color;
+  if (spacing) ctx.letterSpacing = `${spacing}px`;
+  ctx.fillText(text, x, y);
+  ctx.restore();
+}
+export const HUD_CINZEL = 'Cinzel, Georgia, serif';
+
 // ---------- texte gravé (lettrage parchemin) ----------
 export function engraved(text, x, y, size = 12, color = HPAL.parch, align = 'left', font = 'Georgia, serif') {
   ctx.save();

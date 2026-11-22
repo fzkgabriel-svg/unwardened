@@ -5,7 +5,7 @@ import { G, ctx, W, H, TAU } from '../state.js';
 import { roundRect } from '../utils.js';
 import { curWorld, RARITY_COLOR } from '../world.js';
 import { playerAngle } from '../attacks.js';
-import { HPAL, metalFrame, parchment, engraved, gem } from './frame.js';
+import { HPAL, metalFrame, parchment, engraved, gem, crisp, HUD_CINZEL } from './frame.js';
 
 const MS = 148; // côté de la carte carrée
 
@@ -24,18 +24,19 @@ export function drawMinimap() {
   roundRect(ox + 2.5, oy + 2.5, ow - 5, oh - 5, 5); ctx.stroke();
   const bossAlive = G.enemies.some(en => en.type && en.type.startsWith('finalBoss'));
   // ligne 1 : vague à gauche, kills totaux à droite
-  engraved(bossAlive ? 'BOSS' : `VAGUE ${G.wave}`, ox + 12, oy + 20, 13, bossAlive ? '#8e2424' : '#3a2a14', 'left', 'Georgia, serif');
-  engraved(`${G.kills} kills`, ox + ow - 12, oy + 20, 10, '#6d5a3a', 'right', 'Consolas, monospace');
+  crisp(bossAlive ? 'BOSS' : `VAGUE ${G.wave}`, ox + 12, oy + 21, 15,
+    bossAlive ? '#8e2424' : '#33240f', 'left', { font: HUD_CINZEL, weight: 700, spacing: 1.5 });
+  crisp(`${G.kills} kills`, ox + ow - 12, oy + 20, 11.5, '#6d5a3a', 'right', { weight: 700, spacing: 0.5 });
   // ligne 2 : progression des monstres de la vague + mini-jauge
   if (!bossAlive) {
-    engraved(`${G.waveKills}/${G.waveTarget} monstres`, ox + 12, oy + 37, 10.5, '#5a4526', 'left', 'Consolas, monospace');
+    crisp(`${G.waveKills}/${G.waveTarget} monstres`, ox + 12, oy + 39, 11.5, '#4a3517', 'left', { weight: 600, spacing: 0.5 });
     const f = G.waveTarget > 0 ? Math.min(1, G.waveKills / G.waveTarget) : 0;
     ctx.fillStyle = 'rgba(0,0,0,0.25)';
-    roundRect(ox + 12, oy + oh - 10, ow - 24, 4, 2); ctx.fill();
+    roundRect(ox + 12, oy + oh - 9, ow - 24, 4, 2); ctx.fill();
     ctx.fillStyle = HPAL.green;
-    if (f > 0.01) { roundRect(ox + 12, oy + oh - 10, (ow - 24) * f, 4, 2); ctx.fill(); }
+    if (f > 0.01) { roundRect(ox + 12, oy + oh - 9, (ow - 24) * f, 4, 2); ctx.fill(); }
   } else {
-    engraved('DÉTRUIRE LE BOSS', ox + 12, oy + 37, 10.5, '#8e2424', 'left', 'Georgia, serif');
+    crisp('DÉTRUIRE LE BOSS', ox + 12, oy + 39, 11.5, '#8e2424', 'left', { font: HUD_CINZEL, weight: 700, spacing: 1 });
   }
 
   // ---- cadre métallique carré ----
