@@ -115,7 +115,7 @@ function drawHeroCenter(L, CL) {
     ['📦', `${s.totalRuns || 0} parties`], ['🌊', `vag. ${s.bestWave || 0}`],
     ['💀', `${(s.totalKills || 0).toLocaleString('fr-FR')} kills`], ['⏱', fmtPlaytime(s.playtime || 0)]
   ];
-  const rw = 110, rh = 28, gap = 0; // badges collés verticalement
+  const rw = 110, rh = 22, gap = 0; // hauteur réduite pour éviter chevauchement
   const sideY = D.y - 10; // alignés avec le haut du mannequin
   const leftX = D.x - 180, rightX = D.x + 70;
   recs.forEach((r, i) => {
