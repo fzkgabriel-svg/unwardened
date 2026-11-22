@@ -110,23 +110,27 @@ function drawHeroCenter(L, CL) {
   ctx.restore();
   drawDoll(D.x, D.y);
 
-  // records en ligne sous le mannequin
+  // records répartis sur les côtés du mannequin (2 gauche, 2 droite)
   const recs = [
     ['📦', `${s.totalRuns || 0} parties`], ['🌊', `vag. ${s.bestWave || 0}`],
     ['💀', `${(s.totalKills || 0).toLocaleString('fr-FR')} kills`], ['⏱', fmtPlaytime(s.playtime || 0)]
   ];
-  const rw = 126, gap = 10, rx0 = D.x - (recs.length * rw + (recs.length - 1) * gap) / 2;
-  const ry = D.y + 104;
+  const rw = 110, rh = 28, gap = 8;
+  const sideY = D.y - 10; // alignés avec le haut du mannequin
+  const leftX = D.x - 140, rightX = D.x + 30;
   recs.forEach((r, i) => {
-    const rx = rx0 + i * (rw + gap);
+    const isLeft = i < 2;
+    const col = isLeft ? 0 : i - 2;
+    const rx = isLeft ? leftX : rightX;
+    const ry = sideY + col * (rh + gap);
     ctx.fillStyle = 'rgba(255,255,255,0.05)';
-    roundRect(rx, ry, rw, 32, 8); ctx.fill();
+    roundRect(rx, ry, rw, rh, 7); ctx.fill();
     ctx.strokeStyle = 'rgba(255,215,64,0.25)'; ctx.lineWidth = 1;
-    roundRect(rx, ry, rw, 32, 8); ctx.stroke();
-    ctx.fillStyle = '#d4b062'; ctx.font = `12px ${UI}`; ctx.textAlign = 'center';
-    ctx.fillText(r[0], rx + 22, ry + 20);
-    ctx.fillStyle = '#e8e0c8'; ctx.font = `bold 10.5px ${UI}`;
-    ctx.fillText(fitText(String(r[1]), rw - 52), rx + rw / 2 + 10, ry + 20);
+    roundRect(rx, ry, rw, rh, 7); ctx.stroke();
+    ctx.fillStyle = '#d4b062'; ctx.font = `11px ${UI}`; ctx.textAlign = 'center';
+    ctx.fillText(r[0], rx + 18, ry + 18);
+    ctx.fillStyle = '#e8e0c8'; ctx.font = `bold 10px ${UI}`;
+    ctx.fillText(fitText(String(r[1]), rw - 40), rx + rw / 2 + 8, ry + 18);
   });
 }
 
