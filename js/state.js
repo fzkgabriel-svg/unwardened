@@ -12,7 +12,7 @@ export const ctx = canvas.getContext('2d');
 ctx.scale(SS, SS);
 export const W = 1200, H = 640;
 export const TAU = Math.PI * 2;
-export const VERSION = '3.24.0';
+export const VERSION = '3.25.0';
 export const FINAL_WAVE = 20; // vague du boss final (campagne 1) // incrémenter à chaque mise à jour du jeu
 // vagues finales : campagne 2 -> 25, 3 -> 30, 4 (Égouts) -> 35, 5 (Espace) -> 40
 export function finalWave() {
@@ -71,10 +71,12 @@ export const G = {
   rings: [],
   bomber: null,    // cinématique de l'ultime : B-2 + bombe larguée
   mushroom: null,  // champignon nuageux de l'explosion ({x,y,t})
-  iceStorm: null,  // ultime Pluie de Glace : {t, x, y, r, spawnT} (ralentit + réduit les dégâts ennemis)
+  iceStorm: null,  // ultime Pluie de Glace : {t, x, y, r, spawnT, age, finale, boomed} (ralentit + réduit les dégâts ennemis)
+  iceDim: 0,       // assombrissement écran pendant la Pluie de Glace (0..1)
   hellStorm: null, // ultime Colère Infernale : {t, x, y, r, spawnT} (foyers de feu)
-  iceSpikes: [],   // pics de glace en chute {x, ty, y, v, r}
+  iceSpikes: [],   // cristaux de glace en chute {x, ty, y, v, r, kind, rot, drift, mega}
   skyIcicles: [],  // stalactites géantes de la Pluie de Glace {x, y, ty, v, r, rot}
+  iceShards: [],   // éclats de glace laissés au sol par les impacts {x, y, rot, s, life, maxLife}
   snowPatches: [], // sols enneigés laissés par la Pluie de Glace {x, y, r, life, maxLife}
   lasers: [],      // faisceaux de feu du Titan de Feu {x, y, angle, len, w, life, tick}
   hands: [],       // mains de feu en vol vers leur cible {x, y, tx, ty, t, dur}

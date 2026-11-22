@@ -673,7 +673,7 @@ function update(dt) {
     saveStats();
     G.enemies.length = 0; G.drops.length = 0; G.fireZones.length = 0;
     G.portals.length = 0; G.projectiles.length = 0; G.lightnings.length = 0;
-    G.iceWalls.length = 0; G.shockwaves.length = 0; G.iceSpikes.length = 0; G.skyIcicles.length = 0; G.snowPatches.length = 0; G.iceStorm = null;
+    G.iceWalls.length = 0; G.shockwaves.length = 0; G.iceSpikes.length = 0; G.skyIcicles.length = 0; G.snowPatches.length = 0; G.iceShards.length = 0; G.iceStorm = null; G.iceDim = 0;
     G.lasers.length = 0; G.hands.length = 0; G.volcanoes.length = 0; G.hellStorm = null;
     G.acidZones.length = 0; G.blackHoles.length = 0;
     G.acidRain = 0; G.voidStorm = 0;

@@ -368,7 +368,7 @@ function stormCloudXY(s, i, t) {
 // zone glacée qui pulse + pics de glace en chute + sol enneigé + nuages
 export function drawIceStorm() {
   const s = G.iceStorm;
-  if (!s && !G.iceSpikes.length && !G.iceWalls.length && !G.shockwaves.length && !G.skyIcicles.length && !G.snowPatches.length) return;
+  if (!s && !G.iceSpikes.length && !G.iceWalls.length && !G.shockwaves.length && !G.skyIcicles.length && !G.snowPatches.length && !G.iceShards.length) return;
   // SOL EN NEIGE : nappes blanches laissées par la Pluie de Glace (~25 s)
   for (const sp of G.snowPatches) {
     if (sp.life <= 0) continue;
@@ -401,6 +401,22 @@ export function drawIceStorm() {
       ctx.arc(sp.x + Math.cos(ang) * dd, sp.y + Math.sin(ang) * dd * 0.6, 1.6, 0, TAU);
       ctx.fill();
     }
+    ctx.restore();
+  }
+  // ÉCLATS DE GLACE AU SOL : petits cristaux laissés par les impacts (~7 s)
+  for (const d of G.iceShards) {
+    if (d.life <= 0) continue;
+    const a = Math.min(1, d.life / 2);
+    ctx.save();
+    ctx.translate(d.x, d.y);
+    ctx.rotate(d.rot);
+    ctx.globalAlpha = a * 0.85;
+    ctx.fillStyle = '#b3e5fc';
+    ctx.beginPath();
+    ctx.moveTo(0, -7 * d.s); ctx.lineTo(4 * d.s, 0); ctx.lineTo(0, 3 * d.s); ctx.lineTo(-4 * d.s, 0);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.moveTo(0, -7 * d.s); ctx.lineTo(0, 2 * d.s); ctx.stroke();
     ctx.restore();
   }
   // NUAGES de la tempête : masses blanches/bleues qui pleuvent sur la zone
@@ -443,19 +459,143 @@ export function drawIceStorm() {
     ctx.fillStyle = '#e1f5fe'; ctx.font = 'bold 15px Inter, sans-serif'; ctx.textAlign = 'center';
     ctx.fillText(`❄ ${Math.ceil(s.t)}s`, s.x, s.y - s.r - 14);
   }
-  // pics de glace : lames allongées avec reflet
+  // CERCLE MAGIQUE : runes de glace en rotation + ondulation radiale
+  if (s && s.age !== undefined) {
+    const prep = s.friendly && s.age < 1.4;
+    const finale = s.friendly && s.age >= 9.8;
+    ctx.save();
+    // cercle runique intérieur (rayon ~110, tourne lentement)
+    const rr = Math.min(s.r * 0.45, 130);
+    const rot = G.time * (finale ? 0.9 : 0.4);
+    ctx.strokeStyle = `rgba(179,229,252,${prep ? 0.5 + Math.sin(G.time * 6) * 0.2 : 0.35})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(s.x, s.y, rr, 0, TAU); ctx.stroke();
+    // runes : petites marques orientées le long du cercle
+    for (let i = 0; i < 18; i++) {
+      const a = rot + i * TAU / 18;
+      const rx = s.x + Math.cos(a) * rr, ry = s.y + Math.sin(a) * rr;
+      ctx.save();
+      ctx.translate(rx, ry); ctx.rotate(a + Math.PI / 2);
+      ctx.strokeStyle = `rgba(224,242,254,${0.4 + 0.3 * Math.sin(G.time * 3 + i)})`;
+      ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.moveTo(-3, -5); ctx.lineTo(3, -5); ctx.lineTo(0, 5); ctx.closePath(); ctx.stroke();
+      ctx.restore();
+    }
+    // cercle extérieur pointillé (déjà présent) + second cercle médian
+    ctx.setLineDash([4, 12]);
+    ctx.strokeStyle = `rgba(129,212,250,${prep ? 0.7 : 0.4})`;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(s.x, s.y, rr * 0.72, 0, TAU); ctx.stroke();
+    ctx.setLineDash([]);
+    // onde de préparation : anneau qui monte du centre pendant la phase prep
+    if (prep) {
+      const k = Math.min(1, s.age / 1.4);
+      ctx.strokeStyle = `rgba(224,242,254,${(1 - k) * 0.8})`;
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(s.x, s.y, 30 + k * s.r * 0.9, 0, TAU); ctx.stroke();
+      // aura brillante autour du centre
+      const ag = ctx.createRadialGradient(s.x, s.y, 10, s.x, s.y, 120);
+      ag.addColorStop(0, `rgba(224,242,254,${0.35 * (1 - k * 0.5)})`);
+      ag.addColorStop(1, 'rgba(224,242,254,0)');
+      ctx.fillStyle = ag;
+      ctx.beginPath(); ctx.arc(s.x, s.y, 120, 0, TAU); ctx.fill();
+    }
+    // scintillements de givre le long du cercle en finale
+    if (finale) {
+      for (let i = 0; i < 14; i++) {
+        const a = G.time * 1.5 + i * TAU / 14;
+        const tw = 0.5 + 0.5 * Math.sin(G.time * 8 + i * 2.3);
+        if (tw < 0.6) continue;
+        ctx.fillStyle = 'rgba(255,255,255,0.95)';
+        ctx.beginPath();
+        ctx.arc(s.x + Math.cos(a) * s.r * 0.92, s.y + Math.sin(a) * s.r * 0.58, 2, 0, TAU);
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+  // ENNEMIS GELÉS : carapace de glace + cristaux + calotte de neige
+  for (const e of G.enemies) {
+    if (!(e.frozen > 0)) continue;
+    const fa = Math.min(1, e.frozen / 2);
+    const bob = Math.sin(G.time * 3 + e.x) * 1.5;
+    ctx.save();
+    ctx.translate(e.x, e.y + bob);
+    ctx.globalAlpha = 0.30 + fa * 0.35;
+    // dôme de givre translucide
+    const fg = ctx.createRadialGradient(0, -e.r * 0.4, 2, 0, -e.r * 0.3, e.r * 1.3);
+    fg.addColorStop(0, 'rgba(224,242,254,0.9)');
+    fg.addColorStop(0.7, 'rgba(129,212,250,0.55)');
+    fg.addColorStop(1, 'rgba(79,195,247,0)');
+    ctx.fillStyle = fg;
+    ctx.beginPath(); ctx.ellipse(0, -e.r * 0.25, e.r * 1.15, e.r * 0.95, 0, 0, TAU); ctx.fill();
+    // calotte de neige
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    ctx.beginPath(); ctx.ellipse(0, -e.r * 0.85, e.r * 0.7, e.r * 0.35, 0, Math.PI, 0); ctx.fill();
+    // 3 mini-cristaux plantés dans la gangue
+    for (let i = -1; i <= 1; i++) {
+      const ca = i * 0.7 + e.x * 0.01;
+      const cx2 = Math.cos(ca) * e.r * 0.8, cy2 = -e.r * 0.2 + Math.sin(ca) * e.r * 0.4;
+      const ch2 = 5 + (i + 1) * 3;
+      ctx.fillStyle = 'rgba(179,229,252,0.9)';
+      ctx.beginPath();
+      ctx.moveTo(cx2, cy2 - ch2); ctx.lineTo(cx2 + 2.5, cy2); ctx.lineTo(cx2 - 2.5, cy2);
+      ctx.closePath(); ctx.fill();
+    }
+    // reflets
+    ctx.globalAlpha = fa * 0.8;
+    ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.ellipse(0, -e.r * 0.25, e.r * 1.15, e.r * 0.95, 0, 0, TAU); ctx.stroke();
+    ctx.restore();
+  }
+  // cristaux de glace : 3 variantes facettées + traînée lumineuse + rotation
   for (const sp of G.iceSpikes) {
-    const h = sp.r * 3.2;
+    const h = sp.r * 3.2 * (sp.mega ? 1.5 : 1);
+    const kind = sp.kind || 0;
     ctx.save();
     ctx.translate(sp.x, sp.y);
-    const g2 = ctx.createLinearGradient(-sp.r, 0, sp.r, 0);
-    g2.addColorStop(0, '#0277bd'); g2.addColorStop(0.5, '#b3e5fc'); g2.addColorStop(1, '#0288d1');
-    ctx.fillStyle = g2;
+    // traînée lumineuse bleue/blanche (s'étire avec la vitesse)
+    const tl = Math.min(90, sp.v * 2.6);
+    const tg = ctx.createLinearGradient(0, -tl, 0, 4);
+    tg.addColorStop(0, 'rgba(224,242,254,0)');
+    tg.addColorStop(0.6, sp.mega ? 'rgba(179,229,252,0.4)' : 'rgba(179,229,252,0.25)');
+    tg.addColorStop(1, 'rgba(255,255,255,0.65)');
+    ctx.fillStyle = tg;
     ctx.beginPath();
-    ctx.moveTo(0, -h); ctx.lineTo(sp.r * 0.55, 0); ctx.lineTo(-sp.r * 0.55, 0);
+    ctx.moveTo(-sp.r * 0.4, 4); ctx.lineTo(0, -tl); ctx.lineTo(sp.r * 0.4, 4);
     ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.lineWidth = 1.2;
-    ctx.beginPath(); ctx.moveTo(0, -h); ctx.lineTo(0, -h * 0.25); ctx.stroke();
+    // corps du cristal
+    const g2 = ctx.createLinearGradient(-sp.r, 0, sp.r, 0);
+    g2.addColorStop(0, '#01579b'); g2.addColorStop(0.4, '#4fc3f7');
+    g2.addColorStop(0.6, '#b3e5fc'); g2.addColorStop(1, '#0277bd');
+    ctx.fillStyle = g2;
+    ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    if (kind === 0) { // lame simple
+      ctx.moveTo(0, -h); ctx.lineTo(sp.r * 0.55, 0); ctx.lineTo(-sp.r * 0.55, 0);
+    } else if (kind === 1) { // prisme hexagonal facetté
+      ctx.moveTo(0, -h);
+      ctx.lineTo(sp.r * 0.62, -h * 0.35); ctx.lineTo(sp.r * 0.45, h * 0.15);
+      ctx.lineTo(-sp.r * 0.45, h * 0.15); ctx.lineTo(-sp.r * 0.62, -h * 0.35);
+    } else { // aiguille fine
+      ctx.moveTo(0, -h * 1.15); ctx.lineTo(sp.r * 0.34, 0); ctx.lineTo(-sp.r * 0.34, 0);
+    }
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    // facettes internes + reflet animé
+    ctx.save();
+    ctx.rotate(Math.sin(G.time * 6 + (sp.rot || 0)) * 0.12);
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 0.9;
+    ctx.beginPath(); ctx.moveTo(0, -h * 0.9); ctx.lineTo(0, h * 0.05); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 1.1;
+    ctx.beginPath(); ctx.moveTo(0, -h * 0.95); ctx.lineTo(0, -h * 0.3); ctx.stroke();
+    ctx.restore();
+    // halo pour les méga-cristaux
+    if (sp.mega) {
+      ctx.shadowColor = '#b3e5fc'; ctx.shadowBlur = 18;
+      ctx.fillStyle = 'rgba(224,242,254,0.5)';
+      ctx.beginPath(); ctx.arc(0, -h * 0.85, sp.r * 0.4, 0, TAU); ctx.fill();
+      ctx.shadowBlur = 0;
+    }
     ctx.restore();
   }
   // STALACTITES GÉANTES : lames de glace facettées qui dévalent le ciel

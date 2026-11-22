@@ -79,6 +79,16 @@ export function draw() {
   drawBackground();
   drawBiomeGrade(); // voile teinté par biome (couleurs plus riches)
   drawCloudShadows(); // nappes d'ombre de nuages dérivant sur le monde
+  // Pluie de Glace : assombrissement glacé progressif pendant l'ultime
+  if (G.iceDim > 0.01) {
+    ctx.fillStyle = `rgba(5,12,30,${G.iceDim})`;
+    ctx.fillRect(0, 0, W, H);
+    const fg = ctx.createLinearGradient(0, H * 0.55, 0, H);
+    fg.addColorStop(0, 'rgba(120,200,255,0)');
+    fg.addColorStop(1, `rgba(140,220,255,${G.iceDim * 0.45})`);
+    ctx.fillStyle = fg;
+    ctx.fillRect(0, H * 0.55, W, H * 0.45);
+  }
   if (G.state === 'menu') {
     drawMenu();
     drawDurWarnPopup(); // popup durabilité par-dessus tous les écrans du menu
