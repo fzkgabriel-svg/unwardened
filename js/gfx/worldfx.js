@@ -51,7 +51,7 @@ export function drawWorldPortals() {
     ctx.fillText(label, po.x, po.y - 78);
     const d = Math.hypot(G.player.x - po.x, G.player.y - po.y) - 46;
     if (d < CONFIG.interactDist) {
-      ctx.font = 'bold 12px Segoe UI';
+      ctx.font = 'bold 12px Inter, sans-serif';
       ctx.strokeText('E — Entrer', po.x, po.y - 96);
       ctx.fillStyle = '#fff';
       ctx.fillText('E — Entrer', po.x, po.y - 96);
@@ -413,7 +413,7 @@ export function drawEffects() {
   ctx.textAlign = 'center';
   for (const t of G.damageTexts) {
     ctx.globalAlpha = Math.min(1, t.life / (t.maxLife * 0.5));
-    ctx.font = 'bold 15px Segoe UI';
+    ctx.font = 'bold 15px Inter, sans-serif';
     ctx.strokeStyle = 'rgba(0,0,0,0.8)'; ctx.lineWidth = 3;
     ctx.strokeText(t.text, t.x, t.y);
     ctx.fillStyle = t.color;

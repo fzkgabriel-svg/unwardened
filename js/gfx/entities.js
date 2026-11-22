@@ -843,7 +843,7 @@ export function drawEnemy(e) {
   roundRect(e.x - bw / 2, e.y - e.r - 13, bw * Math.max(0, e.hp / e.maxHp), 5, 2); ctx.fill();
   if (e.isBoss || e.isMini) {
     ctx.fillStyle = e.isBoss ? '#ff5252' : '#ffb300';
-    ctx.font = 'bold 13px Segoe UI'; ctx.textAlign = 'center';
+    ctx.font = 'bold 13px Inter, sans-serif'; ctx.textAlign = 'center';
     ctx.fillText(e.isBoss ? 'BOSS' : 'MINI-BOSS', e.x, e.y - e.r - 18);
   }
 }

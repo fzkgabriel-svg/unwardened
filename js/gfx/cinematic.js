@@ -342,7 +342,7 @@ export function drawIceStorm() {
     ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, TAU); ctx.stroke();
     ctx.setLineDash([]);
     // compte à rebours de la tempête
-    ctx.fillStyle = '#e1f5fe'; ctx.font = 'bold 15px Segoe UI'; ctx.textAlign = 'center';
+    ctx.fillStyle = '#e1f5fe'; ctx.font = 'bold 15px Inter, sans-serif'; ctx.textAlign = 'center';
     ctx.fillText(`❄ ${Math.ceil(s.t)}s`, s.x, s.y - s.r - 14);
   }
   // pics de glace : lames allongées avec reflet
