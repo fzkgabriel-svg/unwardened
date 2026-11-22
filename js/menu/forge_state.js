@@ -124,8 +124,16 @@ export function drawItemDetail() {
   ctx.fillText(fitText(it.name, L.cw - 60), W / 2, L.cy + 152);
   ctx.fillStyle = '#90caf9'; ctx.font = 'bold 12px Inter, sans-serif';
   ctx.fillText(SLOT_LABEL[it.slot] || it.slot.toUpperCase(), W / 2, L.cy + 174);
-  ctx.fillStyle = broken ? '#ff8a80' : '#69f0ae'; ctx.font = 'italic 13px Inter, sans-serif';
-  ctx.fillText(broken ? '💥 CASSÉ — répare-le pour le rééquiper' : equipped ? '✓ Actuellement équipé' : 'Dans ton inventaire', W / 2, L.cy + 196);
+  // comparaison : quel objet serait remplacé dans le même emplacement
+  const mateId = G.inv.equip[it.slot];
+  const mateIt = mateId && mateId !== id ? ITEMS[mateId] : null;
+  ctx.fillStyle = broken ? '#ff8a80' : equipped ? '#69f0ae' : mateIt ? '#ffcc80' : '#90a4ae';
+  ctx.font = 'italic 12.5px Inter, sans-serif';
+  const statusTxt = broken ? '💥 CASSÉ — répare-le pour le rééquiper'
+    : equipped ? '✓ Actuellement équipé'
+    : mateIt ? `🔄 Équiper remplacera : ${mateIt.name} (${mateIt.desc})`
+    : 'Dans ton inventaire';
+  ctx.fillText(fitText(statusTxt, L.cw - 60), W / 2, L.cy + 196);
 
   // les niveaux d'armes se suivent dans l'onglet Héros (épée / lance)
 
@@ -259,23 +267,42 @@ export function forgeClickAt(x, y) {
   return null;
 }
 
-export function heroSlots(L) {
-  const hx = L.cx + L.cw / 2 - 20, hy = L.cy + L.ch / 2 + 26;
-  // emplacements calés sur les parties du corps, bien dégagés du héros
+// ---------- onglet PERSONNAGE : colonnes gauche/centre/droite + bandeau bas ----------
+// zone de contenu : sous les onglets, au-dessus de la bande ULTIME/PROGRESSION
+export function heroColLayout(L) {
+  const ix = L.cx + 18, iy = L.cy + 96, iw = L.cw - 36;
+  const stripY = L.cy + L.ch - 54;         // haut de la bande du bas
+  const ih = stripY - 10 - iy;             // hauteur utile du contenu
+  const colW = 240;
   return {
-    hx, hy,
-    weapon: { x: hx + 78, y: hy - 32, w: 88, h: 64 },   // droite, hauteur torse
-    armor:  { x: hx - 166, y: hy - 32, w: 88, h: 64 },  // gauche, hauteur torse
-    charm:  { x: hx - 44, y: hy - 124, w: 88, h: 52 },  // centré au-dessus de la tête
-    boots:  { x: hx - 44, y: hy + 92, w: 88, h: 50 }    // centré sous les pieds
+    ix, iy, iw, ih, colW, stripY,
+    left:  { x: ix, y: iy, w: colW, h: ih },
+    right: { x: ix + iw - colW, y: iy, w: colW, h: ih },
+    dcx: ix + iw / 2,                       // centre horizontal = milieu du panneau
+    dcy: iy + ih / 2
   };
 }
 
-export function ultBtns(L) {
-  const x = L.cx + L.cw - 252, y = L.cy + 96;
+export function heroSlots(L) {
+  const { dcx, dcy } = heroColLayout(L);
+  const hx = dcx, hy = dcy + 10;
+  // emplacements calés sur les parties du corps, bien dégagés du héros
   return {
-    nuke:  { x, y, w: 232, h: 40 },
-    glace: { x, y: y + 48, w: 232, h: 40 },
-    hell:  { x, y: y + 96, w: 232, h: 40 }
+    hx, hy,
+    weapon: { x: hx + 62, y: hy - 36, w: 82, h: 60 },   // droite, hauteur torse
+    armor:  { x: hx - 144, y: hy - 36, w: 82, h: 60 },  // gauche, hauteur torse
+    charm:  { x: hx - 41, y: hy - 118, w: 82, h: 48 },  // centré au-dessus de la tête
+    boots:  { x: hx - 41, y: hy + 84, w: 82, h: 44 }    // centré sous les pieds
+  };
+}
+
+// sélecteur d'ultime : 3 boutons compacts sur la bande du bas (gauche)
+export function ultBtns(L) {
+  const y = L.cy + L.ch - 48, h = 34;
+  const w = 196, gap = 10, x0 = L.cx + 24;
+  return {
+    nuke:  { x: x0, y, w, h },
+    glace: { x: x0 + w + gap, y, w, h },
+    hell:  { x: x0 + 2 * (w + gap), y, w, h }
   };
 }
