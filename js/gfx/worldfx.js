@@ -509,6 +509,63 @@ export function drawLightnings() {
   }
 }
 
+// ---------- CASCADES : eau/lave/glace qui dévale (animé, coords monde) ----------
+const FALL_COL = {
+  plain:  ['#5aa8d8', '#9fd4f0', '#dff2fb'],
+  ice:    ['#a8d4f0', '#d8ecfa', '#f0f8ff'],
+  hell:   ['#ff5722', '#ff9800', '#ffd54f'],
+  sewer:  ['#7cb86a', '#a4d68a', '#d4ecc0'],
+  space:  ['#5a8ae0', '#82b1ff', '#cfe4ff'],
+};
+export function drawFalls() {
+  const w = curWorld();
+  if (!w || !w.falls || !w.falls.length) return;
+  const cols = FALL_COL[w.def.biome] || FALL_COL.plain;
+  const t = G.time;
+  for (const f of w.falls) {
+    if (f.x < G.camX - 160 || f.x > G.camX + W + 160 || f.y < G.camY - 240 || f.y > G.camY + H + 160) continue;
+    const h = f.h, dir = f.flip ? -1 : 1;
+    ctx.save();
+    ctx.translate(f.x, f.y);
+    // falaise rocheuse derrière la chute
+    const rockG = ctx.createLinearGradient(-40 * dir, -h - 20, 40 * dir, 10);
+    rockG.addColorStop(0, 'rgba(0,0,0,0.45)'); rockG.addColorStop(1, 'rgba(0,0,0,0.1)');
+    ctx.fillStyle = rockG;
+    ctx.beginPath();
+    ctx.moveTo(-46 * dir, 8); ctx.lineTo(-30 * dir, -h - 14); ctx.lineTo(30 * dir, -h - 10); ctx.lineTo(46 * dir, 6);
+    ctx.closePath(); ctx.fill();
+    // lame d'eau : dégradé + streaks animés
+    const wg = ctx.createLinearGradient(0, -h - 12, 0, 8);
+    wg.addColorStop(0, cols[0]); wg.addColorStop(0.6, cols[1]); wg.addColorStop(1, cols[2]);
+    ctx.fillStyle = wg;
+    ctx.beginPath();
+    ctx.moveTo(-12 * dir, -h - 10); ctx.quadraticCurveTo(-16 * dir, -h / 2, -10 * dir, 4);
+    ctx.lineTo(10 * dir, 4); ctx.quadraticCurveTo(16 * dir, -h / 2, 12 * dir, -h - 10);
+    ctx.closePath(); ctx.fill();
+    // filet brillant central
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(-3 * dir, -h - 8); ctx.quadraticCurveTo(-5 * dir, -h / 2, -2 * dir, 2);
+    ctx.stroke();
+    // gouttelettes qui tombent
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    for (let i = 0; i < 6; i++) {
+      const sp = (t * (60 + i * 22) + i * 47) % h;
+      const dx = Math.sin(i * 3.7 + t) * 6 * dir;
+      ctx.globalAlpha = 0.5 + 0.5 * Math.sin(t * 8 + i);
+      ctx.beginPath(); ctx.ellipse(dx, -sp, 1.6, 3.4, 0, 0, TAU); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    // embruns à la base
+    const mistA = 0.25 + Math.sin(t * 2.5 + f.seed * 30) * 0.1;
+    const mg = ctx.createRadialGradient(0, 6, 2, 0, 6, 30);
+    mg.addColorStop(0, `rgba(255,255,255,${mistA})`); mg.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = mg;
+    ctx.beginPath(); ctx.ellipse(0, 6, 30, 10, 0, 0, TAU); ctx.fill();
+    ctx.restore();
+  }
+}
+
 // ---------- AMBIANCE PAR BIOME : particules d'ambiance dans le monde ----------
 // Positions calculées procéduralement (aucune allocation par frame).
 // Chaque biome a son propre climat : feuilles, neige, braises, spores, poussière cosmique.
@@ -563,6 +620,59 @@ export function drawAmbient() {
     }
   }
   ctx.globalAlpha = 1;
+
+  // ---- couches d'ambiance par biome (brumes, aurores, fumée) ----
+  const sky = w.def.biome;
+  if (sky === 'sewer' || sky === 'plain' || sky === 'ice') {
+    // brume basse dérivante : grandes nappes douces qui glissent
+    const mistCol = sky === 'sewer' ? 'rgba(140,200,110,' : sky === 'ice' ? 'rgba(230,242,252,' : 'rgba(255,240,200,';
+    const nM = sky === 'sewer' ? 7 : 5;
+    for (let i = 0; i < nM; i++) {
+      const span = W + 500;
+      const mx = cx - 250 + ((i * 373 + t * (6 + i * 3)) % span);
+      const my = cy + (i * 211 % (H + 200)) - 100 + Math.sin(t * 0.4 + i * 2) * 30;
+      const mr = 130 + (i % 3) * 60;
+      const a = sky === 'sewer' ? 0.05 : sky === 'ice' ? 0.07 : 0.045;
+      const mg = ctx.createRadialGradient(mx, my, mr * 0.2, mx, my, mr);
+      mg.addColorStop(0, mistCol + a + ')'); mg.addColorStop(1, mistCol + '0)');
+      ctx.fillStyle = mg;
+      ctx.beginPath(); ctx.ellipse(mx, my, mr * 1.6, mr * 0.55, 0, 0, TAU); ctx.fill();
+    }
+  } else if (sky === 'space') {
+    // aurores cosmiques : rubans ondulants violet/cyan en haut de la zone visible
+    const aurCols = ['rgba(177,140,255,', 'rgba(80,200,255,', 'rgba(255,120,220,'];
+    for (let b = 0; b < 3; b++) {
+      const yBase = cy - 60 + b * 90 + Math.sin(t * 0.3 + b * 2) * 25;
+      ctx.beginPath();
+      for (let x = cx - 100; x <= cx + W + 100; x += 60) {
+        const yy = yBase + Math.sin(x * 0.006 + t * (0.5 + b * 0.2) + b * 2.5) * (26 + b * 14);
+        x === cx - 100 ? ctx.moveTo(x, yy) : ctx.lineTo(x, yy);
+      }
+      for (let x = cx + W + 100; x >= cx - 100; x -= 60) {
+        const yy = yBase + 34 + Math.sin(x * 0.006 + t * (0.5 + b * 0.2) + b * 2.5) * (26 + b * 14);
+        ctx.lineTo(x, yy);
+      }
+      ctx.closePath();
+      const ag = ctx.createLinearGradient(0, yBase - 40, 0, yBase + 80);
+      ag.addColorStop(0, aurCols[b] + '0.14)'); ag.addColorStop(0.5, aurCols[b] + '0.05)'); ag.addColorStop(1, aurCols[b] + '0)');
+      ctx.fillStyle = ag;
+      ctx.fill();
+    }
+  } else if (sky === 'hell') {
+    // colonnes de fumée : nappes sombres qui montent des fissures
+    for (let i = 0; i < 6; i++) {
+      const span = W + 400;
+      const mx = cx - 200 + ((i * 431 + t * (10 + i * 4)) % span);
+      const rise = (t * (22 + i * 6)) % (H + 300);
+      const my = cy + H + 100 - rise;
+      const mr = 60 + (i % 3) * 35 + rise * 0.15;
+      const a = Math.max(0, 0.09 - rise * 0.0002);
+      const mg = ctx.createRadialGradient(mx, my, mr * 0.2, mx, my, mr);
+      mg.addColorStop(0, `rgba(90,70,60,${a})`); mg.addColorStop(1, 'rgba(90,70,60,0)');
+      ctx.fillStyle = mg;
+      ctx.beginPath(); ctx.arc(mx, my, mr, 0, TAU); ctx.fill();
+    }
+  }
 }
 
 export function drawEffects() {

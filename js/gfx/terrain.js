@@ -222,6 +222,230 @@ export function drawTerrain() {
   ctx.drawImage(w._terrain, cx, cy, W, H, cx, cy, W, H);
 }
 
+// ---------- SECRETS : petits sites cachés (cercles, puits, tombes, autels) ----------
+function drawSecretItem(s, def, g) {
+  const ctx = g;
+  const ice = def.biome === 'ice', hell = def.biome === 'hell', sewer = def.biome === 'sewer', space = def.biome === 'space';
+  const stoneCol = ice ? '#b8c9d8' : hell ? '#4a2a24' : sewer ? '#4c5c3a' : space ? '#3d4556' : '#8d8578';
+  const mossCol = ice ? 'rgba(200,230,250,0.7)' : hell ? 'rgba(255,120,50,0.5)' : sewer ? 'rgba(140,220,110,0.7)' : space ? 'rgba(140,180,255,0.7)' : 'rgba(129,199,132,0.7)';
+  ctx.save();
+  ctx.translate(s.x, s.y); ctx.rotate(s.rot);
+  if (s.type === 'stonecircle' || s.type === 'bonecircle') {
+    // cercle de pierres dressées ou d'ossements
+    const n = s.type === 'bonecircle' ? 7 : 9;
+    for (let i = 0; i < n; i++) {
+      const a = i * TAU / n;
+      const px = Math.cos(a) * 34, py = Math.sin(a) * 22;
+      if (s.type === 'bonecircle') {
+        ctx.strokeStyle = 'rgba(230,220,195,0.75)'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(px - 3, py - 8); ctx.lineTo(px + 3, py + 8); ctx.stroke();
+        ctx.beginPath(); ctx.arc(px, py - 11, 4, 0, TAU); ctx.stroke();
+      } else {
+        ctx.fillStyle = stoneCol;
+        ctx.beginPath();
+        ctx.moveTo(px - 4, py + 6); ctx.lineTo(px - 3, py - 9 - (i % 3) * 3); ctx.lineTo(px + 3, py - 8 - (i % 2) * 4); ctx.lineTo(px + 4, py + 6);
+        ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.lineWidth = 1; ctx.stroke();
+        ctx.fillStyle = mossCol;
+        ctx.beginPath(); ctx.arc(px - 1, py - 6, 1.6, 0, TAU); ctx.fill();
+      }
+    }
+    // dalle centrale
+    ctx.fillStyle = stoneCol;
+    ctx.beginPath(); ctx.ellipse(0, 2, 12, 7, 0, 0, TAU); ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.lineWidth = 1.2; ctx.stroke();
+    if (s.type === 'stonecircle') {
+      ctx.strokeStyle = mossCol; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.ellipse(0, 0, 24, 15, 0, 0, TAU); ctx.stroke();
+    }
+  } else if (s.type === 'well') {
+    // puits à souhaits : cercle de pierres + toit de bois + seau
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.beginPath(); ctx.ellipse(0, 4, 20, 8, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = stoneCol;
+    ctx.beginPath(); ctx.ellipse(0, 0, 18, 10, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#1e3a52';
+    ctx.beginPath(); ctx.ellipse(0, -1, 13, 6.5, 0, 0, TAU); ctx.fill();
+    ctx.strokeStyle = 'rgba(180,220,245,0.5)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.ellipse(-3, -2, 5, 2, -0.3, 0, TAU); ctx.stroke();
+    // poteaux + toit
+    ctx.strokeStyle = '#6d4c30'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(-12, 0); ctx.lineTo(-12, -22); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(12, 0); ctx.lineTo(12, -22); ctx.stroke();
+    ctx.fillStyle = '#5d4037';
+    ctx.beginPath(); ctx.moveTo(-16, -22); ctx.lineTo(0, -34); ctx.lineTo(16, -22); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.lineWidth = 1; ctx.stroke();
+    // treuil + seau
+    ctx.strokeStyle = '#8d6e63'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(-12, -20); ctx.lineTo(12, -20); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, -20); ctx.lineTo(0, -8); ctx.stroke();
+    ctx.fillStyle = '#795548';
+    ctx.fillRect(-4, -8, 8, 7);
+    ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.lineWidth = 1; ctx.strokeRect(-4, -8, 8, 7);
+  } else if (s.type === 'campfire') {
+    // feu de camp : pierres + bûches + flammes + braises
+    ctx.fillStyle = stoneCol;
+    for (let i = 0; i < 6; i++) {
+      const a = i * TAU / 6;
+      ctx.beginPath(); ctx.arc(Math.cos(a) * 13, Math.sin(a) * 7, 3.5, 0, TAU); ctx.fill();
+    }
+    ctx.strokeStyle = '#5d4037'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-8, 4); ctx.lineTo(8, -4); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-8, -4); ctx.lineTo(8, 4); ctx.stroke();
+    const fl = 0.8 + Math.sin(G.time * 6 + s.seed * 40) * 0.2;
+    const fg = ctx.createRadialGradient(0, -6, 1, 0, -6, 14);
+    fg.addColorStop(0, `rgba(255,220,120,${0.7 * fl})`);
+    fg.addColorStop(0.6, `rgba(255,120,40,${0.5 * fl})`);
+    fg.addColorStop(1, 'rgba(255,60,0,0)');
+    ctx.fillStyle = fg;
+    ctx.beginPath(); ctx.arc(0, -6, 14, 0, TAU); ctx.fill();
+    ctx.fillStyle = `rgba(255,180,60,${0.85 * fl})`;
+    ctx.beginPath(); ctx.moveTo(0, -16); ctx.quadraticCurveTo(4, -8, 0, -2); ctx.quadraticCurveTo(-4, -8, 0, -16); ctx.fill();
+  } else if (s.type === 'icetomb') {
+    // tombe gelée : dalle penchée + neige + fleur de glace
+    ctx.save();
+    ctx.rotate(-0.12);
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.beginPath(); ctx.ellipse(0, 6, 14, 5, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#dfe9f2';
+    ctx.beginPath();
+    ctx.moveTo(-9, 6); ctx.lineTo(-9, -10); ctx.quadraticCurveTo(0, -18, 9, -10); ctx.lineTo(9, 6);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(140,180,210,0.7)'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.beginPath(); ctx.ellipse(0, -8, 6, 4, 0, 0, TAU); ctx.fill();
+    ctx.restore();
+    ctx.fillStyle = 'rgba(240,248,255,0.9)';
+    ctx.beginPath(); ctx.ellipse(0, 7, 16, 5, 0, 0, TAU); ctx.fill();
+    // croix de glace
+    ctx.strokeStyle = 'rgba(190,225,245,0.9)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(0, -22); ctx.lineTo(0, -10); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-5, -19); ctx.lineTo(5, -19); ctx.stroke();
+  } else if (s.type === 'sacrifice') {
+    // autel de sacrifice : dalle + rune + offrandes
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath(); ctx.ellipse(0, 8, 22, 8, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#3a1c18';
+    ctx.fillRect(-16, -4, 32, 14);
+    ctx.fillStyle = '#4a2622';
+    ctx.fillRect(-18, -8, 36, 8);
+    ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 1.5;
+    ctx.strokeRect(-16, -4, 32, 14);
+    // rune incandescente
+    const pulse = 0.7 + Math.sin(G.time * 3 + s.seed * 30) * 0.3;
+    ctx.strokeStyle = `rgba(255,100,50,${pulse})`; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(-6, -6); ctx.lineTo(0, -12); ctx.lineTo(6, -6); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, -12); ctx.lineTo(0, -4); ctx.stroke();
+    // offrandes : crâne + os
+    ctx.fillStyle = 'rgba(230,215,190,0.85)';
+    ctx.beginPath(); ctx.arc(-20, -10, 4, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(20, -10, 4, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#1a0d0b';
+    ctx.beginPath(); ctx.arc(-21, -11, 1, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(19, -11, 1, 0, TAU); ctx.fill();
+  } else if (s.type === 'sump') {
+    // puisard d'égout : cadre de pierre + eau stagnante + grille
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath(); ctx.ellipse(0, 3, 24, 10, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#3d4c2f';
+    ctx.beginPath(); ctx.ellipse(0, 0, 22, 9, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#1a2a1a';
+    ctx.beginPath(); ctx.ellipse(0, -1, 17, 6.5, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = 'rgba(120,180,140,0.5)';
+    ctx.beginPath(); ctx.ellipse(-4, -2, 7, 2.5, -0.2, 0, TAU); ctx.fill();
+    // barreaux
+    ctx.strokeStyle = '#5a7048'; ctx.lineWidth = 2;
+    for (let i = -2; i <= 2; i++) {
+      ctx.beginPath(); ctx.moveTo(i * 5, -8); ctx.lineTo(i * 5, 6); ctx.stroke();
+    }
+    ctx.beginPath(); ctx.moveTo(-18, -2); ctx.lineTo(18, -2); ctx.stroke();
+    // mousse
+    ctx.fillStyle = mossCol;
+    ctx.beginPath(); ctx.arc(-14, -6, 3, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(15, -7, 2.4, 0, TAU); ctx.fill();
+  } else if (s.type === 'cisternmini') {
+    // petite citerne : cuve en pierre + canal + eau
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath(); ctx.ellipse(0, 8, 26, 9, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#3d4c2f';
+    ctx.fillRect(-20, -14, 40, 22);
+    ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 1.5;
+    ctx.strokeRect(-20, -14, 40, 22);
+    ctx.fillStyle = '#16220f';
+    ctx.fillRect(-17, -11, 34, 16);
+    ctx.fillStyle = 'rgba(110,190,80,0.5)';
+    ctx.fillRect(-17, -4, 34, 9);
+    // canal de trop-plein
+    ctx.fillStyle = '#2a381f';
+    ctx.fillRect(20, 2, 14, 6);
+    ctx.fillStyle = 'rgba(120,180,140,0.6)';
+    ctx.fillRect(20, 4, 14, 2);
+    // mousse
+    ctx.fillStyle = mossCol;
+    ctx.beginPath(); ctx.arc(-10, -16, 3.5, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(8, -17, 2.8, 0, TAU); ctx.fill();
+  } else if (s.type === 'artifact') {
+    // artefact alien : monolithe flottant + anneaux d'énergie
+    const bob = Math.sin(G.time * 1.4 + s.seed * 20) * 4;
+    ctx.save();
+    ctx.translate(0, bob);
+    const ag = ctx.createLinearGradient(-8, 0, 8, 0);
+    ag.addColorStop(0, '#3d4a6a'); ag.addColorStop(0.5, '#6a7bab'); ag.addColorStop(1, '#232a40');
+    ctx.fillStyle = ag;
+    ctx.beginPath();
+    ctx.moveTo(0, -26); ctx.lineTo(8, -10); ctx.lineTo(6, 12); ctx.lineTo(-6, 12); ctx.lineTo(-8, -10);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(160,200,255,0.7)'; ctx.lineWidth = 1.2; ctx.stroke();
+    // runes lumineuses
+    const pulse = 0.6 + Math.sin(G.time * 3 + s.seed * 25) * 0.4;
+    ctx.strokeStyle = `rgba(140,220,255,${pulse})`; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(-4, -18); ctx.lineTo(4, -18); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-3, -8); ctx.lineTo(3, -8); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-4, 2); ctx.lineTo(4, 2); ctx.stroke();
+    // anneaux
+    ctx.strokeStyle = `rgba(180,160,255,${0.4 * pulse})`; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.ellipse(0, 0, 20, 7, -0.3, 0, TAU); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(0, 0, 24, 9, 0.4, 0, TAU); ctx.stroke();
+    ctx.restore();
+    const lg = ctx.createRadialGradient(0, bob, 2, 0, bob, 30);
+    lg.addColorStop(0, 'rgba(140,180,255,0.3)'); lg.addColorStop(1, 'rgba(140,180,255,0)');
+    ctx.fillStyle = lg; ctx.beginPath(); ctx.arc(0, bob, 30, 0, TAU); ctx.fill();
+  } else if (s.type === 'ruinmini') {
+    // mini-ruine alien : arc brisé + dalle + gravures
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.beginPath(); ctx.ellipse(0, 4, 26, 8, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#2e3444';
+    // deux piliers + linteau brisé
+    ctx.fillRect(-22, -18, 8, 22);
+    ctx.fillRect(14, -22, 8, 26);
+    ctx.fillStyle = '#3d4556';
+    ctx.beginPath();
+    ctx.moveTo(-24, -18); ctx.lineTo(-10, -26); ctx.lineTo(16, -22); ctx.lineTo(24, -16); ctx.lineTo(24, -12); ctx.lineTo(-24, -12);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 1.5;
+    ctx.strokeRect(-22, -18, 8, 22); ctx.strokeRect(14, -22, 8, 26);
+    // gravures
+    ctx.strokeStyle = `rgba(120,200,255,${0.5 + Math.sin(G.time * 2 + s.seed * 20) * 0.3})`; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(-18, -10); ctx.lineTo(-18, -4); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(18, -12); ctx.lineTo(18, -5); ctx.stroke();
+    // dalle centrale
+    ctx.fillStyle = '#232833';
+    ctx.beginPath(); ctx.ellipse(0, 2, 10, 5, 0, 0, TAU); ctx.fill();
+  }
+  ctx.restore();
+}
+
+// secrets rendus par frame (leurs éléments sont animés : feu, artefact, autel)
+export function drawSecrets() {
+  const w = curWorld();
+  if (!w || !w.secrets) return;
+  const x0 = (G.camX || 0) - 120, y0 = (G.camY || 0) - 160, x1 = x0 + W + 240, y1 = y0 + H + 240;
+  for (const s of w.secrets) {
+    if (s.x < x0 || s.x > x1 || s.y < y0 || s.y > y1) continue;
+    drawSecretItem(s, w.def, ctx);
+  }
+}
+
 // g = contexte de rendu (canvas principal ou canvas de pré-rendu hors écran)
 function drawDecorItem(d, def, g = ctx) {
   const ctx = g; // tout le corps dessine via `ctx` -> redirigé vers g

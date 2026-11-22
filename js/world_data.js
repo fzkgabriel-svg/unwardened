@@ -136,7 +136,7 @@ export const BUILDING_TYPES = [
   { id: 'factory',   name: 'Usine',               cat: 'industriel', rarity: 'rare',       w: 265, h: 175, weight: 9,  loot: 'factory',   camp: 0 },
   { id: 'gas',       name: 'Station-service',     cat: 'industriel', rarity: 'epique',     w: 205, h: 140, weight: 7,  loot: 'gas',       camp: 0 },
   { id: 'shrine',    name: 'Sanctuaire ancien',   cat: 'rare',       rarity: 'legendaire', w: 145, h: 145, weight: 4,  loot: 'shrine',    camp: 0 },
-  { id: 'mill',      name: 'Moulin abandonné',    cat: 'industriel', rarity: 'rare',       w: 150, h: 170, weight: 10, loot: 'warehouse', camp: 0, drawAs: 'tower' },
+  { id: 'mill',      name: 'Moulin abandonné',    cat: 'industriel', rarity: 'rare',       w: 150, h: 170, weight: 10, loot: 'warehouse', camp: 0, drawAs: 'mill' },
   { id: 'watcht',    name: 'Tour de guet',        cat: 'industriel', rarity: 'rare',       w: 70,  h: 185, weight: 11, loot: 'warehouse', camp: 0, drawAs: 'tower' },
   { id: 'camp2',     name: 'Camp de bûcherons',   cat: 'petite',     rarity: 'commun',     w: 105, h: 80,  weight: 18, loot: 'cabin',     camp: 0, drawAs: 'cabin' },
   // ---------- structures hivernales (campagne 2 uniquement) ----------

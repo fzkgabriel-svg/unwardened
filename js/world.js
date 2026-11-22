@@ -350,12 +350,87 @@ export function genWorld(idx) {
   const orng = mulberry32(hashSeed(`obs${idx}:${seed}`));
   const obstacles = genObstacles(orng, w, h, spawn, buildings, lakes);
 
+  // ---------- PHASE 2 : bosquets, cascades, secrets ----------
+  const grng = mulberry32(hashSeed(`grove${idx}:${seed}`));
+  // bosquets denses : zones de végétation concentrée (forêts, taïgas)
+  const GROVE_BIOMES = { plain: 1, ice: 0.7 };
+  if (GROVE_BIOMES[def.biome]) {
+    const gtypes = def.biome === 'ice'
+      ? ['pine', 'pine', 'pine', 'bigtree', 'frozenbush', 'snowdrift', 'crystal', 'rock']
+      : ['tree', 'tree', 'tree', 'bigtree', 'bush', 'bush', 'fern', 'flower', 'stump', 'rock'];
+    for (const s of sectors) {
+      if (grng() >= 0.34 * GROVE_BIOMES[def.biome]) continue;
+      const gx = s.x + rr(grng, 220, Math.max(221, CONFIG.sectorW - 220));
+      const gy = s.y + rr(grng, 160, Math.max(161, CONFIG.sectorH - 160));
+      if (Math.hypot(gx - spawn.x, gy - spawn.y) < 480) continue;
+      const gn = ri(grng, 9, 15);
+      for (let i = 0; i < gn; i++) {
+        const a = grng() * TAU, d = Math.sqrt(grng()) * 140;
+        decor.push({
+          type: pick(grng, gtypes),
+          x: gx + Math.cos(a) * d, y: gy + Math.sin(a) * d * 0.75,
+          h: 4 + grng() * 7, s: 0.75 + grng() * 0.8, c: grng(), rot: grng() * TAU
+        });
+      }
+      // quelques grands arbres au cœur du bosquet
+      for (let i = 0; i < ri(grng, 1, 3); i++) {
+        decor.push({
+          type: def.biome === 'ice' ? 'bigtree' : 'bigtree',
+          x: gx + rr(grng, -60, 60), y: gy + rr(grng, -45, 45),
+          h: 4 + grng() * 7, s: 1.3 + grng() * 0.5, c: grng(), rot: grng() * TAU
+        });
+      }
+    }
+  }
+
+  // cascades : points d'eau qui dévalent (eau, glace, lave, écoulement)
+  const falls = [];
+  const frng = mulberry32(hashSeed(`falls${idx}:${seed}`));
+  const nFalls = 2 + (frng() < 0.5 ? 1 : 0);
+  for (let i = 0; i < nFalls; i++) {
+    for (let t = 0; t < 25; t++) {
+      const fx = rr(frng, CONFIG.edgeMargin + 140, w - CONFIG.edgeMargin - 140);
+      const fy = rr(frng, CONFIG.edgeMargin + 140, h - CONFIG.edgeMargin - 140);
+      if (Math.hypot(fx - spawn.x, fy - spawn.y) < 560) continue;
+      if (inLake(fx, fy)) continue;
+      if (buildings.some(b => Math.hypot(fx - b.x, fy - b.y) < Math.hypot(b.w, b.h) / 2 + 90)) continue;
+      falls.push({ x: fx, y: fy, h: rr(frng, 55, 105), seed: frng(), flip: frng() < 0.5 });
+      break;
+    }
+  }
+
+  // secrets : petits sites cachés (cercle de pierres, puits, tombe, autel, artefact)
+  const SECRET = {
+    plain:  ['stonecircle', 'well', 'stonecircle', 'campfire'],
+    ice:    ['icetomb', 'stonecircle', 'icetomb'],
+    hell:   ['sacrifice', 'sacrifice', 'bonecircle'],
+    sewer:  ['sump', 'sump', 'cisternmini'],
+    space:  ['artifact', 'artifact', 'ruinmini'],
+  };
+  const srng = mulberry32(hashSeed(`secret${idx}:${seed}`));
+  const secrets = [];
+  const nSec = 3 + (srng() < 0.5 ? 1 : 0);
+  const slist = SECRET[def.biome] || SECRET.plain;
+  for (let i = 0; i < nSec; i++) {
+    for (let t = 0; t < 30; t++) {
+      const sx2 = rr(srng, CONFIG.edgeMargin + 160, w - CONFIG.edgeMargin - 160);
+      const sy2 = rr(srng, CONFIG.edgeMargin + 160, h - CONFIG.edgeMargin - 160);
+      if (Math.hypot(sx2 - spawn.x, sy2 - spawn.y) < 700) continue;
+      if (inLake(sx2, sy2)) continue;
+      if (buildings.some(b => Math.hypot(sx2 - b.x, sy2 - b.y) < Math.hypot(b.w, b.h) / 2 + 110)) continue;
+      if (obstacles.some(o => Math.hypot(sx2 - o.x, sy2 - o.y) < o.r + 60)) continue;
+      secrets.push({ type: pick(srng, slist), x: sx2, y: sy2, seed: srng(), rot: srng() * TAU });
+      break;
+    }
+  }
+
   // le décor ne pousse ni dans l'eau ni dans/derrière un obstacle (montagnes, rochers)
   const decorClean = decor.filter(d => !inLake(d.x, d.y) &&
     !obstacles.some(o => Math.hypot(d.x - o.x, d.y - o.y) < o.r + 20));
 
   const world = {
     idx, def, seed, w, h, spawn, buildings, decor: decorClean, sectors, obstacles, lakes,
+    falls, secrets,
     // portail retour : seulement s'il reste dans la même campagne
     returnPortal: (idx > 0 && campaignOf(idx - 1) === campaignOf(idx)) ? { x: spawn.x + 160, y: spawn.y - 60 } : null,
     portal: saved && saved.portal ? { x: saved.portal.x, y: saved.portal.y } : null,

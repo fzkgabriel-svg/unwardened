@@ -238,6 +238,69 @@ function drawBuilding(b, def) {
       }
       break;
     }
+    case 'mill': {
+      // MOULIN : corps de pierre + toit conique + grande roue hydraulique animée
+      const mw = Math.min(hw, hh * 0.55);
+      // corps octogonal simplifié
+      const mg2 = ctx.createLinearGradient(-mw, 0, mw, 0);
+      mg2.addColorStop(0, def.wallDark); mg2.addColorStop(0.5, def.wall); mg2.addColorStop(1, def.wallDark);
+      ctx.fillStyle = mg2;
+      ctx.beginPath();
+      ctx.moveTo(-mw, H2 / 2);
+      ctx.lineTo(-mw * 0.85, -hh * 0.55);
+      ctx.lineTo(mw * 0.85, -hh * 0.55);
+      ctx.lineTo(mw, H2 / 2);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.45)'; ctx.lineWidth = 2; ctx.stroke();
+      // assises de pierre
+      ctx.strokeStyle = 'rgba(0,0,0,0.22)'; ctx.lineWidth = 1.2;
+      for (let i = 1; i < 5; i++) {
+        const yy = H2 / 2 - (H2 + hh * 0.55) * (i / 5);
+        const spread = mw * (0.6 + i * 0.1);
+        ctx.beginPath(); ctx.moveTo(-spread, yy); ctx.lineTo(spread, yy); ctx.stroke();
+      }
+      // toit conique + girouette
+      ctx.fillStyle = def.roof;
+      ctx.beginPath(); ctx.moveTo(-mw * 0.95, -hh * 0.55); ctx.lineTo(0, -hh * 1.35); ctx.lineTo(mw * 0.95, -hh * 0.55); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.strokeStyle = '#78909c'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(0, -hh * 1.35); ctx.lineTo(0, -hh * 1.7); ctx.stroke();
+      ctx.fillStyle = '#cfd8dc';
+      ctx.beginPath(); ctx.moveTo(0, -hh * 1.7); ctx.lineTo(10, -hh * 1.62); ctx.lineTo(0, -hh * 1.55); ctx.closePath(); ctx.fill();
+      // porte + fenêtres
+      door(0);
+      win(-mw * 0.45, -hh * 0.2, 14, 16); win(mw * 0.45, -hh * 0.2, 14, 16);
+      // ROUE À EAU : grande roue à aubes sur le côté (animation lente)
+      const wx = mw * 1.25, wy = H2 * 0.28, wr = Math.min(hh * 0.5, 46);
+      // auvent de la roue
+      ctx.fillStyle = 'rgba(0,0,0,0.18)';
+      ctx.beginPath(); ctx.ellipse(wx + 6, wy + wr + 8, wr * 0.9, 8, 0, 0, TAU); ctx.fill();
+      // axe
+      ctx.strokeStyle = '#5d4037'; ctx.lineWidth = 6; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(wx - wr * 0.5, wy); ctx.lineTo(wx + wr * 0.5, wy); ctx.stroke();
+      // roue + aubes (tourne lentement)
+      const rot = G.time * 0.5;
+      ctx.save();
+      ctx.translate(wx, wy); ctx.rotate(rot);
+      ctx.strokeStyle = '#795548'; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.arc(0, 0, wr, 0, TAU); ctx.stroke();
+      ctx.strokeStyle = '#6d4c30'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(0, 0, wr * 0.55, 0, TAU); ctx.stroke();
+      for (let i = 0; i < 8; i++) {
+        const a = i * TAU / 8;
+        ctx.beginPath(); ctx.moveTo(Math.cos(a) * wr * 0.55, Math.sin(a) * wr * 0.55); ctx.lineTo(Math.cos(a) * wr, Math.sin(a) * wr); ctx.stroke();
+        // aube (palette)
+        ctx.fillStyle = '#8d6e63';
+        ctx.save(); ctx.translate(Math.cos(a) * (wr + 6), Math.sin(a) * (wr + 6)); ctx.rotate(a + Math.PI / 2);
+        ctx.fillRect(-7, -3, 14, 6); ctx.restore();
+      }
+      ctx.restore();
+      // support de la roue
+      ctx.strokeStyle = '#5d4037'; ctx.lineWidth = 5; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(wx - 14, wy + wr + 6); ctx.lineTo(wx, wy + 4); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(wx + 14, wy + wr + 6); ctx.lineTo(wx, wy + 4); ctx.stroke();
+      break;
+    }
     case 'castle': {
       // CHÂTEAU : donjon central + 4 tours d'angle à créneaux, toits coniques.
       // Biome glace : calottes de neige · Biome enfer : toits de braise
