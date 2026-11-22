@@ -5,7 +5,7 @@ import { G, ctx, W, H, TAU } from '../state.js';
 import { roundRect } from '../utils.js';
 import { curWorld, RARITY_COLOR } from '../world.js';
 import { playerAngle } from '../attacks.js';
-import { HPAL, metalFrame, parchment, engraved, gem, crisp, HUD_CINZEL } from './frame.js';
+import { HPAL, metalFrame, parchment, gem, crisp, HUD_CINZEL } from './frame.js';
 
 const MS = 148; // côté de la carte carrée
 
@@ -136,8 +136,6 @@ export function drawMinimap() {
   ctx.restore();
   ctx.restore(); // fin clip
 
-  // nom du monde gravé sous la carte
-  engraved((w.def && w.def.name || 'MONDE').toUpperCase(), mx + MS / 2, my + MS + 16, 10.5, HPAL.parch, 'center', 'Georgia, serif');
   // gemme du cadre
   gem(mx + MS / 2, my - 1, 4.5, HPAL.goldHi, t);
 }
