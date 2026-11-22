@@ -121,13 +121,35 @@ export function campaignPlayBtn() {
   const f = campaignFiche();
   return { x: f.x + f.w - 268, y: f.y + 62, w: 236, h: 46 };
 }
+// boutons de niveau : les 2 mondes de la campagne, cliquables comme des boutons
+export function campaignWorldBtns(c) {
+  const f = campaignFiche();
+  const tx = f.x + 152, bw = 158, bh = 30, gap = 12, y = f.y + 62;
+  const w0 = WORLDS[campaignStart(c)], w1 = WORLDS[campaignEnd(c) - 1];
+  return [
+    { idx: campaignStart(c),     name: w0.name, sel: 0, x: tx,             y, w: bw, h: bh },
+    { idx: campaignStart(c) + 1, name: w1.name, sel: 1, x: tx + bw + gap, y, w: bw, h: bh },
+  ];
+}
 function backBtn() { return { x: 30, y: H - 60, w: 160, h: 40 }; }
 
 export function campaignClickAt(x, y) {
   if (inR(backBtn(), x, y)) { G.menuView = 'main'; return 'back'; }
+  const c = G.campaignSel;
+  if (c !== null && c !== undefined && campaignUnlocked(c)) {
+    // clic sur un niveau : sélectionne le monde de départ
+    for (const wb of campaignWorldBtns(c)) {
+      if (inR(wb, x, y)) {
+        G.campaignSel = c;
+        G.campaignWorlds = G.campaignWorlds || {};
+        G.campaignWorlds[c] = wb.sel;
+        sfxClick();
+        return 'world';
+      }
+    }
+  }
   const play = campaignPlayBtn();
   if (inR(play, x, y)) {
-    const c = G.campaignSel;
     if (c !== null && c !== undefined && campaignUnlocked(c)) {
       G.campaign = c;
       startGame();
@@ -135,8 +157,8 @@ export function campaignClickAt(x, y) {
     }
     return 'locked';
   }
-  const c = terrAt(x, y);
-  if (c >= 0) { G.campaignSel = c; sfxClick(); return 'select'; }
+  const t = terrAt(x, y);
+  if (t >= 0) { G.campaignSel = t; sfxClick(); return 'select'; }
   return null;
 }
 
@@ -393,10 +415,9 @@ function drawTerritory(c, t, dt) {
   // sélection : anneau doré + étiquette
   if (sel) {
     ctx.strokeStyle = '#ffd740'; ctx.lineWidth = 2.5;
-    ctx.setLineDash([8, 6]); ctx.lineDashOffset = -t * 24;
     ctx.beginPath();
     pts.forEach(([px, py], i) => i ? ctx.lineTo(px + 7, py + 7) : ctx.moveTo(px + 7, py + 7));
-    ctx.closePath(); ctx.stroke(); ctx.setLineDash([]);
+    ctx.closePath(); ctx.stroke();
     ctx.fillStyle = '#ffd740'; ctx.font = `700 12px ${UI}`;
     ctx.fillText('▼', terr.x, terr.y + terr.r * 0.86 + 32);
   } else if (hov) {
@@ -475,21 +496,43 @@ function drawFiche(c, t) {
   ctx.font = `700 11px ${UI}`; ctx.fillStyle = info.diffCol;
   ctx.fillText(info.diff, tx, f.y + 56);
   if (done) { ctx.fillStyle = '#ffd740'; ctx.font = `700 11px ${UI}`; ctx.fillText('★ CAMPAGNE TERMINÉE', tx + 130, f.y + 56); }
-  // mondes de la campagne
-  const w0 = WORLDS[campaignStart(c)], w1 = WORLDS[campaignEnd(c) - 1];
-  ctx.font = `600 11.5px ${UI}`; ctx.fillStyle = unlocked ? '#9fb4c8' : 'rgba(255,255,255,0.3)';
-  ctx.fillText(`🗺 ${w0.name}  →  ${w1.name}`, tx, f.y + 78);
-  ctx.fillStyle = unlocked ? '#7d8fa3' : 'rgba(255,255,255,0.22)';
-  ctx.font = `11px ${UI}`;
-  ctx.fillText(`Boss : ${info.boss}  ·  ${info.waves} vagues`, tx, f.y + 96);
-  // récompense
-  ctx.fillStyle = unlocked ? hexA(TERR[c].part, 0.95) : 'rgba(255,255,255,0.25)';
-  ctx.font = `600 11px ${UI}`;
-  ctx.fillText(`🎁 ${info.reward}`, tx, f.y + 116);
-  // description (2 lignes max)
-  ctx.fillStyle = unlocked ? '#8fa3b8' : 'rgba(255,255,255,0.25)';
-  ctx.font = `10.5px ${UI}`;
-  wrapFiche(info.desc, tx, f.y + 134, f.x + f.w - 300 - tx, 14);
+  // niveaux : les 2 mondes de la campagne en boutons cliquables
+  const ws = (G.campaignWorlds && G.campaignWorlds[c]) || 0;
+  for (const wb of campaignWorldBtns(c)) {
+    const selW = ws === wb.sel;
+    const hovW = unlocked && inR(wb, G.mouse.x, G.mouse.y);
+    ctx.fillStyle = selW ? hexA(TERR[c].rim, 0.28) : hovW ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.045)';
+    roundRect(wb.x, wb.y, wb.w, wb.h, 8); ctx.fill();
+    ctx.strokeStyle = selW ? TERR[c].rim : hovW ? hexA(TERR[c].rim, 0.75) : 'rgba(255,255,255,0.16)';
+    ctx.lineWidth = selW ? 1.8 : 1.2;
+    roundRect(wb.x, wb.y, wb.w, wb.h, 8); ctx.stroke();
+    ctx.textAlign = 'left';
+    ctx.font = `700 9.5px ${UI}`;
+    ctx.fillStyle = selW ? TERR[c].rim : unlocked ? '#9fb4c8' : 'rgba(255,255,255,0.3)';
+    // biome non découvert : noms des mondes masqués
+    const label = unlocked ? `M${wb.sel + 1} · ${wb.name.toUpperCase()}` : `M${wb.sel + 1} · •••`;
+    ctx.fillText(label, wb.x + 10, wb.y + wb.h / 2 + 3.5, wb.w - 20);
+    if (selW) {
+      ctx.fillStyle = TERR[c].rim;
+      ctx.beginPath(); ctx.moveTo(wb.x + wb.w - 14, wb.y + wb.h / 2 - 4); ctx.lineTo(wb.x + wb.w - 8, wb.y + wb.h / 2); ctx.lineTo(wb.x + wb.w - 14, wb.y + wb.h / 2 + 4); ctx.closePath(); ctx.fill();
+    }
+  }
+  // boss + récompense + description — masqués tant que le biome n'est pas débloqué
+  if (unlocked) {
+    ctx.fillStyle = '#7d8fa3';
+    ctx.font = `11px ${UI}`;
+    ctx.fillText(`Boss : ${info.boss}  ·  ${info.waves} vagues`, tx, f.y + 112);
+    ctx.fillStyle = hexA(TERR[c].part, 0.95);
+    ctx.font = `600 11px ${UI}`;
+    ctx.fillText(`🎁 ${info.reward}`, tx, f.y + 128);
+    ctx.fillStyle = '#8fa3b8';
+    ctx.font = `10.5px ${UI}`;
+    wrapFiche(info.desc, tx, f.y + 144, f.x + f.w - 300 - tx, 13);
+  } else {
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.font = `600 11px ${UI}`;
+    ctx.fillText('🔒  BIOME INEXPLORÉ — terminez la campagne précédente pour découvrir ses secrets', tx, f.y + 116);
+  }
   // bouton jouer
   const pb = campaignPlayBtn();
   const hov = inR(pb, G.mouse.x, G.mouse.y);
@@ -541,13 +584,9 @@ export function drawCampaign() {
     const a = TERR[c], b = TERR[c + 1];
     const unlocked = campaignUnlocked(c + 1);
     const { mx, my } = pathCurve(a, b);
-    ctx.save();
-    ctx.setLineDash([9, 11]);
-    ctx.lineDashOffset = -t * 26;
     ctx.strokeStyle = unlocked ? 'rgba(255,215,64,0.5)' : 'rgba(255,255,255,0.12)';
     ctx.lineWidth = unlocked ? 3 : 2;
     ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.quadraticCurveTo(mx, my, b.x, b.y); ctx.stroke();
-    ctx.restore();
     // marqueur de progression sur le sentier
     if (unlocked) {
       ctx.fillStyle = '#ffd740'; ctx.font = 'bold 17px Inter, sans-serif'; ctx.textAlign = 'center';

@@ -22,19 +22,19 @@ function layout() {
     { key: 'act', label: 'MODULE ACTIF', hint: 'Touche X', x: sx, y: sy, w: sw, h: sh },
     { key: 'pass', label: 'MODULE PASSIF', hint: '', x: sx + sw + gap, y: sy, w: sw, h: sh },
   ];
-  // panneau détail (droite)
-  const dw = Math.min(360, W * 0.3), dy = 196, dh = 356;
+  // panneau détail (droite) — plus haut pour accueillir description + stats + 2 boutons
+  const dw = Math.min(360, W * 0.3), dy = 190, dh = 400;
   const det = { x: W - dw - 34, y: dy, w: dw, h: dh };
   // grille des modules (gauche), tous les modules : possédés + verrouillés
-  const gx = 34, gy = 196, gw = det.x - gx - 18;
+  const gx = 34, gy = 192, gw = det.x - gx - 18, gh = 400;
   const cols = 4, rows = 3;
-  const cw = (gw - (cols - 1) * 12) / cols, ch = (dh - (rows - 1) * 12) / rows;
+  const cw = (gw - (cols - 1) * 12) / cols, ch = (gh - (rows - 1) * 12) / rows;
   const ownedSet = G.inv ? modState(G.inv).owned : [];
   const ids = [...MOD_IDS].sort((a, b) => (ownedSet.includes(b) ? 1 : 0) - (ownedSet.includes(a) ? 1 : 0));
   const cards = ids.map((id, i) => ({
     id, x: gx + (i % cols) * (cw + 12), y: gy + Math.floor(i / cols) * (ch + 12), w: cw, h: ch, i,
   }));
-  const btnY = det.y + det.h - 52;
+  const btnY = det.y + det.h - 50;
   // bas du panneau : [équiper/installé] à gauche + [améliorer] à droite
   const bw = det.w - 40, uw = Math.min(150, bw * 0.44);
   const ew = bw - uw - 12;
@@ -391,59 +391,66 @@ function drawDetail(L, id, t) {
   });
   const ix = d.x + d.w / 2;
   // grande icône : hexagone tournant + orbite
-  const iy = d.y + 78;
+  const iy = d.y + 74;
   ctx.save();
   ctx.translate(ix, iy);
   ctx.rotate(t * 0.4);
   ctx.strokeStyle = hexA(m.col, owned ? 0.7 : 0.2); ctx.lineWidth = 1.6;
   ctx.beginPath();
-  for (let k = 0; k < 6; k++) { const a = k * TAU / 6; const px = Math.cos(a) * 46, py = Math.sin(a) * 46; k ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }
+  for (let k = 0; k < 6; k++) { const a = k * TAU / 6; const px = Math.cos(a) * 44, py = Math.sin(a) * 44; k ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }
   ctx.closePath(); ctx.stroke();
   ctx.restore();
   const bob = Math.sin(t * 2.2) * 4;
   ctx.save();
   ctx.shadowColor = m.col; ctx.shadowBlur = owned ? 26 : 6;
-  ctx.font = '46px serif'; ctx.textAlign = 'center';
+  ctx.font = '44px serif'; ctx.textAlign = 'center';
   ctx.globalAlpha = enter * (owned ? 1 : 0.4);
   ctx.fillText(m.icon, ix, iy + bob);
   ctx.restore();
-  // nom + chips
+  // nom
   const lvl = owned ? modLevel(id) : 1;
   ctx.globalAlpha = enter;
   ctx.font = `700 18px ${UI}`; ctx.fillStyle = owned ? C_TEXT : 'rgba(255,255,255,0.4)';
-  ctx.fillText(m.name, ix, d.y + 152);
-  // pastilles de niveau sous le nom
+  ctx.fillText(m.name, ix, d.y + 146);
+  // rangée méta : rareté · type (centrée)
+  ctx.font = `600 9.5px ${UI}`; ctx.letterSpacing = '1.5px';
+  ctx.fillStyle = rc; ctx.fillText(m.rar.toUpperCase(), ix - 62, d.y + 164);
+  ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.fillText('·', ix - 24, d.y + 164);
+  ctx.fillStyle = m.col; ctx.fillText(m.type === 'actif' ? 'MODULE ACTIF' : 'MODULE PASSIF', ix + 34, d.y + 164);
+  ctx.letterSpacing = '0px';
+  // rangée niveau (gauche) + recharge (droite) — jamais superposées
   if (owned) {
+    const lx = ix - 96;
     for (let k = 0; k < 3; k++) {
       ctx.fillStyle = k < lvl ? '#ffd740' : 'rgba(255,255,255,0.18)';
-      ctx.save(); ctx.translate(ix + (k - 1) * 16, d.y + 168);
-      ctx.rotate(Math.PI / 4); ctx.fillRect(-4, -4, 8, 8); ctx.restore();
+      ctx.save(); ctx.translate(lx + k * 15, d.y + 182);
+      ctx.rotate(Math.PI / 4); ctx.fillRect(-3.6, -3.6, 7.2, 7.2); ctx.restore();
     }
-    ctx.font = `700 9px ${UI}`; ctx.fillStyle = lvl >= 3 ? '#ffd740' : '#69f0ae';
-    ctx.fillText(lvl >= 3 ? 'NIV MAX' : `NIV ${lvl}`, ix + 40, d.y + 171);
+    ctx.font = `700 9.5px ${UI}`; ctx.fillStyle = lvl >= 3 ? '#ffd740' : '#69f0ae';
+    ctx.fillText(lvl >= 3 ? 'NIV MAX' : `NIV ${lvl}`, lx + 52, d.y + 185);
   }
-  ctx.font = `600 9.5px ${UI}`; ctx.letterSpacing = '1.5px';
-  ctx.fillStyle = rc; ctx.fillText(m.rar.toUpperCase(), ix - 60, d.y + 172);
-  ctx.fillStyle = m.col; ctx.fillText(m.type === 'actif' ? 'MODULE ACTIF' : 'MODULE PASSIF', ix + 60, d.y + 172);
-  ctx.letterSpacing = '0px';
   if (m.type === 'actif' && m.cd) {
-    ctx.fillStyle = 'rgba(255,215,64,0.8)'; ctx.font = `700 10px ${UI}`;
-    ctx.fillText(`[X] recharge ${m.cd} s`, ix, d.y + 190);
+    ctx.fillStyle = 'rgba(255,215,64,0.85)'; ctx.font = `700 10px ${UI}`;
+    const cdTxt = `[X] recharge ${m.cd} s`;
+    ctx.fillText(cdTxt, d.x + d.w - 22 - ctx.measureText(cdTxt).width, d.y + 185);
   }
-  // description
-  ctx.font = `12px ${UI}`; ctx.fillStyle = owned ? '#b5af9f' : 'rgba(255,255,255,0.3)';
+  // description : retour à la ligne, max 4 lignes, jamais de troncature
+  ctx.font = `10.5px ${UI}`; ctx.fillStyle = owned ? '#b5af9f' : 'rgba(255,255,255,0.3)';
   const words = m.desc.split(' '); const lines = []; let cur = '';
-  for (const w of words) { const tx = cur ? cur + ' ' + w : w; if (ctx.measureText(tx).width > d.w - 48) { lines.push(cur); cur = w; } else cur = tx; }
+  for (const w of words) {
+    const tx = cur ? cur + ' ' + w : w;
+    if (ctx.measureText(tx).width > d.w - 52 && cur) { lines.push(cur); cur = w; } else cur = tx;
+  }
   if (cur) lines.push(cur);
-  lines.forEach((l, i) => ctx.fillText(l, ix, d.y + 216 + i * 17));
+  lines.slice(0, 4).forEach((l, i) => ctx.fillText(l, ix, d.y + 206 + i * 14));
   // statistiques
-  const sy = d.y + d.h - 108;
+  const sy = d.y + d.h - 118;
   ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(d.x + 24, sy - 14); ctx.lineTo(d.x + d.w - 24, sy - 14); ctx.stroke();
   ctx.font = `600 9.5px ${UI}`; ctx.letterSpacing = '2px'; ctx.fillStyle = CYAN;
   ctx.fillText('STATISTIQUES', ix, sy + 2); ctx.letterSpacing = '0px';
   ctx.font = `11px ${UI}`; ctx.fillStyle = owned ? C_MUTED : 'rgba(255,255,255,0.28)';
-  statLines(m, lvl).forEach((l, i) => ctx.fillText(l, ix, sy + 20 + i * 15));
+  statLines(m, lvl).forEach((l, i) => ctx.fillText(l, ix, sy + 20 + i * 14));
   // boutons bas : [équiper/installé] + [améliorer niv] (module possédé) ou [acheter] (verrouillé)
   const b = equipped ? L.equipBtn : (owned ? L.equipBtn : L.shopBtn);
   const hov = inR(b, G.mouse.x, G.mouse.y);

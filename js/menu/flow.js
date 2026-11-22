@@ -5,7 +5,7 @@ import { ACHIEVEMENTS, unlocked, achievementCount, checkAchievements, achInfo, i
 import { ITEMS, MATS, canCraft, craft, toggleEquip, equipBonuses, getDur, canRepair, repairItem, repairCost, loadInv, addMaterial, modeInfo, addWmodeXp, modeMult, MODE_MAX_LVL, setInvNoSave, modeKey, WEAPON_MODES, DUR_MAX, durMaxOf } from '../inventory.js';
 import { spawnEnemy, spawnFinalBoss } from '../enemies.js';
 import { gainXp } from '../player.js';
-import { curWorld, syncCamera, regenerateWorld, reloadWorlds, campaignStart } from '../world.js';
+import { curWorld, syncCamera, regenerateWorld, reloadWorlds, campaignStart, campaignEnd } from '../world.js';
 import { sfxCraft, sfxRepair, sfxEquip, sfxConfirm, sfxClick } from '../audio.js';
 import { MAX_SLOTS, activeSlot, allSlots, slotMeta, slotSummary, createChar, selectChar, deselectChar, resetChar, fmtPlaytime, fmtDate, checkAdminPass, adminOK as _adminOK, adminList, adminWipeAll, adminLock } from '../chars.js';
 import { inR, fitText, wrapLines, hexA, fmtTime, overline, panel, overlineCentered, drawMenuButton, drawAdminPwInput, menuButtons, menuButtonAt, adminUnlocked, campaignUnlocked, UI, SERIF, C_TEXT, C_MUTED, C_GOLD, MENU_X, MENU_W, MENU_ITEMS } from './common.js';
@@ -63,8 +63,9 @@ export function startGame() {
   // reset compteurs de la partie
   G.dmgDealt = 0; G.dmgTaken = 0; G.potionsUsed = 0; G.bossesKilled = 0; G.runTime = 0;
   G.runMats = {}; G.runWear = {}; G.runWmode = {}; // résumé de fin de partie
-  // nouvelle partie : monde de départ de la campagne choisie, carte régénérée
-  G.worldIndex = campaignStart(G.campaign);
+  // nouvelle partie : monde de départ de la campagne choisie (monde sélectionné sur la carte), carte régénérée
+  const wsel = (G.campaignWorlds && G.campaignWorlds[G.campaign]) || 0;
+  G.worldIndex = Math.min(campaignStart(G.campaign) + wsel, campaignEnd(G.campaign) - 1);
   regenerateWorld(G.worldIndex);
   // reset positions : spawn du monde courant
   const sp = curWorld().spawn;
