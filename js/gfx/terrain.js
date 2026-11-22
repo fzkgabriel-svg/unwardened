@@ -498,8 +498,8 @@ function drawSecretItem(s, def, g) {
 // végétation animée par le vent : sous-ensemble du décor rendu par frame
 const SWAY_AMP = { grass: 0.4, flower: 0.36, fern: 0.28, bush: 0.12, frozenbush: 0.12,
   firegrass: 0.42, alienflora: 0.3, glowshroom: 0.2, mush: 0.2, shroom: 0.16,
-  tree: 0.06, bigtree: 0.055, pine: 0.07, cosmictree: 0.09, crystal: 0.05,
-  energycrystal: 0.07 };
+  tree: 0.085, bigtree: 0.075, pine: 0.1, cosmictree: 0.13, crystal: 0.07,
+  energycrystal: 0.1 };
 export function drawSwayDecor() {
   const w = curWorld();
   if (!w || !w.decor) return;
@@ -538,7 +538,7 @@ export function drawLakeGlints() {
       const gx = Math.cos(a) * l.rx * 0.55 + drift;
       const gy = Math.sin(a) * l.ry * 0.5 + Math.cos(t * 0.5 + i) * 6;
       const tw = 0.5 + 0.5 * Math.sin(t * 2.2 + i * 2.6 + seed * 3);
-      ctx.globalAlpha = 0.10 + tw * 0.30;
+      ctx.globalAlpha = 0.18 + tw * 0.42;
       ctx.fillStyle = ice ? '#ffffff' : '#eaf7ff';
       ctx.beginPath();
       ctx.ellipse(gx, gy, (10 + (i % 3) * 7) * (0.7 + tw * 0.5), 2 + tw * 1.6, a * 0.4, 0, TAU);
@@ -562,12 +562,12 @@ export function drawLakeGlints() {
 
 // lumières dynamiques : halos vacillants autour des éléments luminescents du décor
 const LIGHT_TYPES = {
-  lantern:      { c: '255,213,79',  r: 52,  a: 0.16 },
-  fire:         { c: '255,112,67',  r: 60,  a: 0.18 },
-  glowshroom:   { c: '156,204,101', r: 44,  a: 0.15 },
-  energycrystal:{ c: '77,208,225',  r: 56,  a: 0.16 },
-  holo:         { c: '100,181,246', r: 58,  a: 0.13 },
-  crystal:      { c: '179,229,252', r: 40,  a: 0.11 },
+  lantern:      { c: '255,213,79',  r: 68,  a: 0.24 },
+  fire:         { c: '255,112,67',  r: 80,  a: 0.26 },
+  glowshroom:   { c: '156,204,101', r: 60,  a: 0.22 },
+  energycrystal:{ c: '77,208,225',  r: 74,  a: 0.24 },
+  holo:         { c: '100,181,246', r: 76,  a: 0.20 },
+  crystal:      { c: '179,229,252', r: 54,  a: 0.17 },
 };
 export function drawDecorLights() {
   const w = curWorld();

@@ -609,7 +609,7 @@ export function drawCloudShadows() {
       const ox = (k - 1) * mr * 0.75, oy = (k % 2 ? 30 : -25) + Math.sin(t * 0.2 + i + k) * 15;
       const ex = mr * (1.15 - k * 0.15), ey = mr * 0.42;
       const cg = ctx.createRadialGradient(mx + ox, my + oy, mr * 0.15, mx + ox, my + oy, ex);
-      const a = sky === 'space' ? 0.10 : sky === 'hell' ? 0.07 : 0.085;
+      const a = sky === 'space' ? 0.14 : sky === 'hell' ? 0.10 : 0.12;
       cg.addColorStop(0, `rgba(8,10,25,${a})`);
       cg.addColorStop(0.7, `rgba(8,10,25,${a * 0.5})`);
       cg.addColorStop(1, 'rgba(8,10,25,0)');
@@ -624,11 +624,11 @@ export function drawCloudShadows() {
 // Positions calculées procéduralement (aucune allocation par frame).
 // Chaque biome a son propre climat : feuilles, neige, braises, spores, poussière cosmique.
 const AMB = {
-  plain:  { n: 34, col: ['rgba(180,220,120,', 'rgba(255,200,120,', 'rgba(150,190,255,'], spd: [14, 30], size: [1, 2.4], mode: 'leaf' },
-  ice:    { n: 55, col: ['rgba(255,255,255,', 'rgba(200,230,250,'],       spd: [30, 60], size: [1, 2.6], mode: 'snow' },
-  hell:   { n: 42, col: ['rgba(255,140,50,', 'rgba(255,210,90,', 'rgba(255,80,30,'], spd: [12, 34], size: [1.2, 2.8], mode: 'ember' },
-  sewer:  { n: 38, col: ['rgba(170,255,120,', 'rgba(140,230,160,'],       spd: [6, 18],  size: [1, 2.2], mode: 'spore' },
-  space:  { n: 46, col: ['rgba(140,200,255,', 'rgba(220,140,255,', 'rgba(160,255,220,'], spd: [8, 26], size: [1, 2.4], mode: 'mote' },
+  plain:  { n: 55, col: ['rgba(180,220,120,', 'rgba(255,200,120,', 'rgba(150,190,255,'], spd: [14, 30], size: [1, 2.4], mode: 'leaf' },
+  ice:    { n: 85, col: ['rgba(255,255,255,', 'rgba(200,230,250,'],       spd: [30, 60], size: [1, 2.6], mode: 'snow' },
+  hell:   { n: 65, col: ['rgba(255,140,50,', 'rgba(255,210,90,', 'rgba(255,80,30,'], spd: [12, 34], size: [1.2, 2.8], mode: 'ember' },
+  sewer:  { n: 60, col: ['rgba(170,255,120,', 'rgba(140,230,160,'],       spd: [6, 18],  size: [1, 2.2], mode: 'spore' },
+  space:  { n: 72, col: ['rgba(140,200,255,', 'rgba(220,140,255,', 'rgba(160,255,220,'], spd: [8, 26], size: [1, 2.4], mode: 'mote' },
 };
 export function drawAmbient() {
   const w = curWorld();

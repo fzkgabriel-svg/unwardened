@@ -152,7 +152,7 @@ function update(dt) {
   if (keys['q'] || keys['arrowleft']) dx -= 1;
   if (keys['d'] || keys['arrowright']) dx += 1;
   if (p.slowT > 0) p.slowT = Math.max(0, p.slowT - dt);
-  const pSpeed = p.speed * (p.slowT > 0 ? 0.68 : 1) * (p.attackMode === 3 ? 0.7 : p.attackMode === 5 ? 0.97 : 0.93); // lance tank / arc léger / épée
+  const pSpeed = p.speed * (p.slowT > 0 ? 0.8 : 1) * (p.attackMode === 3 ? 0.7 : p.attackMode === 5 ? 0.97 : 0.93); // lance tank / arc léger / épée
   if (dx || dy) {
     const len = Math.hypot(dx, dy);
     p.x = Math.max(p.r, Math.min(worldW() - p.r, p.x + dx / len * pSpeed));
