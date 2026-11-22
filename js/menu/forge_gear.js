@@ -54,8 +54,6 @@ function drawEquipList(L, col) {
   const rows = heroEquipRows(L);
   panel(col.x + 4, col.y, col.w - 8, col.h);
   secHead('ÉQUIPEMENT', col.x + 14, col.y + 16, col.w - 28);
-  ctx.fillStyle = C_MUTED; ctx.font = `italic 10px ${UI}`; ctx.textAlign = 'left';
-  ctx.fillText('clique une pièce pour son détail', col.x + 14, col.y + 32);
   rows.forEach(r => {
     const id = G.inv.equip[r.slot], it = id && ITEMS[id];
     const eq = !!it;
@@ -198,20 +196,12 @@ const SKILL_DEF = [
 function drawSkillsColumn(L, col) {
   const x = col.x + 14, w = col.w - 28;
   secHead('COMPÉTENCES', x, col.y + 20, w);
-  ctx.fillStyle = C_MUTED; ctx.font = `italic 11px ${UI}`; ctx.textAlign = 'left';
-  ctx.fillText('niveaux gagnés en combattant', x, col.y + 38);
-  ctx.fillStyle = '#8d99ae'; ctx.font = `italic 10px ${UI}`;
-  ctx.fillText('clique une carte pour l\'emporter — 2 armes max par partie', x, col.y + 50);
   const cards = heroSkillCards(L);
   for (const card of cards) {
     const sd = SKILL_DEF.find(d => d.key === card.key);
     const locked = sd.key === 'arc' && !(G.stats && G.stats.bowUnlocked);
     drawSkillCard(card.x, card.y, card.w, card.h, sd, locked);
   }
-  // note de bas de colonne
-  const yEnd = cards[cards.length - 1].y + cards[cards.length - 1].h;
-  ctx.fillStyle = '#78909c'; ctx.font = `italic 10px ${UI}`; ctx.textAlign = 'center';
-  ctx.fillText('dégâts ×2 au niv. 100 (progression exponentielle)', x + w / 2, yEnd + 14);
 }
 
 function drawSkillCard(x, y, w, h, sd, locked) {
@@ -301,9 +291,7 @@ function drawProgressionStrip(L) {
   const txt = `🏆 ${ach} succès · 🗺️ ${done}/5 campagnes · 🌊 vag. ${s.bestWave || 0} · 💀 ${(s.totalKills || 0).toLocaleString('fr-FR')} · ⏱ ${fmtPlaytime(s.playtime || 0)}`;
   const x = L.cx + L.cw - 20;
   ctx.textAlign = 'right'; ctx.font = `bold 11px ${UI}`; ctx.fillStyle = '#c9b98a';
-  ctx.fillText(fitText(txt, 330), x, L.cy + L.ch - 30);
-  ctx.fillStyle = C_MUTED; ctx.font = `9px ${UI}`;
-  ctx.fillText('PROGRESSION', x, L.cy + L.ch - 42);
+  ctx.fillText(fitText(txt, 330), x, L.cy + L.ch - 34);
   ctx.textAlign = 'left';
 }
 
@@ -365,7 +353,7 @@ function drawHeroStatsTab(L) {
     ctx.fillStyle = '#ffe9a3'; ctx.font = `bold 11px Consolas, monospace`; ctx.textAlign = 'right';
     ctx.fillText(locked ? '🔒' : `NIV ${info.lvl} · +${Math.round((modeMult(G.inv, sd.key) - 1) * 100)}%`, cx + cw3 - 24, wy + 30);
     ctx.fillStyle = '#8d99ae'; ctx.font = `9.5px ${UI}`; ctx.textAlign = 'left';
-    ctx.fillText(locked ? 'boss final du monde 9' : `+0,5 % dégâts / niveau — ${Math.floor(info.xp).toLocaleString('fr-FR')}/${info.need.toLocaleString('fr-FR')} XP`, cx + 32, wy + 45);
+    ctx.fillText(locked ? 'boss final du monde 9' : `${Math.floor(info.xp).toLocaleString('fr-FR')} / ${info.need.toLocaleString('fr-FR')} XP`, cx + 32, wy + 45);
   });
 }
 
