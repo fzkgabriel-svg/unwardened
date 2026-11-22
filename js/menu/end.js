@@ -211,93 +211,217 @@ export function drawVictory() {
   ctx.globalAlpha = 1;
 }
 
+// ---------- GAME OVER 2.0 ----------
+// Petites illustrations vectorielles discrètes (crâne, épée brisée, coins)
+function drawSkullIcon(x, y, s = 1, col = '#cbb9a0') {
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+  ctx.fillStyle = col;
+  // dôme du crâne
+  ctx.beginPath(); ctx.arc(0, -3, 10.5, Math.PI, 0); ctx.fill();
+  ctx.fillRect(-10.5, -3, 21, 8.5); // mâchoire
+  // front bombé
+  ctx.beginPath(); ctx.arc(0, -8, 6.5, Math.PI, 0); ctx.fill();
+  ctx.fillStyle = '#17100c'; // orbites et cavité nasale
+  ctx.beginPath(); ctx.arc(-4.4, -4, 2.9, 0, TAU); ctx.fill();
+  ctx.beginPath(); ctx.arc(4.4, -4, 2.9, 0, TAU); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(0, -2.5); ctx.lineTo(-1.8, 0.5); ctx.lineTo(1.8, 0.5); ctx.closePath(); ctx.fill();
+  // fissure funeste
+  ctx.strokeStyle = col; ctx.lineWidth = 1.1;
+  ctx.beginPath(); ctx.moveTo(-8, -12); ctx.lineTo(-5, -8); ctx.lineTo(-7.5, -5); ctx.stroke();
+  ctx.restore();
+}
+
+function drawBrokenSword(x, y, s = 1, col = '#9aa7b8', ang = -0.55) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.scale(s, s);
+  ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  // lame brisée : le tiers supérieur a volé
+  ctx.beginPath(); ctx.moveTo(-13, 9); ctx.lineTo(2, -9); ctx.stroke();
+  // extrémité déchiquetée
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(2, -9); ctx.lineTo(5.5, -5); ctx.lineTo(8.5, -8); ctx.stroke();
+  // garde
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(-1.5, 1.5); ctx.lineTo(9, -1.5); ctx.stroke();
+  // poignée + pommeau
+  ctx.lineWidth = 3.4;
+  ctx.beginPath(); ctx.moveTo(-1.5, 1.5); ctx.lineTo(-8, 8); ctx.stroke();
+  ctx.fillStyle = col;
+  ctx.beginPath(); ctx.arc(-9.5, 9.5, 2.6, 0, TAU); ctx.fill();
+  ctx.restore();
+}
+
+function cornerFlourish(x, y, sx, sy) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(sx, sy);
+  ctx.strokeStyle = 'rgba(212,176,98,0.4)'; ctx.lineWidth = 1.4;
+  ctx.beginPath(); ctx.moveTo(0, 30); ctx.lineTo(0, 9); ctx.lineTo(9, 0); ctx.stroke();
+  ctx.fillStyle = 'rgba(212,176,98,0.45)';
+  ctx.save(); ctx.translate(16, 16); ctx.rotate(Math.PI / 4); ctx.fillRect(-3, -3, 6, 6); ctx.restore();
+  ctx.beginPath(); ctx.arc(34, 34, 2.2, 0, TAU); ctx.fill();
+  ctx.restore();
+}
+
+// cendres qui montent : déterministes, discrètes, medium fantasy
+function drawDeathEmbers() {
+  for (let i = 0; i < 18; i++) {
+    const speed = 0.22 + (i % 5) * 0.05;
+    const t = (G.time * speed + i * 0.618) % 1;
+    const ex = W / 2 + (((i * 0.7549) % 1) - 0.5) * W * 1.5 + Math.sin(G.time * 1.4 + i * 2.1) * 16 * t;
+    const ey = H - 20 - t * (H * 0.82);
+    const a = Math.sin(t * Math.PI) * 0.45;
+    ctx.fillStyle = `rgba(255,${150 + (i % 3) * 28},70,${a})`;
+    ctx.fillRect(ex, ey, 1.6 + (i % 3) * 0.5, 1.6 + (i % 3) * 0.5);
+  }
+}
+
 export function drawGameOver() {
   const p = G.player;
-  // fond rouge sombre + vignette
-  ctx.fillStyle = 'rgba(25,0,0,0.82)'; ctx.fillRect(0, 0, W, H);
-  const v = ctx.createRadialGradient(W / 2, H / 2, 80, W / 2, H / 2, H * 0.8);
-  v.addColorStop(0, 'rgba(120,0,0,0)'); v.addColorStop(1, 'rgba(90,0,0,0.55)');
-  ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+  const di = G.deathInfo || {};
+  const goT = G.goT || 0;
+  const e1 = 1 - Math.pow(1 - Math.min(1, goT / 0.8), 3);          // intro globale
+  const e2 = 1 - Math.pow(1 - Math.min(1, Math.max(0, goT - 0.25) / 0.5), 3); // titre
+  const e3 = Math.min(1, Math.max(0, goT - 0.55) / 0.5);             // panneau
+  const e4 = Math.min(1, Math.max(0, goT - 0.9) / 0.45);             // boutons
+
+  // ---- fond : charbon profond + vignette sanglant sombre + profondeur ----
+  ctx.fillStyle = 'rgba(7,5,8,0.94)'; ctx.fillRect(0, 0, W, H);
+  const vg = ctx.createRadialGradient(W / 2, H / 2 - 60, 60, W / 2, H / 2, H * 0.95);
+  vg.addColorStop(0, 'rgba(60,10,10,0.28)'); vg.addColorStop(0.6, 'rgba(20,6,8,0.18)'); vg.addColorStop(1, 'rgba(0,0,0,0.55)');
+  ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+  // lueur funeste centrale très discrète
+  const hg = ctx.createRadialGradient(W / 2, H / 2 - 130, 10, W / 2, H / 2 - 130, 340);
+  hg.addColorStop(0, 'rgba(140,30,30,0.12)'); hg.addColorStop(1, 'rgba(140,30,30,0)');
+  ctx.fillStyle = hg; ctx.fillRect(0, 0, W, H);
+  drawDeathEmbers();
+
+  // ---- coins : ornements médiévaux discrets ----
+  ctx.save(); ctx.globalAlpha = e1 * 0.9;
+  cornerFlourish(26, 24, 1, 1); cornerFlourish(W - 26, 24, -1, 1);
+  cornerFlourish(26, H - 24, 1, -1); cornerFlourish(W - 26, H - 24, -1, -1);
+  ctx.restore();
 
   ctx.textAlign = 'center';
 
-  // titre pulsé avec glow
-  const pulse = 1 + Math.sin(G.time * 5) * 0.06;
+  // ---- titre : crâne + épée brisée + « VOUS ÊTES MORT » ----
   ctx.save();
-  ctx.translate(W / 2, H / 2 - 168);
-  ctx.scale(pulse, pulse);
-  const tg = ctx.createLinearGradient(-260, 0, 260, 0);
-  tg.addColorStop(0, '#ff1744'); tg.addColorStop(0.5, '#ff5252'); tg.addColorStop(1, '#b71c1c');
-  ctx.font = 'bold 64px Inter, sans-serif';
-  ctx.shadowColor = 'rgba(255,30,30,0.9)'; ctx.shadowBlur = 35;
-  ctx.fillStyle = tg;
-  ctx.fillText('GAME OVER', 0, 0);
+  ctx.globalAlpha = e1;
+  drawSkullIcon(W / 2 - 150, 66, 1.15);
+  drawBrokenSword(W / 2 + 152, 74, 1.1, '#8d99ae', -0.5);
+  // filet ornemental sous les icônes
+  ctx.strokeStyle = 'rgba(212,176,98,0.4)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(W / 2 - 210, 96); ctx.lineTo(W / 2 - 30, 96);
+  ctx.moveTo(W / 2 + 30, 96); ctx.lineTo(W / 2 + 210, 96); ctx.stroke();
+  ctx.fillStyle = 'rgba(212,176,98,0.5)';
+  ctx.save(); ctx.translate(W / 2 - 22, 96); ctx.rotate(Math.PI / 4); ctx.fillRect(-2.5, -2.5, 5, 5); ctx.restore();
+  ctx.save(); ctx.translate(W / 2 + 22, 96); ctx.rotate(Math.PI / 4); ctx.fillRect(-2.5, -2.5, 5, 5); ctx.restore();
   ctx.restore();
 
-  // filet décoratif
-  ctx.strokeStyle = 'rgba(255,82,82,0.5)'; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(W / 2 - 180, H / 2 - 136); ctx.lineTo(W / 2 + 180, H / 2 - 136); ctx.stroke();
-  ctx.fillStyle = '#ef9a9a'; ctx.font = 'italic 18px Inter, sans-serif';
-  ctx.fillText('Le roi est tombé... mais les Terres Oubliées se souviendront de vous', W / 2, H / 2 - 110);
+  ctx.save();
+  ctx.globalAlpha = e2;
+  ctx.translate(0, (1 - e2) * 16);
+  overlineCentered('L\'ÂME S\'EN EST ALLÉE', W / 2, 122, '#a8503c');
+  // titre : doré vieilli, serif élégant, léger glow sombre (pas de rouge criard)
+  const tg = ctx.createLinearGradient(W / 2 - 260, 0, W / 2 + 260, 0);
+  tg.addColorStop(0, '#8a6a2f'); tg.addColorStop(0.5, '#d4b062'); tg.addColorStop(1, '#8a6a2f');
+  ctx.font = 'bold 54px Cinzel, Georgia, serif';
+  ctx.shadowColor = 'rgba(160,40,40,0.35)'; ctx.shadowBlur = 18;
+  ctx.fillStyle = tg;
+  ctx.fillText('VOUS ÊTES MORT', W / 2, 168);
+  ctx.shadowBlur = 0;
+  // sous-titre immersif
+  ctx.font = 'italic 16px Georgia, serif';
+  ctx.fillStyle = '#b8a98c';
+  const subs = [
+    'Les brumes des Terres Oubliées emportent un nouveau héros…',
+    'Le froid du Royaume de Glace fige votre nom dans l\'éternité…',
+    'Les Enfers réclament ce qui leur revient…',
+    'Les Égouts avalent ceux qui s\'y aventurent sans gloire…',
+    'Le vide spatial dissout jusqu\'aux plus braves…'
+  ];
+  ctx.fillText(subs[G.campaign] || subs[0], W / 2, 194);
+  ctx.restore();
 
-  // bandeau record : indique si la partie a battu des records
+  // ---- panneau central : bilan de la mort en 6 blocs compacts ----
+  const lx = W / 2 - 315, lw = 630, ly = 208, lh = 208;
+  ctx.save();
+  ctx.globalAlpha = e3;
+  // panneau parchemin sombre
+  const pg = ctx.createLinearGradient(lx, ly, lx, ly + lh);
+  pg.addColorStop(0, 'rgba(26,18,20,0.92)'); pg.addColorStop(1, 'rgba(14,10,12,0.94)');
+  ctx.fillStyle = pg;
+  roundRect(lx, ly, lw, lh, 12); ctx.fill();
+  ctx.strokeStyle = 'rgba(212,176,98,0.35)'; ctx.lineWidth = 1.4;
+  roundRect(lx + 0.5, ly + 0.5, lw - 1, lh - 1, 12); ctx.stroke();
+  ctx.strokeStyle = 'rgba(160,50,50,0.25)'; ctx.lineWidth = 1;
+  roundRect(lx + 5.5, ly + 5.5, lw - 11, lh - 11, 9); ctx.stroke();
+  // coins internes du panneau
+  ctx.fillStyle = 'rgba(212,176,98,0.5)';
+  [[lx + 10, ly + 10], [lx + lw - 10, ly + 10], [lx + 10, ly + lh - 10], [lx + lw - 10, ly + lh - 10]].forEach(([cx2, cy2]) => {
+    ctx.save(); ctx.translate(cx2, cy2); ctx.rotate(Math.PI / 4); ctx.fillRect(-2, -2, 4, 4); ctx.restore();
+  });
+
+  const loot = runLootRows();
+  const blocks = [
+    { icon: '💀', label: 'MAIN DE FATE', value: di.killer || 'Inconnu', color: di.killerColor || '#ff8a80', big: true },
+    { icon: '🗺️', label: 'LIEU DE PERDITION', value: `${di.world || 'Inconnu'}${di.campaign ? ' · ' + di.campaign : ''}`, color: '#d4b062' },
+    { icon: '⏱', label: 'TEMPS DE SURVIE', value: fmtTime(G.runTime), color: '#c9b8a0' },
+    { icon: '⭐', label: 'NIVEAU ATTEINT', value: `Nv. ${p.level}`, color: '#81d4fa' },
+    { icon: '⚔️', label: 'ENNEMIS VAINCUS', value: G.kills.toLocaleString('fr-FR'), color: '#69f0ae' },
+    { icon: '🛡', label: 'DÉGÂTS (INFLIGÉS / REÇUS)', value: `${Math.floor(G.dmgDealt).toLocaleString('fr-FR')} → ${Math.floor(G.dmgTaken).toLocaleString('fr-FR')}`, color: '#ffeb3b' }
+  ];
+  const bw2 = (lw - 44) / 2, bh2 = 42, bgap = 8, bx0 = lx + 16, by0 = ly + 20;
+  blocks.forEach((b, i) => {
+    const col = i % 2, row = (i / 2) | 0;
+    const bx = bx0 + col * (bw2 + 12), by = by0 + row * (bh2 + bgap);
+    const bi = Math.min(1, Math.max(0, (goT - 0.7 - i * 0.06) / 0.35));
+    if (bi <= 0) return;
+    ctx.save(); ctx.globalAlpha = e3 * bi;
+    ctx.fillStyle = 'rgba(255,255,255,0.045)';
+    roundRect(bx, by, bw2, bh2, 7); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.09)'; ctx.lineWidth = 1;
+    roundRect(bx, by, bw2, bh2, 7); ctx.stroke();
+    ctx.textAlign = 'left';
+    ctx.font = '13px serif';
+    ctx.fillText(b.icon, bx + 10, by + bh2 / 2 + 5);
+    ctx.fillStyle = '#8d8574'; ctx.font = `600 8.5px ${UI}`; ctx.letterSpacing = '1.5px';
+    ctx.fillText(b.label, bx + 32, by + 13);
+    ctx.letterSpacing = '0px';
+    ctx.fillStyle = b.color; ctx.font = `bold ${b.big ? 14 : 12.5}px ${UI}`;
+    ctx.fillText(fitText(String(b.value), bw2 - 42), bx + 32, by + bh2 - 10);
+    ctx.restore();
+  });
+  // ligne butin : matériaux + niveaux d'armes (compacte)
+  const fy = ly + lh - 20;
+  ctx.save(); ctx.globalAlpha = e3 * Math.min(1, Math.max(0, (goT - 1.0) / 0.35));
+  ctx.font = `11px ${UI}`; ctx.fillStyle = '#9a8f78'; ctx.textAlign = 'center';
+  ctx.fillText(`📦 +${loot.mats} matériaux · ${loot.wmodeLabel}${loot.wmodeXp > 0 ? ` (+${loot.wmodeXp} XP)` : ''} · ${loot.wearLabel}${loot.wear > 0 ? ` (−${loot.wear.toFixed(0)} %)` : ''}`, W / 2, fy);
+  ctx.restore();
+  ctx.restore();
+
+  // ---- bandeau record ----
   const lr = G.lastRun || { any: false };
-  const cy = H / 2 - 54;
+  ctx.save(); ctx.globalAlpha = e3;
+  ctx.textAlign = 'center';
   if (lr.any) {
     const labels = [];
     if (lr.wave) labels.push('VAGUE');
     if (lr.level) labels.push('NIVEAU');
     if (lr.kills) labels.push('ENNEMIS');
     if (lr.damage) labels.push('DÉGÂTS');
-    ctx.save();
-    ctx.shadowColor = 'rgba(255,215,64,0.9)'; ctx.shadowBlur = 18;
-    ctx.fillStyle = '#ffd740'; ctx.font = 'bold 20px Inter, sans-serif';
-    ctx.fillText(`★  NOUVEAU RECORD : ${labels.join(' · ')}  ★`, W / 2, cy - 12);
-    ctx.restore();
-  } else {
-    ctx.fillStyle = '#78909c'; ctx.font = 'italic 15px Inter, sans-serif';
-    ctx.fillText('Aucun record battu cette fois-ci', W / 2, cy - 12);
+    ctx.shadowColor = 'rgba(255,215,64,0.7)'; ctx.shadowBlur = 12;
+    ctx.fillStyle = '#ffd740'; ctx.font = 'bold 15px Inter, sans-serif';
+    ctx.fillText(`★  NOUVEAU RECORD : ${labels.join(' · ')}  ★`, W / 2, 434);
+    ctx.shadowBlur = 0;
   }
+  ctx.restore();
 
-  // carte récapitulative de la partie
-  const loot = runLootRows();
-  const cw = 460, ch = 185, cx = W / 2 - cw / 2; // cy déjà déclaré (bandeau record, même valeur)
-  ctx.fillStyle = 'rgba(0,0,0,0.55)';
-  roundRect(cx, cy, cw, ch, 14); ctx.fill();
-  ctx.strokeStyle = 'rgba(255,82,82,0.5)'; ctx.lineWidth = 2;
-  roundRect(cx, cy, cw, ch, 14); ctx.stroke();
-
-  const rows = [
-    ['Vague atteinte', G.wave, '#ff7043', lr.wave],
-    ['Niveau', p.level, '#40c4ff', lr.level],
-    ['Ennemis vaincus', G.kills, '#69f0ae', lr.kills],
-    ['Dégâts infligés', Math.floor(G.dmgDealt), '#ffeb3b', lr.damage],
-    ['Temps de survie', fmtTime(G.runTime), '#9575cd', false],
-    ['📦 Matériaux gagnés', `+${loot.mats}`, '#ffd740', false],
-    [loot.wmodeLabel, loot.wmodeXp > 0 ? `+${loot.wmodeXp} XP` : '—', '#ce93d8', false],
-    [loot.wearLabel, loot.wear > 0 ? `-${loot.wear.toFixed(0)} %` : '—', '#ff8a65', false]
-  ];
-  ctx.font = '16px Inter, sans-serif';
-  rows.forEach((r, i) => {
-    const ry = cy + 24 + i * 17;
-    ctx.textAlign = 'left'; ctx.fillStyle = '#bdbdbd';
-    ctx.fillText(r[0], cx + 34, ry);
-    ctx.textAlign = 'right'; ctx.fillStyle = r[2]; ctx.font = 'bold 17px Inter, sans-serif';
-    ctx.fillText(String(r[1]), cx + cw - 34, ry);
-    if (r[3]) {
-      ctx.fillStyle = '#ffd740'; ctx.font = 'bold 15px Inter, sans-serif';
-      ctx.fillText('★', cx + cw - 34 - ctx.measureText(String(r[1])).width - 14, ry);
-    }
-    ctx.font = '16px Inter, sans-serif';
-  });
-
-  // boutons REJOUER / MENU
+  // ---- boutons RÉESSAYER / MENU ----
+  ctx.save(); ctx.globalAlpha = e4;
   const b = goButtons();
-  drawMenuButton(b.replay, '↻  REJOUER', '#4caf50', '#69f0ae', true);
-  drawMenuButton(b.menu, '⌂  MENU', '#455a64', '#90a4ae', false);
-
-  ctx.fillStyle = '#ff8a80'; ctx.font = 'bold 14px Inter, sans-serif';
-  ctx.globalAlpha = 0.6 + Math.sin(G.time * 4) * 0.4;
-  ctx.fillText('R — Rejouer', W / 2, b.replay.y + b.replay.h + 26);
-  ctx.globalAlpha = 1;
+  drawMenuButton(b.replay, '↻  RÉESSAYER', '#7f2d2d', '#ef9a9a', true);
+  drawMenuButton(b.menu, '⌂  MENU PRINCIPAL', '#3a4150', '#90a4ae', false);
+  // rappel clavier discret
+  ctx.fillStyle = '#8d8574'; ctx.font = 'bold 12px Inter, sans-serif';
+  ctx.globalAlpha = e4 * (0.55 + Math.sin(G.time * 4) * 0.25);
+  ctx.fillText('R — Rejouer', W / 2, b.replay.y + b.replay.h + 24);
+  ctx.restore();
 }

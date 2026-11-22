@@ -433,7 +433,7 @@ export function updateBurrow(e, dt, p) {
       spawnParticles(e.x, e.y, '#ff7043', 26, 8);
       G.screenShake = Math.max(G.screenShake, 15);
       if (Math.hypot(p.x - e.x, p.y - e.y) < e.r + p.r + 75) {
-        damagePlayer(e.damage * 1.7, 1.2);
+        damagePlayer(e.damage * 1.7, 1.2, e);
       }
     }
   }

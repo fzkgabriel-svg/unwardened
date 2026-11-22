@@ -8,6 +8,7 @@ import { wearEquipment, addMaterial, getDur, DUR_MAX, ITEMS } from './inventory.
 import { drawHUD, drawAchToast, drawWarnToast } from './hud.js';
 import { drawMenu, drawGameOver, drawPauseMenu, drawVictory, recordRun, drawAdminMenu, drawAdminButton, drawDurWarnPopup } from './menu.js';
 import { initWorlds, updateCamera, worldW, worldH, checkWavePortal, syncCamera, resolveObstacles, curWorld } from './world.js';
+import { CAMPAIGNS } from './world_data.js';
 import { drawMusicButton, sfxHurt, sfxWave, sfxPickup, sfxBreak, sfxBoss, sfxWarn, sfxPhase, sfxBossAtk } from './audio.js';
 import { updateTutorial, drawTutorial } from './tutorial.js';
 import { tickPlaytime } from './chars.js';
@@ -30,7 +31,7 @@ const bossCycleEspace = ['bossVoid', 'overlord', 'bossVoid'];
 const MID_BOSS_WAVE = { 2: 20, 3: 25, 4: 30 };
 
 // inflige des dégâts au joueur (contact, foudre, projectile de glace)
-export function damagePlayer(dmg, slow = 1.0) {
+export function damagePlayer(dmg, slow = 1.0, killer = null) {
   const p = G.player;
   if (G.godMode) { addDamageText(p.x, p.y - 18, 'IMMORTEL', '#69f0ae'); return; }
   if (p.attackMode === 3) dmg *= 0.6;   // bouclier : -40% de dégâts subis
@@ -39,6 +40,8 @@ export function damagePlayer(dmg, slow = 1.0) {
   if (G.iceStorm) dmg *= 0.5; // Pluie de Glace : les ennemis frappent 2× moins fort
   p.hp -= dmg;
   G.dmgTaken += dmg;
+  // tracking du dernier agresseur (pour l'écran de mort)
+  if (killer) G.lastKiller = killer;
   sfxHurt();
   p.lastHurt = G.time;
   p.slowT = Math.max(p.slowT, slow);
@@ -64,6 +67,16 @@ export function damagePlayer(dmg, slow = 1.0) {
     p.hp = 0; p.alive = false; G.gameOver = true;
     G.bomber = null; // la cinématique de l'ultime s'arrête avec le héros
     G.iceStorm = null; G.iceSpikes = [];
+    // snapshot des infos de mort pour l'écran game over
+    const k = G.lastKiller;
+    G.deathInfo = {
+      killer: k ? (k.name || 'Inconnu') : 'Inconnu',
+      killerType: k ? k.type : null,
+      killerColor: k ? (k.glow || k.color || '#ff5252') : '#ff5252',
+      world: curWorld().def ? curWorld().def.name : 'Inconnu',
+      campaign: (CAMPAIGNS[G.campaign] || {}).name || '',
+      wave: G.wave
+    };
     // cinématique de mort : le héros s'effondre pendant 1,8s avant le game over
     G.state = 'dying'; G.deathT = 1.8;
     G.deathDir = Math.random() < 0.5 ? -1 : 1;
@@ -112,6 +125,7 @@ function update(dt) {
     updateEffects(dt);
     return;
   }
+  if (G.state === 'gameover') G.goT = (G.goT || 0) + dt; // horloge des animations de l'écran de mort
   if (G.state !== 'playing' || G.gameOver) return;
   // ralenti entre les vagues (au lieu du freeze) : 2,5s à ~30% de vitesse,
   // les monstres continuent de surgir normalement pendant la transition
@@ -370,7 +384,7 @@ function update(dt) {
         e.x = Math.max(e.r, Math.min(worldW() - e.r, e.x));
         e.y = Math.max(e.r, Math.min(worldH() - e.r, e.y));
         if (Math.hypot(p.x - e.x, p.y - e.y) < e.r + p.r + 6) {
-          damagePlayer(e.damage * 1.4, 1.0); // le bond frappe plus fort
+          damagePlayer(e.damage * 1.4, 1.0, e); // le bond frappe plus fort
           e.lunging = 0;
           e.lungeCd = 3.5 + Math.random() * 1.5;
         } else if (e.lunging <= 0) {
@@ -395,7 +409,7 @@ function update(dt) {
       collideIceWalls(e);  // ni les murs de glace
       if (dist < e.r + p.r + (e.range || 0) && e.attackCooldown <= 0) {
         e.attackCooldown = 1;
-        damagePlayer(e.damage, 1.0);
+        damagePlayer(e.damage, 1.0, e);
       }
 
       // Attaques à distance : boss (foudre/glace) et sorcière (sort violet)
