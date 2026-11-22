@@ -15,7 +15,7 @@ export function drawBuildings() {
     if (!b.looted) {
       const d = Math.hypot(G.player.x - b.x, G.player.y - b.y) - Math.max(b.w, b.h) * 0.5;
       if (d < CONFIG.interactDist) {
-        ctx.font = 'bold 12px Segoe UI'; ctx.textAlign = 'center';
+        ctx.font = 'bold 12px Inter, sans-serif'; ctx.textAlign = 'center';
         const label = `E — Fouiller : ${b.def.name}`;
         ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,0.8)';
         ctx.strokeText(label, b.x, b.y - b.h / 2 - 18);
@@ -255,7 +255,7 @@ function drawBuilding(b, def) {
   // déjà pillé : petite marque au sol
   if (b.looted) {
     ctx.fillStyle = 'rgba(105,240,174,0.5)';
-    ctx.font = 'bold 13px Segoe UI'; ctx.textAlign = 'center';
+    ctx.font = 'bold 13px Inter, sans-serif'; ctx.textAlign = 'center';
     ctx.fillText('✓', b.x, b.y + 4);
   }
 }

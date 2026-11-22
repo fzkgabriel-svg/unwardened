@@ -125,16 +125,16 @@ export function drawDurWarnPopup() {
   roundRect(L.x, L.y, L.w, L.h, 14); ctx.stroke();
   ctx.shadowBlur = 0;
   ctx.textAlign = 'center';
-  ctx.fillStyle = '#ef5350'; ctx.font = 'bold 24px Segoe UI';
+  ctx.fillStyle = '#ef5350'; ctx.font = 'bold 24px Inter, sans-serif';
   ctx.fillText('⚠ ÉQUIPEMENT ENDOMMAGÉ', W / 2, L.y + 48);
-  ctx.fillStyle = '#e0e0e0'; ctx.font = '15px Segoe UI';
+  ctx.fillStyle = '#e0e0e0'; ctx.font = '15px Inter, sans-serif';
   ctx.fillText('Ces équipements sont à moins de 20 % de durabilité :', W / 2, L.y + 80);
-  ctx.fillStyle = '#ff8a80'; ctx.font = 'bold 14px Segoe UI';
+  ctx.fillStyle = '#ff8a80'; ctx.font = 'bold 14px Inter, sans-serif';
   ctx.fillText(G.durWarn.join('  ·  '), W / 2, L.y + 106);
-  ctx.fillStyle = '#a89f7c'; ctx.font = 'italic 13px Segoe UI';
+  ctx.fillStyle = '#a89f7c'; ctx.font = 'italic 13px Inter, sans-serif';
   ctx.fillText('Ils risquent de casser pendant la partie. Tu peux les réparer à la forge.', W / 2, L.y + 134);
-  drawMenuButton(L.launch, '▶  LANCER QUAND MÊME', '#b71c1c', '#ef9a9a', true);
-  drawMenuButton(L.back, '🔧  ALLER À LA FORGE', '#455a64', '#90a4ae', false);
+  drawMenuButton(L.launch, 'LANCER QUAND MÊME', '#b71c1c', '#ef9a9a', true);
+  drawMenuButton(L.back, 'ALLER À LA FORGE', '#455a64', '#90a4ae', false);
 }
 
 // Enregistre la performance de la partie terminée dans les stats persistantes
@@ -179,59 +179,70 @@ export function recordRun() {
 }
 
 // Géométrie des boutons du menu (partagée avec le hit-test)
+const MENU_X = 96, MENU_W = 300;
+const MENU_ITEMS = [
+  ['play', 'JOUER'], ['perso', 'HÉROS'], ['forge', 'FORGE'],
+  ['tutoriel', 'TUTORIEL'], ['stats', 'STATISTIQUES'], ['ach', 'SUCCÈS']
+];
 function menuButtons() {
-  const bh = 54, by = H / 2 + 160, gap = 12, bw = 196;
-  const keys = ['play', 'perso', 'tutoriel', 'forge'];
-  const total = bw * keys.length + gap * (keys.length - 1);
-  const x0 = W / 2 - total / 2;
   const b = {};
-  keys.forEach((k, i) => { b[k] = { x: x0 + i * (bw + gap), y: by, w: bw, h: bh }; });
-  b.back = { x: W / 2 - 140, y: H / 2 + 245, w: 280, h: bh };
+  let y = 262;
+  MENU_ITEMS.forEach(([k], i) => {
+    const h = i === 0 ? 48 : 40;
+    b[k] = { x: MENU_X, y, w: MENU_W, h };
+    y += h + (i === 0 ? 10 : 4);
+  });
+  b.back = { x: W / 2 - 140, y: H / 2 + 245, w: 280, h: 54 };
   return b;
-}
-// STATISTIQUES et SUCCÈS : mêmes dimensions que les autres boutons,
-// tout sur les côtés de l'écran (niveau du titre)
-function topMenuButtons() {
-  return {
-    stats: { x: 60, y: 88, w: 196, h: 54 },
-    ach:   { x: W - 256, y: 88, w: 196, h: 54 }
-  };
 }
 
 export function menuButtonAt(x, y) {
   const b = menuButtons();
   if (G.menuView === 'stats' || G.menuView === 'achievements') {
-    const r = b.back;
-    return (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) ? 'back' : null;
+    return inR(b.back, x, y) ? 'back' : null;
   }
-  if (G.menuView === 'main') {
-    const t = topMenuButtons();
-    for (const k of ['stats', 'ach']) {
-      const r = t[k];
-      if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) return k;
-    }
-  }
-  for (const k of ['play', 'perso', 'tutoriel', 'forge']) {
-    const r = b[k];
-    if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) return k;
-  }
+  for (const [k] of MENU_ITEMS) if (inR(b[k], x, y)) return k;
   return null;
 }
 
-export function drawMenu() {
-  ctx.fillStyle = 'rgba(3,7,5,0.9)'; ctx.fillRect(0, 0, W, H);
-  ctx.textAlign = 'center';
+const UI = 'Inter, sans-serif';
+const SERIF = 'Cinzel, Georgia, serif';
+const C_TEXT = '#efe8d6', C_MUTED = '#8f8a7e', C_GOLD = '#d4b062';
 
-  // spores flottantes d'ambiance : dérive + parallaxe douce avec la souris
-  for (let i = 0; i < 30; i++) {
-    const depth = (i % 4) * 0.012;
-    const px = ((i * 173 + G.time * (5 + (i % 5) * 3)) % (W + 40) - 20) + (G.mouse.x - W / 2) * depth;
-    const py = (i * 97) % H + Math.sin(G.time * 1.2 + i) * 10 + (G.mouse.y - H / 2) * depth * 0.6;
-    ctx.globalAlpha = 0.08 + (i % 3) * 0.05;
-    ctx.fillStyle = i % 2 ? '#81c784' : '#ffd740';
-    ctx.beginPath(); ctx.arc(px, py, 1.2 + (i % 3), 0, TAU); ctx.fill();
+// fond commun des écrans de menu : voile sombre + poussières discrètes
+function drawMenuBackdrop() {
+  ctx.fillStyle = 'rgba(7,9,10,0.9)'; ctx.fillRect(0, 0, W, H);
+  const vg = ctx.createLinearGradient(0, 0, W, 0);
+  vg.addColorStop(0, 'rgba(0,0,0,0.45)'); vg.addColorStop(0.6, 'rgba(0,0,0,0)');
+  ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#e8d9a8';
+  for (let i = 0; i < 22; i++) {
+    const depth = (i % 4) * 0.01;
+    const px = ((i * 173 + G.time * (4 + (i % 5) * 2)) % (W + 40) - 20) + (G.mouse.x - W / 2) * depth;
+    const py = (i * 97) % H + Math.sin(G.time * 0.8 + i) * 8 + (G.mouse.y - H / 2) * depth * 0.6;
+    ctx.globalAlpha = 0.04 + (i % 3) * 0.03;
+    ctx.beginPath(); ctx.arc(px, py, 0.8 + (i % 3) * 0.6, 0, TAU); ctx.fill();
   }
   ctx.globalAlpha = 1;
+}
+
+function overline(text, x, y, color = C_GOLD) {
+  ctx.save();
+  ctx.font = `600 11px ${UI}`; ctx.letterSpacing = '3px';
+  ctx.fillStyle = color; ctx.fillText(text, x, y);
+  ctx.restore();
+}
+
+function panel(x, y, w, h) {
+  ctx.fillStyle = 'rgba(255,255,255,0.03)';
+  roundRect(x, y, w, h, 12); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1;
+  roundRect(x + 0.5, y + 0.5, w - 1, h - 1, 12); ctx.stroke();
+}
+
+export function drawMenu() {
+  drawMenuBackdrop();
+  ctx.textAlign = 'center';
 
   // écrans secondaires : stats, succès, forge, personnages, admin
   if (G.menuView === 'stats') {
@@ -259,195 +270,182 @@ export function drawMenu() {
     return;
   }
 
-  // ==== HUD joueur : pilule d'identité en haut de l'écran ====
-  if (activeSlot() >= 0) {
-    const meta = slotMeta(activeSlot()), s = G.stats;
-    const pw = 620, ph = 46, px = W / 2 - pw / 2, py = 26;
-    ctx.fillStyle = 'rgba(8,12,8,0.85)';
-    roundRect(px, py, pw, ph, 23); ctx.fill();
-    ctx.strokeStyle = 'rgba(212,175,55,0.5)'; ctx.lineWidth = 1.5;
-    roundRect(px, py, pw, ph, 23); ctx.stroke();
-    ctx.textAlign = 'left'; ctx.font = 'bold 15px Segoe UI';
-    ctx.fillStyle = '#ffd740';
-    ctx.fillText(`⚔ ${meta ? meta.name : 'Héros'}`, px + 22, py + 30);
-    ctx.textAlign = 'right'; ctx.font = '14px Segoe UI'; ctx.fillStyle = '#e0e0e0';
-    ctx.fillText(`⏱ ${fmtPlaytime(meta ? meta.playtime : 0)}  ·  🏰 vague ${s.bestWave || 0}  ·  💀 ${s.totalKills || 0} kills`, px + pw - 22, py + 30);
-  }
+  // ==== colonne gauche : titre + navigation ====
+  ctx.textAlign = 'left';
+  overline('UN RPG 2D DE SURVIE', MENU_X, 118);
+  ctx.save();
+  ctx.font = `600 52px ${SERIF}`; ctx.letterSpacing = '2px';
+  ctx.fillStyle = C_TEXT;
+  ctx.fillText('LES TERRES', MENU_X - 3, 174);
+  ctx.fillText('OUBLIÉES', MENU_X - 3, 228);
+  ctx.restore();
 
-  // titre doré sobre avec fine lueur
-  const tg = ctx.createLinearGradient(W / 2 - 320, 0, W / 2 + 320, 0);
-  tg.addColorStop(0, '#8a6d1f'); tg.addColorStop(0.35, '#d4af37');
-  tg.addColorStop(0.65, '#ffe9a3'); tg.addColorStop(1, '#8a6d1f');
-  ctx.font = '600 56px Segoe UI';
-  ctx.textAlign = 'center';
-  ctx.shadowColor = 'rgba(212,175,55,0.45)'; ctx.shadowBlur = 22;
-  ctx.fillStyle = tg;
-  ctx.fillText('LES TERRES OUBLIÉES', W / 2, H / 2 - 150);
-  ctx.shadowBlur = 0;
+  const b = menuButtons();
+  MENU_ITEMS.forEach(([k, label], i) => drawNavItem(b[k], label, i === 0, k === 'ach' && unclaimedInTab(-1)));
 
-  // filets décoratifs sous le titre
-  ctx.strokeStyle = 'rgba(212,175,55,0.5)'; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(W / 2 - 260, H / 2 - 128); ctx.lineTo(W / 2 + 260, H / 2 - 128); ctx.stroke();
-  ctx.fillStyle = '#d4af37';
-  ctx.beginPath(); ctx.moveTo(W / 2, H / 2 - 133); ctx.lineTo(W / 2 + 7, H / 2 - 128); ctx.lineTo(W / 2, H / 2 - 123); ctx.lineTo(W / 2 - 7, H / 2 - 128); ctx.closePath(); ctx.fill();
+  ctx.font = `13px ${UI}`; ctx.fillStyle = C_MUTED;
+  ctx.fillText('Entrée pour choisir votre campagne', MENU_X, H - 40);
 
-  ctx.fillStyle = '#a89f7c'; ctx.font = 'italic 19px Segoe UI';
-  ctx.fillText('~ Un RPG 2D de survie ~', W / 2, H / 2 - 104);
-
-  // panneau des contrôles
-  const px = W / 2 - 300, py = H / 2 - 82, pw = 600, ph = 208;
-  ctx.fillStyle = 'rgba(0,0,0,0.6)';
-  roundRect(px, py, pw, ph, 12); ctx.fill();
-  ctx.strokeStyle = 'rgba(212,175,55,0.35)'; ctx.lineWidth = 1.5;
-  roundRect(px, py, pw, ph, 12); ctx.stroke();
-
-  ctx.textAlign = 'left'; ctx.font = 'bold 15px Segoe UI'; ctx.fillStyle = '#d4af37';
-  ctx.fillText('CONTRÔLES', px + 30, py + 32);
-  ctx.font = '15px Segoe UI'; ctx.fillStyle = '#e0e0e0';
+  // ==== colonne droite : héros actif + contrôles ====
+  const rx = 690, rw = 414;
+  const meta = activeSlot() >= 0 ? slotMeta(activeSlot()) : null, s = G.stats;
+  panel(rx, 96, rw, 84);
+  overline('HÉROS ACTIF', rx + 24, 124, C_MUTED);
+  ctx.font = `600 22px ${UI}`; ctx.fillStyle = C_TEXT;
+  ctx.fillText(fitText(meta ? meta.name : 'Héros', 140), rx + 24, 156);
+  const heroStats = [
+    ['TEMPS', fmtPlaytime(meta ? meta.playtime : 0)],
+    ['VAGUE', String(s.bestWave || 0)],
+    ['ENNEMIS', String(s.totalKills || 0)]
+  ];
+  heroStats.forEach(([lab, val], i) => {
+    const sx = rx + 184 + i * 78;
+    ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fillRect(sx - 14, 116, 1, 44);
+    ctx.font = `600 10px ${UI}`; ctx.fillStyle = C_MUTED;
+    ctx.save(); ctx.letterSpacing = '1px'; ctx.fillText(lab, sx, 128); ctx.restore();
+    ctx.font = `600 16px ${UI}`; ctx.fillStyle = C_TEXT;
+    ctx.fillText(fitText(val, 66), sx, 154);
+  });
 
   // nom de l'ultime selon la sélection du héros (même logique que le HUD)
   const _us = G.stats.ultSel || 'nuke';
-  const ultName = _us === 'glace' && G.stats.iceUlt ? 'PLUIE DE GLACE'
-    : _us === 'hell' && G.stats.hellUlt ? 'TITAN DE FEU' : 'BOMBE ATOMIQUE';
+  const ultName = _us === 'glace' && G.stats.iceUlt ? 'Pluie de glace'
+    : _us === 'hell' && G.stats.hellUlt ? 'Titan de feu' : 'Bombe atomique';
   const controls = [
-    ['ZQSD / Flèches', 'Se déplacer'],
-    ['Clic gauche', 'Attaque principale (épée / lance)'],
-    ['Clic droit', 'Secondaire : rotation (épée) / dôme (lance)'],
-    ['& / é', 'Modes : Épée · Bouclier + Lance (1,25s de changement)'],
+    ['ZQSD', 'Se déplacer'],
+    ['Clic gauche', 'Attaque principale'],
+    ['Clic droit', 'Rotation (épée) · Dôme (lance)'],
+    ['& / é', 'Changer de mode d\'arme'],
     ['F', `${ultName} (charge en tuant)`],
-    ['W', 'Boire une fiole (+50 PV, bonus/vague progressif)']
+    ['W', 'Boire une fiole (+50 PV)']
   ];
+  const cy = 196, ch = 300;
+  panel(rx, cy, rw, ch);
+  overline('CONTRÔLES', rx + 24, cy + 34, C_MUTED);
   controls.forEach((c, i) => {
-    const cy = py + 54 + i * 22;
-    // badge touche
-    ctx.fillStyle = 'rgba(255,255,255,0.12)';
-    roundRect(px + 30, cy - 14, 190, 22, 6); ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 1;
-    roundRect(px + 30, cy - 14, 190, 22, 6); ctx.stroke();
-    ctx.fillStyle = '#fff'; ctx.font = 'bold 13px Segoe UI';
-    ctx.fillText(c[0], px + 40, cy + 2);
-    ctx.font = '14px Segoe UI'; ctx.fillStyle = '#bdbdbd';
-    ctx.fillText(c[1], px + 240, cy + 2);
+    const ry = cy + 56 + i * 38;
+    if (i) { ctx.fillStyle = 'rgba(255,255,255,0.05)'; ctx.fillRect(rx + 24, ry - 6, rw - 48, 1); }
+    ctx.font = `600 12px ${UI}`;
+    const kw = Math.max(28, ctx.measureText(c[0]).width + 18);
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    roundRect(rx + 24, ry + 2, kw, 24, 6); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.14)'; ctx.lineWidth = 1;
+    roundRect(rx + 24.5, ry + 2.5, kw - 1, 23, 6); ctx.stroke();
+    ctx.fillStyle = C_TEXT; ctx.textAlign = 'center';
+    ctx.fillText(c[0], rx + 24 + kw / 2, ry + 18);
+    ctx.textAlign = 'left'; ctx.font = `14px ${UI}`; ctx.fillStyle = '#b5af9f';
+    ctx.fillText(c[1], rx + 150, ry + 19);
   });
-
-  ctx.textAlign = 'center'; ctx.font = '15px Segoe UI'; ctx.fillStyle = '#9a8f6a';
-  ctx.fillText('Mini-boss toutes les 3 vagues · Boss toutes les 5 vagues · Survivez !', W / 2, py + ph + 22);
-
-  // cadre décoratif double
-  ctx.strokeStyle = 'rgba(212,175,55,0.22)'; ctx.lineWidth = 1;
-  ctx.strokeRect(14, 14, W - 28, H - 28);
-  ctx.strokeStyle = 'rgba(212,175,55,0.1)';
-  ctx.strokeRect(22, 22, W - 44, H - 44);
-
-  // boutons JOUER / FORGE… (stats + succès sont en haut, près du titre)
-  const b = menuButtons();
-  const tb = topMenuButtons();
-  drawMenuButton(b.play, '▶  JOUER', '#4caf50', '#69f0ae', true);
-  drawMenuButton(b.perso, '👤  HÉROS', '#5c6bc0', '#9fa8da', false);
-  drawMenuButton(b.tutoriel, '📖  TUTORIEL', '#00838f', '#80deea', false);
-  drawMenuButton(b.forge, '⚒️  FORGE', '#6d4c41', '#d7ccc8', false);
-  drawMenuButton(tb.stats, '📊  STATISTIQUES', '#5c6bc0', '#9fa8da', false);
-  drawMenuButton(tb.ach, '🏆  SUCCÈS', '#b8860b', '#ffd740', false);
-
-  // pastille dorée : des récompenses de succès sont réclamables
-  if (unclaimedInTab(-1)) {
-    const r = tb.ach, pulse = 0.6 + Math.sin(G.time * 5) * 0.4;
-    ctx.fillStyle = `rgba(255,215,64,${pulse})`;
-    ctx.beginPath(); ctx.arc(r.x + r.w - 10, r.y + 10, 8, 0, TAU); ctx.fill();
-    ctx.strokeStyle = '#7a5c00'; ctx.lineWidth = 1.5; ctx.stroke();
-    ctx.fillStyle = '#3a2c00'; ctx.font = 'bold 10px Segoe UI';
-    ctx.textAlign = 'center';
-    ctx.fillText('!', r.x + r.w - 10, r.y + 13.5);
-  }
-
-  ctx.fillStyle = '#69f0ae'; ctx.font = 'bold 15px Segoe UI';
-  ctx.globalAlpha = 0.6 + Math.sin(G.time * 4) * 0.4;
-  ctx.fillText('Cliquez ou appuyez sur ENTRÉE pour choisir votre campagne', W / 2, b.play.y + b.play.h + 32);
-  ctx.globalAlpha = 1;
+  ctx.font = `12px ${UI}`; ctx.fillStyle = C_MUTED;
+  ctx.fillText('Mini-boss toutes les 3 vagues  ·  Boss toutes les 5 vagues', rx + 2, cy + ch + 28);
+  ctx.textAlign = 'center';
 }
 
-function drawMenuButton(r, label, c1, c2, primary) {
-  // survol : le bouton réagit à la souris (léger grossissement + lueur)
-  const hov = G.mouse.x >= r.x && G.mouse.x <= r.x + r.w &&
-              G.mouse.y >= r.y && G.mouse.y <= r.y + r.h;
+// entrée de navigation du menu principal (liste verticale)
+function drawNavItem(r, label, primary, badge) {
+  const hov = inR(r, G.mouse.x, G.mouse.y);
   ctx.save();
-  if (hov) {
-    ctx.translate(r.x + r.w / 2, r.y + r.h / 2);
-    ctx.scale(1.05, 1.05);
-    ctx.translate(-(r.x + r.w / 2), -(r.y + r.h / 2));
+  ctx.textAlign = 'left';
+  if (primary) {
+    ctx.fillStyle = hov ? '#e2c27a' : C_GOLD;
+    roundRect(r.x, r.y, r.w, r.h, 8); ctx.fill();
+    ctx.font = `700 15px ${UI}`; ctx.letterSpacing = '2px'; ctx.fillStyle = '#16130c';
+    ctx.fillText(label, r.x + 20, r.y + r.h / 2 + 5);
+    ctx.letterSpacing = '0px';
+    ctx.font = `600 10px ${UI}`;
+    const kw = ctx.measureText('ENTRÉE').width + 14;
+    ctx.fillStyle = 'rgba(22,19,12,0.14)';
+    roundRect(r.x + r.w - kw - 14, r.y + r.h / 2 - 10, kw, 20, 5); ctx.fill();
+    ctx.fillStyle = 'rgba(22,19,12,0.7)';
+    ctx.fillText('ENTRÉE', r.x + r.w - kw - 7, r.y + r.h / 2 + 4);
+  } else {
+    if (hov) {
+      ctx.fillStyle = 'rgba(255,255,255,0.05)';
+      roundRect(r.x, r.y, r.w, r.h, 8); ctx.fill();
+      ctx.fillStyle = C_GOLD; ctx.fillRect(r.x, r.y + 10, 2, r.h - 20);
+    }
+    ctx.font = `600 14px ${UI}`; ctx.letterSpacing = '2px';
+    ctx.fillStyle = hov ? C_TEXT : '#a39d8e';
+    ctx.fillText(label, r.x + 20, r.y + r.h / 2 + 5);
+    const lw = ctx.measureText(label).width;
+    ctx.letterSpacing = '0px';
+    if (badge) {
+      ctx.fillStyle = C_GOLD;
+      ctx.beginPath(); ctx.arc(r.x + 20 + lw + 8, r.y + r.h / 2, 3.5, 0, TAU); ctx.fill();
+    }
+    if (hov) {
+      ctx.font = `500 16px ${UI}`; ctx.fillStyle = C_GOLD;
+      ctx.textAlign = 'right';
+      ctx.fillText('→', r.x + r.w - 16, r.y + r.h / 2 + 6);
+    }
   }
-  const pulse = 0.5 + Math.sin(G.time * 4) * 0.15;
-  // ombre portée sous le bouton
-  ctx.fillStyle = 'rgba(0,0,0,0.4)';
-  roundRect(r.x + 3, r.y + 5, r.w, r.h, 27); ctx.fill();
-  const g = ctx.createLinearGradient(r.x, r.y, r.x, r.y + r.h);
-  g.addColorStop(0, hexA(c1, hov ? 0.85 : primary ? 0.55 + pulse * 0.2 : 0.42));
-  g.addColorStop(1, hexA(c1, hov ? 0.55 : primary ? 0.32 + pulse * 0.1 : 0.24));
-  ctx.fillStyle = g;
-  roundRect(r.x, r.y, r.w, r.h, 27); ctx.fill();
-  // fine surlignage interne (effet de relief)
-  ctx.strokeStyle = hexA('#ffffff', hov ? 0.3 : 0.12); ctx.lineWidth = 1;
-  roundRect(r.x + 3, r.y + 3, r.w - 6, r.h / 2 - 3, 24); ctx.stroke();
-  ctx.strokeStyle = c2; ctx.lineWidth = hov ? 3 : 2.5;
-  ctx.shadowColor = c2; ctx.shadowBlur = (primary ? 18 : 8) + (hov ? 14 : 0);
-  roundRect(r.x, r.y, r.w, r.h, 27); ctx.stroke();
-  ctx.shadowBlur = 0;
-  const fs = r.h < 50 ? 14 : 21; // petites pastilles (stats/succès) : texte réduit
-  ctx.fillStyle = '#fff'; ctx.font = `bold ${fs}px Segoe UI`;
-  ctx.fillText(label, r.x + r.w / 2, r.y + r.h / 2 + fs * 0.36);
-  // curseur "main" au survol pour accentuer l'interactivité
-  if (hov) {
-    ctx.font = 'bold 15px Segoe UI'; ctx.fillStyle = c2;
-    ctx.fillText('▶', r.x - 22, r.y + r.h / 2 + 6);
+  ctx.restore();
+}
+
+// bouton générique sobre (retour, pause, popups) : plein si primary, sinon contour
+function drawMenuButton(r, label, c1, c2, primary) {
+  const hov = inR(r, G.mouse.x, G.mouse.y);
+  ctx.save();
+  if (primary) {
+    ctx.fillStyle = hexA(c1, hov ? 1 : 0.88);
+    roundRect(r.x, r.y, r.w, r.h, 10); ctx.fill();
+  } else {
+    ctx.fillStyle = hov ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)';
+    roundRect(r.x, r.y, r.w, r.h, 10); ctx.fill();
+    ctx.strokeStyle = hov ? hexA(c2, 0.7) : 'rgba(255,255,255,0.16)'; ctx.lineWidth = 1;
+    roundRect(r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1, 10); ctx.stroke();
   }
+  const fs = r.h < 50 ? 13 : 15;
+  ctx.textAlign = 'center';
+  ctx.font = `600 ${fs}px ${UI}`; ctx.letterSpacing = '2px';
+  ctx.fillStyle = primary ? (c1 === C_GOLD ? '#16130c' : '#fff') : (hov ? C_TEXT : '#cfc8b6');
+  ctx.fillText(label, r.x + r.w / 2 + 1, r.y + r.h / 2 + fs * 0.36);
   ctx.restore();
 }
 
 function drawStatsCard() {
   const s = G.stats;
-  const cw = 540, ch = 470, cx = W / 2 - cw / 2, cy = H / 2 - ch / 2;
-  ctx.fillStyle = 'rgba(0,0,0,0.6)';
-  roundRect(cx, cy, cw, ch, 16); ctx.fill();
-  ctx.strokeStyle = 'rgba(255,215,64,0.6)'; ctx.lineWidth = 2;
-  roundRect(cx, cy, cw, ch, 16); ctx.stroke();
+  const cw = 540, ch = 470, cx = W / 2 - cw / 2, cy = H / 2 - ch / 2 - 20;
+  ctx.fillStyle = 'rgba(15,17,19,0.94)';
+  roundRect(cx, cy, cw, ch, 14); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1;
+  roundRect(cx + 0.5, cy + 0.5, cw - 1, ch - 1, 14); ctx.stroke();
 
   ctx.textAlign = 'center';
-  ctx.fillStyle = '#ffd740'; ctx.font = 'bold 30px Segoe UI';
-  ctx.fillText('STATISTIQUES', W / 2, cy + 48);
-  ctx.fillStyle = '#80cbc4'; ctx.font = 'italic 15px Segoe UI';
-  ctx.fillText('Vos meilleurs records sauvegardés', W / 2, cy + 74);
+  overlineCentered('VOS MEILLEURS RECORDS', W / 2, cy + 40);
+  ctx.save();
+  ctx.fillStyle = C_TEXT; ctx.font = `600 28px ${SERIF}`; ctx.letterSpacing = '2px';
+  ctx.fillText('STATISTIQUES', W / 2 + 1, cy + 76);
+  ctx.restore();
 
   const fmtTime = t => {
     t = Math.floor(t);
     return `${Math.floor(t / 60)}m ${String(t % 60).padStart(2, '0')}s`;
   };
   const rows = [
-    ['Meilleure vague', s.bestWave || 0, '#ff7043'],
-    ['Niveau max', s.bestLevel || 1, '#40c4ff'],
-    ['Ennemis vaincus (record)', s.bestKills || 0, '#69f0ae'],
-    ['Dégâts infligés (record)', Math.floor(s.bestDamage || 0), '#ffeb3b'],
-    ['Parties jouées', s.games || 0, '#ffb300'],
-    ['Dégâts infligés (total)', Math.floor(s.totalDamage || 0), '#ff8a65'],
-    ['Dégâts subis (total)', Math.floor(s.totalDamageTaken || 0), '#ef5350'],
-    ['Fioles bues (total)', s.totalPotions || 0, '#ff80ab'],
-    ['Boss vaincus (total)', s.totalBossKills || 0, '#ff5252'],
-    ['Temps de jeu total', fmtTime(s.totalPlayTime || 0), '#9575cd']
+    ['Meilleure vague', s.bestWave || 0],
+    ['Niveau max', s.bestLevel || 1],
+    ['Ennemis vaincus (record)', s.bestKills || 0],
+    ['Dégâts infligés (record)', Math.floor(s.bestDamage || 0)],
+    ['Parties jouées', s.games || 0],
+    ['Dégâts infligés (total)', Math.floor(s.totalDamage || 0)],
+    ['Dégâts subis (total)', Math.floor(s.totalDamageTaken || 0)],
+    ['Fioles bues (total)', s.totalPotions || 0],
+    ['Boss vaincus (total)', s.totalBossKills || 0],
+    ['Temps de jeu total', fmtTime(s.totalPlayTime || 0)]
   ];
-  ctx.font = '16px Segoe UI';
   rows.forEach((r, i) => {
-    const ry = cy + 105 + i * 34;
-    ctx.fillStyle = 'rgba(255,255,255,0.06)';
-    roundRect(cx + 30, ry - 19, cw - 60, 28, 8); ctx.fill();
-    ctx.textAlign = 'left'; ctx.fillStyle = '#e0e0e0';
-    ctx.fillText(r[0], cx + 48, ry);
-    ctx.textAlign = 'right'; ctx.fillStyle = r[2]; ctx.font = 'bold 17px Segoe UI';
-    ctx.fillText(String(r[1]), cx + cw - 48, ry + 1);
-    ctx.font = '16px Segoe UI';
+    const ry = cy + 118 + i * 33;
+    if (i) { ctx.fillStyle = 'rgba(255,255,255,0.05)'; ctx.fillRect(cx + 40, ry - 21, cw - 80, 1); }
+    ctx.textAlign = 'left'; ctx.fillStyle = C_MUTED; ctx.font = `14px ${UI}`;
+    ctx.fillText(r[0], cx + 40, ry);
+    ctx.textAlign = 'right'; ctx.fillStyle = C_TEXT; ctx.font = `600 15px ${UI}`;
+    ctx.fillText(String(r[1]), cx + cw - 40, ry);
   });
 
   // bouton retour
   const b = menuButtons().back;
-  drawMenuButton(b, '←  RETOUR', '#455a64', '#90a4ae', false);
+  drawMenuButton(b, '← RETOUR', '#455a64', '#90a4ae', false);
 }
 
 // grille des succès (partagée dessin / clic) — avec scroll et fiche détail
@@ -571,21 +569,21 @@ function drawAchDetail() {
   ctx.textAlign = 'center';
   ctx.font = '54px serif';
   ctx.fillText(a.icon, W / 2, L.cy + 88);
-  ctx.font = 'bold 26px Segoe UI';
+  ctx.font = 'bold 26px Inter, sans-serif';
   ctx.fillStyle = ok ? '#ffe9a3' : '#78909c';
   ctx.fillText(fitText(a.name, L.cw - 80), W / 2, L.cy + 132);
-  ctx.font = 'bold 13px Segoe UI';
+  ctx.font = 'bold 13px Inter, sans-serif';
   ctx.fillStyle = rarity.color;
   ctx.fillText('★ ' + rarity.label.toUpperCase(), W / 2, L.cy + 158);
-  ctx.font = 'italic 14px Segoe UI';
+  ctx.font = 'italic 14px Inter, sans-serif';
   ctx.fillStyle = ok ? (claimed ? '#69f0ae' : '#ffd740') : '#90a4ae';
   ctx.fillText(ok ? (claimed ? '✓ Récompense récoltée' : '✓ Débloqué — réclame ta récompense !') : '🔒 Pas encore débloqué', W / 2, L.cy + 184);
 
   // OBJECTIF : comment l'obtenir (description complète en plusieurs lignes)
-  ctx.textAlign = 'left'; ctx.font = 'bold 13px Segoe UI';
+  ctx.textAlign = 'left'; ctx.font = 'bold 13px Inter, sans-serif';
   ctx.fillStyle = '#ffd740';
   ctx.fillText('🎯 COMMENT L\'OBTENIR', L.cx + 42, L.cy + 224);
-  ctx.font = '15px Segoe UI';
+  ctx.font = '15px Inter, sans-serif';
   ctx.fillStyle = '#e8e0c8';
   const lines = wrapLines(a.desc, L.cw - 84);
   const descTop = L.cy + 248;
@@ -594,7 +592,7 @@ function drawAchDetail() {
   // RÉCOMPENSE
   const rw = Object.keys(reward).map(m => `${MATS[m].name} ×${reward[m]}`).join('  ·  ');
   const rwY = Math.max(descTop + lines.length * 21 + 14, L.cy + L.ch - 132);
-  ctx.font = 'bold 13px Segoe UI';
+  ctx.font = 'bold 13px Inter, sans-serif';
   ctx.fillStyle = '#ffd740';
   ctx.fillText('🎁 RÉCOMPENSE', L.cx + 42, rwY);
   ctx.font = '14px Consolas, monospace';
@@ -609,10 +607,10 @@ function drawAchDetail() {
     roundRect(cb.x, cb.y, cb.w, cb.h, 10); ctx.fill();
     ctx.strokeStyle = '#81c784'; ctx.lineWidth = 2;
     roundRect(cb.x, cb.y, cb.w, cb.h, 10); ctx.stroke();
-    ctx.fillStyle = '#fff'; ctx.font = 'bold 15px Segoe UI'; ctx.textAlign = 'center';
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 15px Inter, sans-serif'; ctx.textAlign = 'center';
     ctx.fillText('★  OBTENIR  ★', cb.x + cb.w / 2, cb.y + 28);
   } else {
-    ctx.font = 'italic 13px Segoe UI'; ctx.textAlign = 'center';
+    ctx.font = 'italic 13px Inter, sans-serif'; ctx.textAlign = 'center';
     ctx.fillStyle = claimed ? '#69f0ae' : '#546e7a';
     ctx.fillText(claimed ? 'Récompense déjà récoltée ✓' : 'Verrouillé — continue à jouer !', W / 2, L.claim.y + 26);
   }
@@ -621,7 +619,7 @@ function drawAchDetail() {
   roundRect(fb.x, fb.y, fb.w, fb.h, 8); ctx.fill();
   ctx.strokeStyle = '#90a4ae'; ctx.lineWidth = 1.5;
   roundRect(fb.x, fb.y, fb.w, fb.h, 8); ctx.stroke();
-  ctx.fillStyle = '#fff'; ctx.font = 'bold 16px Segoe UI'; ctx.textAlign = 'center';
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 16px Inter, sans-serif'; ctx.textAlign = 'center';
   ctx.fillText('✕', fb.x + fb.w / 2, fb.y + 22);
 }
 
@@ -633,10 +631,10 @@ function drawAchievementsCard() {
   roundRect(cx, cy, cw, ch, 16); ctx.stroke();
 
   ctx.textAlign = 'center';
-  ctx.fillStyle = '#ffd740'; ctx.font = 'bold 30px Segoe UI';
+  ctx.fillStyle = '#ffd740'; ctx.font = 'bold 30px Inter, sans-serif';
   ctx.fillText('SUCCÈS', W / 2, cy + 46);
   const done = achievementCount();
-  ctx.fillStyle = '#80cbc4'; ctx.font = 'italic 15px Segoe UI';
+  ctx.fillStyle = '#80cbc4'; ctx.font = 'italic 15px Inter, sans-serif';
   ctx.fillText(`${done} / ${ACHIEVEMENTS.length} débloqués au total — molette pour défiler, clic pour les détails`, W / 2, cy + 68);
 
   // onglets par monde
@@ -651,7 +649,7 @@ function drawAchievementsCard() {
     ctx.lineWidth = on ? 2 : 1;
     roundRect(t.x, t.y, t.w, t.h, 10); ctx.stroke();
     ctx.textAlign = 'center';
-    ctx.font = 'bold 13px Segoe UI';
+    ctx.font = 'bold 13px Inter, sans-serif';
     ctx.fillStyle = on ? '#ffe9a3' : '#b0bec5';
     ctx.fillText(`${ACH_TAB_NAMES[t.i]}  (${tabDone}/${tabList.length})`, t.x + t.w / 2, t.y + 22);
     // pastille dorée si des récompenses sont réclamables dans cet onglet
@@ -661,7 +659,7 @@ function drawAchievementsCard() {
       ctx.fillStyle = `rgba(255,215,64,${pulse})`;
       ctx.beginPath(); ctx.arc(px, py, 6, 0, TAU); ctx.fill();
       ctx.strokeStyle = '#7a5c00'; ctx.lineWidth = 1.5; ctx.stroke();
-      ctx.fillStyle = '#3a2c00'; ctx.font = 'bold 9px Segoe UI';
+      ctx.fillStyle = '#3a2c00'; ctx.font = 'bold 9px Inter, sans-serif';
       ctx.fillText('!', px, py + 3.5);
     }
   }
@@ -685,15 +683,15 @@ function drawAchievementsCard() {
     ctx.fillText(a.icon, c.x + 20, c.y + 29);
     // nom + rareté
     ctx.textAlign = 'left';
-    ctx.font = 'bold 11px Segoe UI';
+    ctx.font = 'bold 11px Inter, sans-serif';
     ctx.fillStyle = claimable ? '#a5d6a7' : claimed ? '#ffe9a3' : '#78909c';
     const name = fitText(a.name, c.w - 150);
     ctx.fillText(name, c.x + 38, c.y + 16);
     const nameW = ctx.measureText(name).width;
-    ctx.font = '9px Segoe UI'; ctx.fillStyle = rarity.color;
+    ctx.font = '9px Inter, sans-serif'; ctx.fillStyle = rarity.color;
     ctx.fillText(rarity.label, c.x + 38 + nameW + 6, c.y + 16);
     // description
-    ctx.font = '9px Segoe UI';
+    ctx.font = '9px Inter, sans-serif';
     ctx.fillStyle = ok ? '#bdbdbd' : '#546e7a';
     ctx.fillText(fitText(a.desc, c.w - 120), c.x + 38, c.y + 28);
     // récompense / statut de récolte
@@ -714,7 +712,7 @@ function drawAchievementsCard() {
       ctx.strokeStyle = claimable ? '#81c784' : 'rgba(255,255,255,0.2)';
       ctx.lineWidth = 1.5; roundRect(b.x, b.y, b.w, b.h, 6); ctx.stroke();
       ctx.fillStyle = claimable ? '#fff' : '#ffd740';
-      ctx.font = 'bold 9px Segoe UI'; ctx.textAlign = 'center';
+      ctx.font = 'bold 9px Inter, sans-serif'; ctx.textAlign = 'center';
       ctx.fillText(claimable ? 'OBTENIR' : 'RÉCOLTÉ ✓', b.x + b.w / 2, b.y + 14);
     }
     ctx.restore();
@@ -733,7 +731,7 @@ function drawAchievementsCard() {
   }
 
   const b = menuButtons().back;
-  drawMenuButton(b, '←  RETOUR', '#455a64', '#90a4ae', false);
+  drawMenuButton(b, '← RETOUR', '#455a64', '#90a4ae', false);
 
   // fiche détail d'un succès par-dessus tout
   if (achDetail) drawAchDetail();
@@ -850,37 +848,37 @@ function drawItemDetail() {
   // grande icône + nom + emplacement
   drawItemIcon(it, W / 2, L.cy + 88, 40);
   ctx.textAlign = 'center';
-  ctx.fillStyle = broken ? '#ff8a80' : '#ffe9a3'; ctx.font = 'bold 23px Segoe UI';
+  ctx.fillStyle = broken ? '#ff8a80' : '#ffe9a3'; ctx.font = 'bold 23px Inter, sans-serif';
   ctx.fillText(fitText(it.name, L.cw - 60), W / 2, L.cy + 152);
-  ctx.fillStyle = '#90caf9'; ctx.font = 'bold 12px Segoe UI';
+  ctx.fillStyle = '#90caf9'; ctx.font = 'bold 12px Inter, sans-serif';
   ctx.fillText(SLOT_LABEL[it.slot] || it.slot.toUpperCase(), W / 2, L.cy + 174);
-  ctx.fillStyle = broken ? '#ff8a80' : '#69f0ae'; ctx.font = 'italic 13px Segoe UI';
+  ctx.fillStyle = broken ? '#ff8a80' : '#69f0ae'; ctx.font = 'italic 13px Inter, sans-serif';
   ctx.fillText(broken ? '💥 CASSÉ — répare-le pour le rééquiper' : equipped ? '✓ Actuellement équipé' : 'Dans ton inventaire', W / 2, L.cy + 196);
 
   // les niveaux d'armes se suivent dans l'onglet Héros (épée / lance)
 
   // description + effet (max 5 lignes, le reste est tronqué avec « … »)
-  ctx.textAlign = 'left'; ctx.font = 'bold 13px Segoe UI'; ctx.fillStyle = '#ffd740';
+  ctx.textAlign = 'left'; ctx.font = 'bold 13px Inter, sans-serif'; ctx.fillStyle = '#ffd740';
   ctx.fillText('📜 DESCRIPTION', L.cx + 42, L.cy + 226);
-  ctx.font = '14px Segoe UI'; ctx.fillStyle = '#e8e0c8';
+  ctx.font = '14px Inter, sans-serif'; ctx.fillStyle = '#e8e0c8';
   let lines = wrapLines(it.desc, L.cw - 84);
   if (lines.length > 5) { lines = lines.slice(0, 5); lines[4] = fitText(lines[4] + '…', L.cw - 84); }
   lines.forEach((ln, i) => ctx.fillText(ln, L.cx + 42, L.cy + 247 + i * 18));
 
   // durabilité (position fixe : jamais dans les boutons)
   const dy = L.cy + 322;
-  ctx.font = 'bold 13px Segoe UI'; ctx.fillStyle = '#ffd740';
+  ctx.font = 'bold 13px Inter, sans-serif'; ctx.fillStyle = '#ffd740';
   ctx.fillText('🔧 DURABILITÉ', L.cx + 42, dy);
   const dbx = L.cx + 42, dbw = L.cw - 84, dby = dy + 8;
   ctx.fillStyle = 'rgba(255,255,255,0.12)'; roundRect(dbx, dby, dbw, 12, 6); ctx.fill();
   const dc = dur > 50 ? '#69f0ae' : dur > 25 ? '#ffd740' : '#ff5252';
   if (dur > 0) { ctx.fillStyle = dc; roundRect(dbx, dby, dbw * dur / 100, 12, 6); ctx.fill(); }
-  ctx.fillStyle = '#fff'; ctx.font = 'bold 11px Segoe UI'; ctx.textAlign = 'center';
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 11px Inter, sans-serif'; ctx.textAlign = 'center';
   ctx.fillText(broken ? 'CASSÉ' : `${Math.round(dur)} %`, dbx + dbw / 2, dby + 10);
   ctx.textAlign = 'left';
 
   // coût de réparation (une seule ligne, tronquée si besoin)
-  ctx.font = 'bold 13px Segoe UI'; ctx.fillStyle = '#ffd740';
+  ctx.font = 'bold 13px Inter, sans-serif'; ctx.fillStyle = '#ffd740';
   ctx.fillText('💰 RÉPARATION', L.cx + 42, dy + 42);
   ctx.font = '12px Consolas, monospace';
   if (rc) {
@@ -899,7 +897,7 @@ function drawItemDetail() {
     roundRect(rb.x, rb.y, rb.w, rb.h, 9); ctx.fill();
     ctx.strokeStyle = okR ? '#ff9800' : 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1.5;
     roundRect(rb.x, rb.y, rb.w, rb.h, 9); ctx.stroke();
-    ctx.fillStyle = okR ? '#ffe0b2' : '#78909c'; ctx.font = 'bold 14px Segoe UI'; ctx.textAlign = 'center';
+    ctx.fillStyle = okR ? '#ffe0b2' : '#78909c'; ctx.font = 'bold 14px Inter, sans-serif'; ctx.textAlign = 'center';
     ctx.fillText(okR ? '🔧  RÉPARER' : 'MATÉRIAUX INSUFFISANTS', rb.x + rb.w / 2, rb.y + 27);
   }
   const eb = L.equip;
@@ -907,14 +905,14 @@ function drawItemDetail() {
   roundRect(eb.x, eb.y, eb.w, eb.h, 10); ctx.fill();
   ctx.strokeStyle = equipped ? '#ffd740' : broken ? '#ff5252' : '#9fa8da'; ctx.lineWidth = 2;
   roundRect(eb.x, eb.y, eb.w, eb.h, 10); ctx.stroke();
-  ctx.fillStyle = equipped ? '#ffe9a3' : broken ? '#ff8a80' : '#fff'; ctx.font = 'bold 15px Segoe UI'; ctx.textAlign = 'center';
+  ctx.fillStyle = equipped ? '#ffe9a3' : broken ? '#ff8a80' : '#fff'; ctx.font = 'bold 15px Inter, sans-serif'; ctx.textAlign = 'center';
   ctx.fillText(equipped ? '✓  ÉQUIPÉ' : broken ? 'CASSÉ — À RÉPARER' : 'ÉQUIPER', eb.x + eb.w / 2, eb.y + 27);
   const fb = L.close;
   ctx.fillStyle = 'rgba(69,90,100,0.8)';
   roundRect(fb.x, fb.y, fb.w, fb.h, 8); ctx.fill();
   ctx.strokeStyle = '#90a4ae'; ctx.lineWidth = 1.5;
   roundRect(fb.x, fb.y, fb.w, fb.h, 8); ctx.stroke();
-  ctx.fillStyle = '#fff'; ctx.font = 'bold 16px Segoe UI'; ctx.textAlign = 'center';
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 16px Inter, sans-serif'; ctx.textAlign = 'center';
   ctx.fillText('✕', fb.x + fb.w / 2, fb.y + 22);
 }
 
@@ -997,9 +995,9 @@ function drawForgeView() {
   roundRect(L.cx, L.cy, L.cw, L.ch, 16); ctx.stroke();
 
   ctx.textAlign = 'center';
-  ctx.fillStyle = '#ffd740'; ctx.font = 'bold 28px Segoe UI';
+  ctx.fillStyle = '#ffd740'; ctx.font = 'bold 28px Inter, sans-serif';
   ctx.fillText('⚒️  FORGE', W / 2, L.cy + 44);
-  ctx.fillStyle = '#a89f7c'; ctx.font = 'italic 14px Segoe UI';
+  ctx.fillStyle = '#a89f7c'; ctx.font = 'italic 14px Inter, sans-serif';
   ctx.fillText('Forgez des équipements avec les matériaux des monstres', W / 2, L.cy + 62);
 
   // onglets
@@ -1010,7 +1008,7 @@ function drawForgeView() {
     ctx.strokeStyle = active ? '#ffd740' : 'rgba(255,255,255,0.2)';
     ctx.lineWidth = active ? 2 : 1;
     roundRect(r.x, r.y, r.w, r.h, 8); ctx.stroke();
-    ctx.fillStyle = active ? '#ffe9a3' : '#bdbdbd'; ctx.font = 'bold 15px Segoe UI';
+    ctx.fillStyle = active ? '#ffe9a3' : '#bdbdbd'; ctx.font = 'bold 15px Inter, sans-serif';
     ctx.fillText(label, r.x + r.w / 2, r.y + 23);
   }
 
@@ -1022,7 +1020,7 @@ function drawForgeView() {
     roundRect(mb.x, mb.y, mb.w, mb.h, 8); ctx.fill();
     ctx.strokeStyle = '#ef5350'; ctx.lineWidth = mhov ? 2 : 1.2;
     roundRect(mb.x, mb.y, mb.w, mb.h, 8); ctx.stroke();
-    ctx.fillStyle = '#ffcdd2'; ctx.font = 'bold 12px Segoe UI';
+    ctx.fillStyle = '#ffcdd2'; ctx.font = 'bold 12px Inter, sans-serif';
     ctx.fillText('🛠 +10 MATÉRIAUX', mb.x + mb.w / 2, mb.y + 20);
   }
 
@@ -1031,7 +1029,7 @@ function drawForgeView() {
   else drawHeroPaperdoll(L);
   if (itemDetail) drawItemDetail(); // fiche équipement par-dessus tout
 
-  drawMenuButton(T.back, '←  RETOUR', '#455a64', '#90a4ae', false);
+  drawMenuButton(T.back, '← RETOUR', '#455a64', '#90a4ae', false);
   drawForgeAnim(L);
 }
 
@@ -1223,7 +1221,7 @@ function drawForgeAnim(L) {
   ctx.font = 'bold 22px Georgia, serif';
   ctx.fillText(done ? (rep ? '✓ ÉQUIPEMENT RÉPARÉ !' : '✓ OBJET FORGÉ !') : (rep ? 'RÉPARATION EN COURS…' : 'FORGE EN COURS…'), ax, L.cy + 42);
   if (it && !done) {
-    ctx.fillStyle = '#ffe9a3'; ctx.font = 'italic 15px Segoe UI';
+    ctx.fillStyle = '#ffe9a3'; ctx.font = 'italic 15px Inter, sans-serif';
     ctx.fillText(it.name, ax, L.cy + 66);
   }
 
@@ -1257,7 +1255,7 @@ function drawForgeAnim(L) {
     }
     ctx.restore();
     ctx.globalAlpha = baseA;
-    ctx.fillStyle = '#ffe9a3'; ctx.font = 'bold 16px Segoe UI';
+    ctx.fillStyle = '#ffe9a3'; ctx.font = 'bold 16px Inter, sans-serif';
     ctx.fillText(it.name, ax, L.cy + 66);
   }
 
@@ -1295,9 +1293,9 @@ function drawForgeCraft(L) {
     // icône + nom + desc (tuile d'équipement stylée)
     drawItemIcon(it, c.x + 34, c.y + c.h / 2, 17);
     ctx.textAlign = 'left';
-    ctx.fillStyle = '#ffe9a3'; ctx.font = 'bold 13px Segoe UI';
+    ctx.fillStyle = '#ffe9a3'; ctx.font = 'bold 13px Inter, sans-serif';
     ctx.fillText(it.name, c.x + 62, c.y + 24);
-    ctx.fillStyle = '#9e9e9e'; ctx.font = '11px Segoe UI';
+    ctx.fillStyle = '#9e9e9e'; ctx.font = '11px Inter, sans-serif';
     ctx.fillText(it.desc, c.x + 62, c.y + 40);
     // coût en matériaux (vert si suffisant, rouge sinon)
     let cy = c.y + 58;
@@ -1315,7 +1313,7 @@ function drawForgeCraft(L) {
     ctx.strokeStyle = owned ? '#69f0ae' : ok ? '#81c784' : 'rgba(255,255,255,0.2)';
     ctx.lineWidth = 1.5; roundRect(b.x, b.y, b.w, b.h, 6); ctx.stroke();
     ctx.fillStyle = owned ? '#69f0ae' : ok ? '#fff' : '#777';
-    ctx.font = 'bold 12px Segoe UI'; ctx.textAlign = 'center';
+    ctx.font = 'bold 12px Inter, sans-serif'; ctx.textAlign = 'center';
     ctx.fillText(owned ? 'FORGÉ ✓' : 'FORGER', b.x + b.w / 2, b.y + 17);
   }
   ctx.restore();
@@ -1418,13 +1416,13 @@ function drawHeroPaperdoll(L) {
     ctx.lineWidth = eq ? 2 : 1;
     roundRect(r.x, r.y, r.w, r.h, 10); ctx.stroke();
     // étiquette du slot en haut du cadre
-    ctx.fillStyle = eq ? tier : '#90caf9'; ctx.font = 'bold 9px Segoe UI'; ctx.textAlign = 'center';
+    ctx.fillStyle = eq ? tier : '#90caf9'; ctx.font = 'bold 9px Inter, sans-serif'; ctx.textAlign = 'center';
     ctx.fillText(SLOT_LABEL[slot], r.x + r.w / 2, r.y + 11);
     if (it) {
       // icône centrée, nom dessous, mini barre de durabilité en bas
       const icY = r.y + r.h * 0.44;
       drawItemIcon(it, r.x + r.w / 2, icY, 20);
-      ctx.fillStyle = '#ffe9a3'; ctx.font = 'bold 10px Segoe UI';
+      ctx.fillStyle = '#ffe9a3'; ctx.font = 'bold 10px Inter, sans-serif';
       ctx.fillText(fitText(it.name, r.w - 14), r.x + r.w / 2, r.y + r.h - 15);
       const bw2 = r.w - 22, bx2 = r.x + 11, by2 = r.y + r.h - 8;
       ctx.fillStyle = 'rgba(255,255,255,0.15)'; roundRect(bx2, by2, bw2, 3, 2); ctx.fill();
@@ -1435,7 +1433,7 @@ function drawHeroPaperdoll(L) {
     } else {
       ctx.fillStyle = '#546e7a'; ctx.font = '20px serif';
       ctx.fillText('—', r.x + r.w / 2, r.y + r.h * 0.5 + 7);
-      ctx.fillStyle = '#455a64'; ctx.font = 'italic 9px Segoe UI';
+      ctx.fillStyle = '#455a64'; ctx.font = 'italic 9px Inter, sans-serif';
       ctx.fillText('vide', r.x + r.w / 2, r.y + r.h - 15);
     }
   }
@@ -1445,7 +1443,7 @@ function drawHeroPaperdoll(L) {
   // ---- choix de l'ULTIME (touche F en jeu) : en haut à droite ----
   drawUltSelect(L);
   // astuce
-  ctx.fillStyle = '#78909c'; ctx.font = 'italic 12px Segoe UI'; ctx.textAlign = 'center';
+  ctx.fillStyle = '#78909c'; ctx.font = 'italic 12px Inter, sans-serif'; ctx.textAlign = 'center';
   ctx.fillText('Clique sur un emplacement pour voir le détail de l\'équipement', W / 2, L.cy + L.ch - 14);
 }
 
@@ -1467,7 +1465,7 @@ function drawUltSelect(L) {
   const hellOk = !!G.stats.hellUlt;
   const ub = ultBtns(L);
   ctx.textAlign = 'center';
-  ctx.fillStyle = '#ffd740'; ctx.font = 'bold 11px Segoe UI';
+  ctx.fillStyle = '#ffd740'; ctx.font = 'bold 11px Inter, sans-serif';
   ctx.fillText('ULTIME — TOUCHE F', ub.nuke.x + ub.nuke.w / 2, ub.nuke.y - 8);
   const drawOne = (key, icon, label, sub, color, locked) => {
     const r = ub[key], on = sel === key && !locked;
@@ -1480,11 +1478,11 @@ function drawUltSelect(L) {
     roundRect(r.x, r.y, r.w, r.h, 9); ctx.stroke();
     ctx.textAlign = 'left';
     ctx.fillStyle = on ? '#fff' : locked ? '#78909c' : '#e0e0e0';
-    ctx.font = 'bold 15px Segoe UI';
+    ctx.font = 'bold 15px Inter, sans-serif';
     ctx.fillText(`${locked ? '🔒' : icon}  ${label}`, r.x + 12, r.y + 19);
-    ctx.fillStyle = locked ? '#546e7a' : (on ? color : '#90a4ae'); ctx.font = '10px Segoe UI';
+    ctx.fillStyle = locked ? '#546e7a' : (on ? color : '#90a4ae'); ctx.font = '10px Inter, sans-serif';
     ctx.fillText(sub, r.x + 12, r.y + 34);
-    if (on) { ctx.fillStyle = color; ctx.font = 'bold 12px Segoe UI'; ctx.textAlign = 'right'; ctx.fillText('✓', r.x + r.w - 10, r.y + 19); }
+    if (on) { ctx.fillStyle = color; ctx.font = 'bold 12px Inter, sans-serif'; ctx.textAlign = 'right'; ctx.fillText('✓', r.x + r.w - 10, r.y + 19); }
     ctx.globalAlpha = 1; ctx.textAlign = 'center';
   };
   drawOne('nuke', '💣', 'BOMBE ATOMIQUE', 'B-2 + explosion nucléaire', '#ffd740', false);
@@ -1502,18 +1500,18 @@ function drawModeCard(x, y, key, icon, label, color) {
   roundRect(x, y, w, h, 10); ctx.stroke();
   ctx.textAlign = 'left';
   ctx.font = '17px serif'; ctx.fillText(icon, x + 12, y + 24);
-  ctx.fillStyle = color; ctx.font = 'bold 13px Segoe UI';
+  ctx.fillStyle = color; ctx.font = 'bold 13px Inter, sans-serif';
   ctx.fillText(label, x + 38, y + 22);
-  ctx.fillStyle = '#ffe9a3'; ctx.font = 'bold 15px Segoe UI';
+  ctx.fillStyle = '#ffe9a3'; ctx.font = 'bold 15px Inter, sans-serif';
   ctx.fillText(`Niv. ${info.lvl}`, x + w - 78, y + 24);
-  ctx.fillStyle = '#8d99ae'; ctx.font = '10px Segoe UI';
+  ctx.fillStyle = '#8d99ae'; ctx.font = '10px Inter, sans-serif';
   ctx.fillText(`+${Math.round((modeMult(G.inv, key) - 1) * 100)}% dégâts`, x + 38, y + 40);
   // barre d'XP vers le niveau suivant
   const bx = x + 12, bw = w - 24, by = y + 52;
   ctx.fillStyle = 'rgba(255,255,255,0.12)'; roundRect(bx, by, bw, 7, 3.5); ctx.fill();
   ctx.fillStyle = color;
   roundRect(bx, by, bw * info.pct, 7, 3.5); ctx.fill();
-  ctx.fillStyle = '#aab4c0'; ctx.font = '9px Segoe UI'; ctx.textAlign = 'center';
+  ctx.fillStyle = '#aab4c0'; ctx.font = '9px Inter, sans-serif'; ctx.textAlign = 'center';
   ctx.fillText(info.lvl >= MODE_MAX_LVL ? 'NIVEAU MAX' : `${Math.floor(info.xp).toLocaleString('fr-FR')} / ${info.need.toLocaleString('fr-FR')} XP`, x + w / 2, by + 18);
 }
 
@@ -1543,7 +1541,7 @@ function drawForgeInv(L) {
   }
   for (const r of inv.rows) {
     if (r.empty) {
-      ctx.fillStyle = '#546e7a'; ctx.font = 'italic 12px Segoe UI'; ctx.textAlign = 'left';
+      ctx.fillStyle = '#546e7a'; ctx.font = 'italic 12px Inter, sans-serif'; ctx.textAlign = 'left';
       ctx.fillText('— aucun objet forgé dans cet emplacement —', r.x + 10, r.y + 20);
       continue;
     }
@@ -1559,9 +1557,9 @@ function drawForgeInv(L) {
     roundRect(r.x, r.y, r.w, r.h - 6, 9); ctx.stroke();
     drawItemIcon(it, r.x + 30, r.y + 26, 19);
     ctx.textAlign = 'left';
-    ctx.fillStyle = broken ? '#ff8a80' : eq ? '#ffe9a3' : '#e0e0e0'; ctx.font = 'bold 13px Segoe UI';
+    ctx.fillStyle = broken ? '#ff8a80' : eq ? '#ffe9a3' : '#e0e0e0'; ctx.font = 'bold 13px Inter, sans-serif';
     ctx.fillText(it.name + (broken ? '  💥' : eq ? '  ✓' : ''), r.x + 56, r.y + 20);
-    ctx.fillStyle = '#9e9e9e'; ctx.font = '11px Segoe UI';
+    ctx.fillStyle = '#9e9e9e'; ctx.font = '11px Inter, sans-serif';
     ctx.fillText(fitText(it.desc, 420), r.x + 56, r.y + 37);
     // barre de durabilité + %
     const dbx = r.x + 56, dbw = 170, dby = r.y + 44;
@@ -1570,7 +1568,7 @@ function drawForgeInv(L) {
     const dc = dur > 50 ? '#69f0ae' : dur > 25 ? '#ffd740' : '#ff5252';
     ctx.fillStyle = dc;
     if (dur > 0) { roundRect(dbx, dby, dbw * dur / 100, 5, 2.5); ctx.fill(); }
-    ctx.fillStyle = broken ? '#ff8a80' : '#8d99ae'; ctx.font = 'bold 9px Segoe UI'; ctx.textAlign = 'left';
+    ctx.fillStyle = broken ? '#ff8a80' : '#8d99ae'; ctx.font = 'bold 9px Inter, sans-serif'; ctx.textAlign = 'left';
     ctx.fillText(broken ? 'CASSÉ' : `${Math.round(dur)}%`, dbx + dbw + 8, dby + 5);
     // bouton RÉPARER (si usé) + coût
     const rb = r.rbtn;
@@ -1580,7 +1578,7 @@ function drawForgeInv(L) {
       roundRect(rb.x, rb.y, rb.w, rb.h, 8); ctx.fill();
       ctx.strokeStyle = okR ? '#ff9800' : 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1.5;
       roundRect(rb.x, rb.y, rb.w, rb.h, 8); ctx.stroke();
-      ctx.fillStyle = okR ? '#ffe0b2' : '#78909c'; ctx.font = 'bold 11px Segoe UI'; ctx.textAlign = 'center';
+      ctx.fillStyle = okR ? '#ffe0b2' : '#78909c'; ctx.font = 'bold 11px Inter, sans-serif'; ctx.textAlign = 'center';
       ctx.fillText('🔧 RÉPARER', rb.x + rb.w / 2, rb.y + rb.h / 2 + 4);
       // le coût de réparation est affiché dans la fiche détail (clic sur l'objet)
     }
@@ -1590,7 +1588,7 @@ function drawForgeInv(L) {
     roundRect(b.x, b.y, b.w, b.h, 8); ctx.fill();
     ctx.strokeStyle = broken ? '#ff5252' : eq ? '#ffd740' : '#9fa8da'; ctx.lineWidth = 1.5;
     roundRect(b.x, b.y, b.w, b.h, 8); ctx.stroke();
-    ctx.fillStyle = broken ? '#ff8a80' : eq ? '#ffe9a3' : '#fff'; ctx.font = 'bold 12px Segoe UI'; ctx.textAlign = 'center';
+    ctx.fillStyle = broken ? '#ff8a80' : eq ? '#ffe9a3' : '#fff'; ctx.font = 'bold 12px Inter, sans-serif'; ctx.textAlign = 'center';
     ctx.fillText(broken ? 'CASSÉ' : eq ? 'ÉQUIPÉ ✓' : 'ÉQUIPER', b.x + b.w / 2, b.y + 20);
     ctx.textAlign = 'left';
   }
@@ -1647,7 +1645,7 @@ export function drawPauseMenu() {
   ctx.fillStyle = 'rgba(4,8,12,0.72)'; ctx.fillRect(0, 0, W, H);
   ctx.textAlign = 'center';
 
-  ctx.font = '600 52px Segoe UI';
+  ctx.font = '600 52px Inter, sans-serif';
   ctx.shadowColor = 'rgba(255,255,255,0.25)'; ctx.shadowBlur = 20;
   ctx.fillStyle = '#e0e0e0';
   ctx.fillText('PAUSE', W / 2, H / 2 - 90);
@@ -1658,22 +1656,22 @@ export function drawPauseMenu() {
   if (G.resumeTimer > 0) {
     // compte à rebours : le jeu reste gelé
     const n = Math.ceil(G.resumeTimer);
-    ctx.font = 'bold 90px Segoe UI';
+    ctx.font = 'bold 90px Inter, sans-serif';
     ctx.shadowColor = 'rgba(105,240,174,0.8)'; ctx.shadowBlur = 30;
     ctx.fillStyle = '#69f0ae';
     ctx.fillText(String(n), W / 2, H / 2 + 40);
     ctx.shadowBlur = 0;
-    ctx.font = 'italic 17px Segoe UI'; ctx.fillStyle = '#a5d6a7';
+    ctx.font = 'italic 17px Inter, sans-serif'; ctx.fillStyle = '#a5d6a7';
     ctx.fillText('Reprise dans…', W / 2, H / 2 + 75);
     return;
   }
 
-  ctx.font = '15px Segoe UI'; ctx.fillStyle = '#90a4ae';
+  ctx.font = '15px Inter, sans-serif'; ctx.fillStyle = '#90a4ae';
   ctx.fillText('Échap ou cliquez sur REPRENDRE — 3 secondes de gel avant de continuer', W / 2, H / 2 - 30);
 
   const b = pauseButtons();
-  drawMenuButton(b.resume, '▶  REPRENDRE', '#4caf50', '#69f0ae', true);
-  drawMenuButton(b.quit, '⌂  MENU PRINCIPAL', '#455a64', '#90a4ae', false);
+  drawMenuButton(b.resume, 'REPRENDRE', '#4caf50', '#69f0ae', true);
+  drawMenuButton(b.quit, 'MENU PRINCIPAL', '#455a64', '#90a4ae', false);
 }
 
 // ---------- GAME OVER ----------
@@ -1807,14 +1805,14 @@ export function drawVictory() {
   if (G.campaign === 1) {
     ctx.save();
     ctx.shadowColor = 'rgba(129,212,250,0.9)'; ctx.shadowBlur = 16;
-    ctx.fillStyle = '#81d4fa'; ctx.font = 'bold 19px Segoe UI';
+    ctx.fillStyle = '#81d4fa'; ctx.font = 'bold 19px Inter, sans-serif';
     ctx.fillText('❄ COFFRE DÉBLOQUÉ : ULTIME « PLUIE DE GLACE » — choisis-la dans la forge (onglet Héros)', W / 2, H / 2 - 100);
     ctx.restore();
   }
   if (G.campaign === 2) {
     ctx.save();
     ctx.shadowColor = 'rgba(255,112,67,0.9)'; ctx.shadowBlur = 16;
-    ctx.fillStyle = '#ffab91'; ctx.font = 'bold 19px Segoe UI';
+    ctx.fillStyle = '#ffab91'; ctx.font = 'bold 19px Inter, sans-serif';
     ctx.fillText('🔥 TRÔNE CONQUIS : ULTIME « TITAN DE FEU » — choisis-la dans la forge (onglet Héros)', W / 2, H / 2 - 100);
     ctx.restore();
   }
@@ -1836,14 +1834,14 @@ export function drawVictory() {
     [loot.wmodeLabel, loot.wmodeXp > 0 ? `+${loot.wmodeXp} XP` : '—', '#ce93d8', false],
     [loot.wearLabel, loot.wear > 0 ? `-${loot.wear.toFixed(0)} %` : '—', '#ff8a65', false]
   ];
-  ctx.font = '16px Segoe UI';
+  ctx.font = '16px Inter, sans-serif';
   rows.forEach((r, i) => {
     const ry = cy + 24 + i * 17;
     ctx.textAlign = 'left'; ctx.fillStyle = '#bdbdbd';
     ctx.fillText(r[0], cx + 34, ry);
-    ctx.textAlign = 'right'; ctx.fillStyle = r[2]; ctx.font = 'bold 17px Segoe UI';
+    ctx.textAlign = 'right'; ctx.fillStyle = r[2]; ctx.font = 'bold 17px Inter, sans-serif';
     ctx.fillText(String(r[1]), cx + cw - 34, ry);
-    ctx.font = '16px Segoe UI';
+    ctx.font = '16px Inter, sans-serif';
   });
 
   // boutons REJOUER / MENU (même géométrie que le game over)
@@ -1854,7 +1852,7 @@ export function drawVictory() {
     hasNext ? '#1565c0' : '#4caf50', hasNext ? '#64b5f6' : '#69f0ae', true);
   drawMenuButton(b.menu, '⌂  MENU', '#455a64', '#90a4ae', false);
 
-  ctx.fillStyle = '#ffe9a3'; ctx.font = 'bold 14px Segoe UI';
+  ctx.fillStyle = '#ffe9a3'; ctx.font = 'bold 14px Inter, sans-serif';
   ctx.globalAlpha = 0.6 + Math.sin(G.time * 4) * 0.4;
   ctx.fillText(hasNext ? 'R — Monde suivant' : 'R — Rejouer', W / 2, b.replay.y + b.replay.h + 26);
   ctx.globalAlpha = 1;
@@ -1877,7 +1875,7 @@ export function drawGameOver() {
   ctx.scale(pulse, pulse);
   const tg = ctx.createLinearGradient(-260, 0, 260, 0);
   tg.addColorStop(0, '#ff1744'); tg.addColorStop(0.5, '#ff5252'); tg.addColorStop(1, '#b71c1c');
-  ctx.font = 'bold 64px Segoe UI';
+  ctx.font = 'bold 64px Inter, sans-serif';
   ctx.shadowColor = 'rgba(255,30,30,0.9)'; ctx.shadowBlur = 35;
   ctx.fillStyle = tg;
   ctx.fillText('GAME OVER', 0, 0);
@@ -1886,7 +1884,7 @@ export function drawGameOver() {
   // filet décoratif
   ctx.strokeStyle = 'rgba(255,82,82,0.5)'; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.moveTo(W / 2 - 180, H / 2 - 136); ctx.lineTo(W / 2 + 180, H / 2 - 136); ctx.stroke();
-  ctx.fillStyle = '#ef9a9a'; ctx.font = 'italic 18px Segoe UI';
+  ctx.fillStyle = '#ef9a9a'; ctx.font = 'italic 18px Inter, sans-serif';
   ctx.fillText('Le roi est tombé... mais les Terres Oubliées se souviendront de vous', W / 2, H / 2 - 110);
 
   // bandeau record : indique si la partie a battu des records
@@ -1900,11 +1898,11 @@ export function drawGameOver() {
     if (lr.damage) labels.push('DÉGÂTS');
     ctx.save();
     ctx.shadowColor = 'rgba(255,215,64,0.9)'; ctx.shadowBlur = 18;
-    ctx.fillStyle = '#ffd740'; ctx.font = 'bold 20px Segoe UI';
+    ctx.fillStyle = '#ffd740'; ctx.font = 'bold 20px Inter, sans-serif';
     ctx.fillText(`★  NOUVEAU RECORD : ${labels.join(' · ')}  ★`, W / 2, cy - 12);
     ctx.restore();
   } else {
-    ctx.fillStyle = '#78909c'; ctx.font = 'italic 15px Segoe UI';
+    ctx.fillStyle = '#78909c'; ctx.font = 'italic 15px Inter, sans-serif';
     ctx.fillText('Aucun record battu cette fois-ci', W / 2, cy - 12);
   }
 
@@ -1926,18 +1924,18 @@ export function drawGameOver() {
     [loot.wmodeLabel, loot.wmodeXp > 0 ? `+${loot.wmodeXp} XP` : '—', '#ce93d8', false],
     [loot.wearLabel, loot.wear > 0 ? `-${loot.wear.toFixed(0)} %` : '—', '#ff8a65', false]
   ];
-  ctx.font = '16px Segoe UI';
+  ctx.font = '16px Inter, sans-serif';
   rows.forEach((r, i) => {
     const ry = cy + 24 + i * 17;
     ctx.textAlign = 'left'; ctx.fillStyle = '#bdbdbd';
     ctx.fillText(r[0], cx + 34, ry);
-    ctx.textAlign = 'right'; ctx.fillStyle = r[2]; ctx.font = 'bold 17px Segoe UI';
+    ctx.textAlign = 'right'; ctx.fillStyle = r[2]; ctx.font = 'bold 17px Inter, sans-serif';
     ctx.fillText(String(r[1]), cx + cw - 34, ry);
     if (r[3]) {
-      ctx.fillStyle = '#ffd740'; ctx.font = 'bold 15px Segoe UI';
+      ctx.fillStyle = '#ffd740'; ctx.font = 'bold 15px Inter, sans-serif';
       ctx.fillText('★', cx + cw - 34 - ctx.measureText(String(r[1])).width - 14, ry);
     }
-    ctx.font = '16px Segoe UI';
+    ctx.font = '16px Inter, sans-serif';
   });
 
   // boutons REJOUER / MENU
@@ -1945,7 +1943,7 @@ export function drawGameOver() {
   drawMenuButton(b.replay, '↻  REJOUER', '#4caf50', '#69f0ae', true);
   drawMenuButton(b.menu, '⌂  MENU', '#455a64', '#90a4ae', false);
 
-  ctx.fillStyle = '#ff8a80'; ctx.font = 'bold 14px Segoe UI';
+  ctx.fillStyle = '#ff8a80'; ctx.font = 'bold 14px Inter, sans-serif';
   ctx.globalAlpha = 0.6 + Math.sin(G.time * 4) * 0.4;
   ctx.fillText('R — Rejouer', W / 2, b.replay.y + b.replay.h + 26);
   ctx.globalAlpha = 1;
@@ -2014,136 +2012,124 @@ function resetModalRect() {
 }
 
 function drawCharacters() {
-  ctx.fillStyle = 'rgba(3,7,5,0.9)'; ctx.fillRect(0, 0, W, H);
-  // spores d'ambiance (même style que le menu principal)
-  for (let i = 0; i < 30; i++) {
-    const depth = (i % 4) * 0.012;
-    const px = ((i * 173 + G.time * (5 + (i % 5) * 3)) % (W + 40) - 20) + (G.mouse.x - W / 2) * depth;
-    const py = (i * 97) % H + Math.sin(G.time * 1.2 + i) * 10 + (G.mouse.y - H / 2) * depth * 0.6;
-    ctx.globalAlpha = 0.08 + (i % 3) * 0.05;
-    ctx.fillStyle = i % 2 ? '#81c784' : '#ffd740';
-    ctx.beginPath(); ctx.arc(px, py, 1.2 + (i % 3), 0, TAU); ctx.fill();
-  }
-  ctx.globalAlpha = 1;
   ctx.textAlign = 'center';
 
   // titre
-  const tg = ctx.createLinearGradient(W / 2 - 300, 0, W / 2 + 300, 0);
-  tg.addColorStop(0, '#8a6d1f'); tg.addColorStop(0.4, '#ffe9a3'); tg.addColorStop(0.6, '#ffe9a3'); tg.addColorStop(1, '#8a6d1f');
-  ctx.font = '600 46px Segoe UI';
-  ctx.shadowColor = 'rgba(212,175,55,0.45)'; ctx.shadowBlur = 20;
-  ctx.fillStyle = tg;
-  ctx.fillText('CHOISISSEZ VOTRE HÉROS', W / 2, 105);
-  ctx.shadowBlur = 0;
-  ctx.fillStyle = '#a89f7c'; ctx.font = 'italic 17px Segoe UI';
-  ctx.fillText(`${MAX_SLOTS} emplacements — chaque héros possède sa propre sauvegarde`, W / 2, 135);
+  overlineCentered('SÉLECTION DU PERSONNAGE', W / 2, 48);
+  ctx.save();
+  ctx.font = `600 38px ${SERIF}`; ctx.letterSpacing = '2px';
+  ctx.fillStyle = C_TEXT;
+  ctx.fillText('CHOISISSEZ VOTRE HÉROS', W / 2, 90);
+  ctx.restore();
+  ctx.fillStyle = C_MUTED; ctx.font = `14px ${UI}`;
+  ctx.fillText(`${MAX_SLOTS} emplacements — chaque héros possède sa propre sauvegarde`, W / 2, 118);
 
   const cards = charCards();
   for (let i = 0; i < MAX_SLOTS; i++) {
     const c = cards[i], meta = slotMeta(i);
-    const hov = G.mouse.x >= c.x && G.mouse.x <= c.x + c.w && G.mouse.y >= c.y && G.mouse.y <= c.y + c.h;
+    const hov = inR(c, G.mouse.x, G.mouse.y);
     // carte
-    ctx.save();
-    if (hov) { ctx.translate(c.x + c.w / 2, c.y + c.h / 2); ctx.scale(1.03, 1.03); ctx.translate(-(c.x + c.w / 2), -(c.y + c.h / 2)); }
-    ctx.fillStyle = meta ? 'rgba(10,18,12,0.92)' : 'rgba(10,14,20,0.85)';
-    roundRect(c.x, c.y, c.w, c.h, 16); ctx.fill();
-    ctx.strokeStyle = meta ? (hov ? '#ffd740' : 'rgba(212,175,55,0.55)') : (hov ? '#4fc3f7' : 'rgba(79,195,247,0.3)');
-    ctx.lineWidth = hov ? 3 : 2;
-    ctx.shadowColor = meta ? 'rgba(212,175,55,0.35)' : 'rgba(79,195,247,0.25)';
-    ctx.shadowBlur = hov ? 18 : 6;
-    roundRect(c.x, c.y, c.w, c.h, 16); ctx.stroke();
-    ctx.shadowBlur = 0;
-    ctx.restore();
+    ctx.fillStyle = hov ? 'rgba(22,24,27,0.95)' : 'rgba(15,17,19,0.93)';
+    roundRect(c.x, c.y, c.w, c.h, 14); ctx.fill();
+    ctx.strokeStyle = hov ? 'rgba(212,176,98,0.6)' : 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1;
+    roundRect(c.x + 0.5, c.y + 0.5, c.w - 1, c.h - 1, 14); ctx.stroke();
 
     if (!meta) {
       // emplacement vide
-      ctx.fillStyle = hov ? '#4fc3f7' : '#546e7a';
-      ctx.font = 'bold 44px Segoe UI';
-      ctx.fillText('+', c.x + c.w / 2, c.y + c.h / 2 - 30);
-      ctx.fillStyle = hov ? '#b3e5fc' : '#78909c';
-      ctx.font = 'bold 19px Segoe UI';
-      ctx.fillText('Nouvelle aventure', c.x + c.w / 2, c.y + c.h / 2 + 14);
-      ctx.font = '14px Segoe UI'; ctx.fillStyle = '#546e7a';
-      ctx.fillText('Cliquez pour créer un héros', c.x + c.w / 2, c.y + c.h / 2 + 44);
+      const mx = c.x + c.w / 2, my = c.y + c.h / 2 - 34;
+      ctx.strokeStyle = hov ? C_GOLD : 'rgba(255,255,255,0.18)'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(mx, my, 26, 0, TAU); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(mx - 9, my); ctx.lineTo(mx + 9, my); ctx.moveTo(mx, my - 9); ctx.lineTo(mx, my + 9); ctx.stroke();
+      ctx.fillStyle = hov ? C_TEXT : '#a39d8e';
+      ctx.font = `600 17px ${UI}`;
+      ctx.fillText('Nouvelle aventure', mx, c.y + c.h / 2 + 22);
+      ctx.font = `13px ${UI}`; ctx.fillStyle = C_MUTED;
+      ctx.fillText('Cliquez pour créer un héros', mx, c.y + c.h / 2 + 46);
       continue;
     }
 
     const s = slotSummary(i);
+    const mx = c.x + c.w / 2;
+    // monogramme du héros
+    ctx.fillStyle = 'rgba(212,176,98,0.08)';
+    ctx.beginPath(); ctx.arc(mx, c.y + 78, 36, 0, TAU); ctx.fill();
+    ctx.strokeStyle = 'rgba(212,176,98,0.45)'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = C_GOLD; ctx.font = `600 30px ${SERIF}`;
+    ctx.fillText((meta.name.trim()[0] || '?').toUpperCase(), mx, c.y + 89);
     // nom + badge "en cours" si c'est le personnage actif
-    ctx.fillStyle = '#ffd740'; ctx.font = 'bold 26px Segoe UI';
-    ctx.fillText(meta.name, c.x + c.w / 2, c.y + 52);
+    ctx.fillStyle = C_TEXT; ctx.font = `600 22px ${UI}`;
+    ctx.fillText(fitText(meta.name, c.w - 48), mx, c.y + 150);
     if (activeSlot() === i) {
-      ctx.fillStyle = '#69f0ae'; ctx.font = 'bold 12px Segoe UI';
-      ctx.fillText('● EN COURS', c.x + c.w / 2, c.y + 74);
+      ctx.font = `600 10px ${UI}`;
+      const bw = 84;
+      ctx.fillStyle = 'rgba(105,240,174,0.1)';
+      roundRect(mx - bw / 2, c.y + 162, bw, 20, 10); ctx.fill();
+      ctx.save(); ctx.letterSpacing = '1.5px';
+      ctx.fillStyle = '#7ed9a8'; ctx.fillText('EN COURS', mx + 1, c.y + 176);
+      ctx.restore();
     }
-    // silhouette du héros
-    ctx.save();
-    ctx.translate(c.x + c.w / 2, c.y + 175);
-    ctx.fillStyle = 'rgba(255,215,64,0.12)';
-    ctx.beginPath(); ctx.arc(0, -30, 34, 0, TAU); ctx.fill();
-    ctx.strokeStyle = 'rgba(255,215,64,0.5)'; ctx.lineWidth = 2; ctx.stroke();
-    ctx.fillStyle = 'rgba(255,215,64,0.75)';
-    ctx.font = 'bold 30px Segoe UI';
-    ctx.fillText('⚔', 0, 8);
-    ctx.restore();
     // stats
-    ctx.textAlign = 'left';
     const rows = [
-      ['⏱ Temps de jeu', fmtPlaytime(s.playtime)],
-      ['🕐 Dernière connexion', fmtDate(s.lastPlayed)],
-      ['🏰 Meilleure vague', s.bestWave || '—'],
-      ['💀 Ennemis vaincus', s.totalKills || '—'],
-      ['⭐ Niveau max', s.bestLevel || '—'],
-      ['🎮 Parties jouées', s.totalRuns || '—']
+      ['Temps de jeu', fmtPlaytime(s.playtime)],
+      ['Dernière connexion', fmtDate(s.lastPlayed)],
+      ['Meilleure vague', s.bestWave || '—'],
+      ['Ennemis vaincus', s.totalKills || '—'],
+      ['Niveau max', s.bestLevel || '—'],
+      ['Parties jouées', s.totalRuns || '—']
     ];
-    ctx.font = '15px Segoe UI';
     rows.forEach((r, j) => {
-      const ry = c.y + 238 + j * 20;
-      ctx.fillStyle = '#8d9a8d'; ctx.fillText(r[0], c.x + 36, ry);
-      ctx.fillStyle = '#e8e6da'; ctx.font = 'bold 15px Segoe UI';
-      ctx.fillText(String(r[1]), c.x + 190, ry);
-      ctx.font = '15px Segoe UI';
+      const ry = c.y + 214 + j * 25;
+      if (j) { ctx.fillStyle = 'rgba(255,255,255,0.05)'; ctx.fillRect(c.x + 30, ry - 17, c.w - 60, 1); }
+      ctx.textAlign = 'left'; ctx.font = `13px ${UI}`; ctx.fillStyle = C_MUTED;
+      ctx.fillText(r[0], c.x + 30, ry);
+      ctx.textAlign = 'right'; ctx.font = `600 13px ${UI}`; ctx.fillStyle = C_TEXT;
+      ctx.fillText(fitText(String(r[1]), 150), c.x + c.w - 30, ry);
     });
     ctx.textAlign = 'center';
     // boutons JOUER / MENU / RÉINITIALISER
-    drawMiniButton(c.play, '⚔ JOUER', '#4caf50', '#69f0ae');
-    drawMiniButton(c.menu, '☰ MENU', '#5c6bc0', '#9fa8da');
-    drawMiniButton(c.reset, '🗑 RESET', '#b71c1c', '#ef9a9a');
+    drawMiniButton(c.play, 'JOUER', C_GOLD, C_GOLD, true);
+    drawMiniButton(c.menu, 'MENU', '#90a4ae', '#cfd8dc');
+    drawMiniButton(c.reset, 'RESET', '#e57373', '#ef9a9a');
   }
 
   // entrée admin discrète (engrenage en bas à droite)
-  const gear = cards[0].gear, ghov = G.mouse.x >= gear.x && G.mouse.x <= gear.x + gear.w && G.mouse.y >= gear.y && G.mouse.y <= gear.y + gear.h;
-  ctx.fillStyle = ghov ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.06)';
+  const gear = cards[0].gear, ghov = inR(gear, G.mouse.x, G.mouse.y);
+  ctx.fillStyle = ghov ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)';
   roundRect(gear.x, gear.y, gear.w, gear.h, 10); ctx.fill();
-  ctx.strokeStyle = ghov ? '#ffd740' : 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1.5;
-  roundRect(gear.x, gear.y, gear.w, gear.h, 10); ctx.stroke();
-  ctx.fillStyle = ghov ? '#ffd740' : '#78909c'; ctx.font = 'bold 20px Segoe UI';
-  ctx.fillText('⚙', gear.x + gear.w / 2, gear.y + 31);
+  ctx.strokeStyle = ghov ? 'rgba(212,176,98,0.6)' : 'rgba(255,255,255,0.1)'; ctx.lineWidth = 1;
+  roundRect(gear.x + 0.5, gear.y + 0.5, gear.w - 1, gear.h - 1, 10); ctx.stroke();
+  ctx.fillStyle = ghov ? C_GOLD : '#6f7378'; ctx.font = `20px ${UI}`;
+  ctx.fillText('⚙', gear.x + gear.w / 2, gear.y + 30);
 
   // saisie du nom / modale reset / panneau mot de passe admin par-dessus
   if (G.charInput) drawNameInput();
   if (G.adminInput && !adminUnlocked()) drawAdminPwInput();
   if (G.resetConfirm >= 0) drawResetModal();
-
-  // cadre décoratif (la version est dessinée par la boucle de rendu)
-  ctx.strokeStyle = 'rgba(212,175,55,0.22)'; ctx.lineWidth = 1;
-  ctx.strokeRect(14, 14, W - 28, H - 28);
 }
 
-function drawMiniButton(r, label, c1, c2) {
-  const hov = G.mouse.x >= r.x && G.mouse.x <= r.x + r.w && G.mouse.y >= r.y && G.mouse.y <= r.y + r.h;
+function overlineCentered(text, x, y, color = C_GOLD) {
+  ctx.save(); ctx.textAlign = 'center';
+  ctx.font = `600 11px ${UI}`; ctx.letterSpacing = '3px';
+  ctx.fillStyle = color; ctx.fillText(text, x + 1.5, y);
+  ctx.restore();
+}
+
+function drawMiniButton(r, label, c1, c2, primary) {
+  const hov = inR(r, G.mouse.x, G.mouse.y);
   ctx.save();
-  if (hov) { ctx.translate(r.x + r.w / 2, r.y + r.h / 2); ctx.scale(1.06, 1.06); ctx.translate(-(r.x + r.w / 2), -(r.y + r.h / 2)); }
-  const g = ctx.createLinearGradient(r.x, r.y, r.x, r.y + r.h);
-  g.addColorStop(0, hexA(c1, hov ? 0.85 : 0.6)); g.addColorStop(1, hexA(c1, hov ? 0.6 : 0.35));
-  ctx.fillStyle = g;
-  roundRect(r.x, r.y, r.w, r.h, 10); ctx.fill();
-  ctx.strokeStyle = c2; ctx.lineWidth = hov ? 2.5 : 1.8;
-  ctx.shadowColor = c2; ctx.shadowBlur = hov ? 12 : 4;
-  roundRect(r.x, r.y, r.w, r.h, 10); ctx.stroke();
-  ctx.shadowBlur = 0;
-  ctx.fillStyle = '#fff'; ctx.font = 'bold 14px Segoe UI';
-  ctx.fillText(label, r.x + r.w / 2, r.y + r.h / 2 + 5);
+  if (primary) {
+    ctx.fillStyle = hexA(c1, hov ? 1 : 0.9);
+    roundRect(r.x, r.y, r.w, r.h, 8); ctx.fill();
+  } else {
+    ctx.fillStyle = hexA(c1, hov ? 0.16 : 0.06);
+    roundRect(r.x, r.y, r.w, r.h, 8); ctx.fill();
+    ctx.strokeStyle = hexA(c2, hov ? 0.6 : 0.25); ctx.lineWidth = 1;
+    roundRect(r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1, 8); ctx.stroke();
+  }
+  ctx.textAlign = 'center';
+  ctx.font = `600 12px ${UI}`; ctx.letterSpacing = '1.5px';
+  ctx.fillStyle = primary ? (c1 === C_GOLD ? '#16130c' : '#fff') : (hov ? '#fff' : hexA(c2, 0.95));
+  ctx.fillText(label, r.x + r.w / 2 + 1, r.y + r.h / 2 + 4.5);
   ctx.restore();
 }
 
@@ -2156,9 +2142,9 @@ function drawNameInput() {
   ctx.strokeStyle = '#ffd740'; ctx.lineWidth = 2;
   roundRect(x, y, w, h, 14); ctx.stroke();
   ctx.textAlign = 'center';
-  ctx.fillStyle = '#ffd740'; ctx.font = 'bold 22px Segoe UI';
+  ctx.fillStyle = '#ffd740'; ctx.font = 'bold 22px Inter, sans-serif';
   ctx.fillText('NOUVEAU HÉROS', W / 2, y + 42);
-  ctx.fillStyle = '#a89f7c'; ctx.font = '14px Segoe UI';
+  ctx.fillStyle = '#a89f7c'; ctx.font = '14px Inter, sans-serif';
   ctx.fillText(`Emplacement ${inp.slot + 1} — tapez un nom (Entrée pour valider)`, W / 2, y + 68);
   // champ texte
   const fx = x + 40, fy = y + 88, fw = w - 80, fh = 44;
@@ -2166,10 +2152,10 @@ function drawNameInput() {
   roundRect(fx, fy, fw, fh, 8); ctx.fill();
   ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1.5;
   roundRect(fx, fy, fw, fh, 8); ctx.stroke();
-  ctx.textAlign = 'left'; ctx.fillStyle = '#fff'; ctx.font = 'bold 20px Segoe UI';
+  ctx.textAlign = 'left'; ctx.fillStyle = '#fff'; ctx.font = 'bold 20px Inter, sans-serif';
   const shown = inp.text + (Math.floor(G.time * 2.5) % 2 === 0 ? '|' : ' ');
   ctx.fillText(shown || ' ', fx + 14, fy + 30);
-  ctx.textAlign = 'center'; ctx.fillStyle = '#78909c'; ctx.font = '13px Segoe UI';
+  ctx.textAlign = 'center'; ctx.fillStyle = '#78909c'; ctx.font = '13px Inter, sans-serif';
   ctx.fillText('Échap pour annuler', W / 2, y + h - 18);
 }
 
@@ -2186,9 +2172,9 @@ function drawAdminPwInput() {
   ctx.strokeStyle = err ? '#ff1744' : '#ef5350'; ctx.lineWidth = 2;
   roundRect(x, y, w, h, 14); ctx.stroke();
   ctx.textAlign = 'center';
-  ctx.fillStyle = '#ef5350'; ctx.font = 'bold 22px Segoe UI';
+  ctx.fillStyle = '#ef5350'; ctx.font = 'bold 22px Inter, sans-serif';
   ctx.fillText('⚠ ACCÈS ADMIN', W / 2, y + 44);
-  ctx.fillStyle = '#a89f7c'; ctx.font = '14px Segoe UI';
+  ctx.fillStyle = '#a89f7c'; ctx.font = '14px Inter, sans-serif';
   ctx.fillText('Entrez le mot de passe administrateur', W / 2, y + 70);
   const fx = x + 40, fy = y + 88, fw = w - 80, fh = 40;
   ctx.fillStyle = 'rgba(255,255,255,0.08)';
@@ -2199,10 +2185,10 @@ function drawAdminPwInput() {
   const dots = '•'.repeat(inp.text.length) + (Math.floor(G.time * 2.5) % 2 === 0 ? '|' : ' ');
   ctx.fillText(dots || ' ', fx + 14, fy + 28);
   if (err) {
-    ctx.textAlign = 'center'; ctx.fillStyle = '#ff5252'; ctx.font = 'bold 14px Segoe UI';
+    ctx.textAlign = 'center'; ctx.fillStyle = '#ff5252'; ctx.font = 'bold 14px Inter, sans-serif';
     ctx.fillText('✕ MOT DE PASSE INCORRECT', W / 2, y + h - 42);
   }
-  ctx.textAlign = 'center'; ctx.fillStyle = '#78909c'; ctx.font = '13px Segoe UI';
+  ctx.textAlign = 'center'; ctx.fillStyle = '#78909c'; ctx.font = '13px Inter, sans-serif';
   ctx.fillText('Échap pour annuler', W / 2, y + h - 16);
   ctx.restore();
 }
@@ -2216,15 +2202,15 @@ function drawResetModal() {
   ctx.strokeStyle = '#ef5350'; ctx.lineWidth = 2;
   roundRect(m.x, m.y, m.w, m.h, 14); ctx.stroke();
   ctx.textAlign = 'center';
-  ctx.fillStyle = '#ef5350'; ctx.font = 'bold 22px Segoe UI';
+  ctx.fillStyle = '#ef5350'; ctx.font = 'bold 22px Inter, sans-serif';
   ctx.fillText('RÉINITIALISER LE HÉROS ?', W / 2, m.y + 48);
-  ctx.fillStyle = '#e0e0e0'; ctx.font = '15px Segoe UI';
+  ctx.fillStyle = '#e0e0e0'; ctx.font = '15px Inter, sans-serif';
   ctx.fillText(`« ${meta ? meta.name : ''} » — toutes ses données seront`, W / 2, m.y + 82);
   ctx.fillText('définitivement effacées (inventaire, succès, mondes, stats).', W / 2, m.y + 106);
-  ctx.fillStyle = '#ffb74d'; ctx.font = 'bold 14px Segoe UI';
+  ctx.fillStyle = '#ffb74d'; ctx.font = 'bold 14px Inter, sans-serif';
   ctx.fillText('Cette action est irréversible.', W / 2, m.y + 132);
   drawMiniButton(m.no, 'ANNULER', '#455a64', '#90a4ae');
-  drawMiniButton(m.yes, 'CONFIRMER', '#b71c1c', '#ef9a9a');
+  drawMiniButton(m.yes, 'CONFIRMER', '#c62828', '#ef9a9a', true);
 }
 
 // ==================== PANNEAU ADMIN ====================
@@ -2260,9 +2246,9 @@ function drawAdmin() {
     if (at >= 0 && at < 1.4) { drawPadlockAnim(); return; }
   }
   ctx.textAlign = 'center';
-  ctx.fillStyle = '#ef5350'; ctx.font = '600 36px Segoe UI';
+  ctx.fillStyle = '#ef5350'; ctx.font = '600 36px Inter, sans-serif';
   ctx.fillText('⚠ PANNEAU ADMIN', W / 2, 70);
-  ctx.fillStyle = '#a89f7c'; ctx.font = '15px Segoe UI';
+  ctx.fillStyle = '#a89f7c'; ctx.font = '15px Inter, sans-serif';
   ctx.fillText('Gestion locale des personnages — données stockées sur cet appareil', W / 2, 100);
 
   if (!adminUnlocked()) {
@@ -2271,7 +2257,7 @@ function drawAdmin() {
   }
 
   // en-tête du tableau
-  ctx.textAlign = 'left'; ctx.font = 'bold 14px Segoe UI'; ctx.fillStyle = '#78909c';
+  ctx.textAlign = 'left'; ctx.font = 'bold 14px Inter, sans-serif'; ctx.fillStyle = '#78909c';
   const cols = [60, 240, 200, 160, 140, 120];
   const heads = ['#', 'HÉROS', 'TEMPS DE JEU', 'DERNIÈRE CONNEXION', 'RECORDS', ''];
   let cx = W / 2 - 480;
@@ -2288,13 +2274,13 @@ function drawAdmin() {
     ctx.font = 'bold 16px Consolas, monospace'; ctx.fillStyle = '#90a4ae';
     ctx.fillText(String(i + 1), cx, ry + 6); cx += cols[0];
     if (!meta) {
-      ctx.font = '16px Segoe UI'; ctx.fillStyle = '#546e7a';
+      ctx.font = '16px Inter, sans-serif'; ctx.fillStyle = '#546e7a';
       ctx.fillText('— emplacement vide —', cx, ry + 6);
       continue;
     }
-    ctx.font = 'bold 17px Segoe UI'; ctx.fillStyle = '#ffd740';
+    ctx.font = 'bold 17px Inter, sans-serif'; ctx.fillStyle = '#ffd740';
     ctx.fillText(meta.name, cx, ry + 6); cx += cols[1];
-    ctx.font = '15px Segoe UI'; ctx.fillStyle = '#e0e0e0';
+    ctx.font = '15px Inter, sans-serif'; ctx.fillStyle = '#e0e0e0';
     ctx.fillText(fmtPlaytime(s.playtime), cx, ry + 6); cx += cols[2];
     ctx.fillStyle = '#a89f7c';
     ctx.fillText(fmtDate(s.lastPlayed), cx, ry + 6); cx += cols[3];
@@ -2307,13 +2293,13 @@ function drawAdmin() {
     ctx.fillStyle = confirming ? 'rgba(183,28,28,0.85)' : (hov ? 'rgba(239,83,80,0.4)' : 'rgba(239,83,80,0.15)');
     roundRect(rb.x, rb.y, rb.w, rb.h, 8); ctx.fill();
     ctx.strokeStyle = '#ef5350'; ctx.lineWidth = 1.5; roundRect(rb.x, rb.y, rb.w, rb.h, 8); ctx.stroke();
-    ctx.fillStyle = '#fff'; ctx.font = 'bold 13px Segoe UI';
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 13px Inter, sans-serif';
     ctx.fillText(confirming ? '⚠ CONFIRMER ?' : '🗑 RÉINITIALISER', rb.x + rb.w / 2, rb.y + 24);
   }
 
   // total + boutons
   const total = slots_playtime_total();
-  ctx.textAlign = 'center'; ctx.fillStyle = '#78909c'; ctx.font = '14px Segoe UI';
+  ctx.textAlign = 'center'; ctx.fillStyle = '#78909c'; ctx.font = '14px Inter, sans-serif';
   ctx.fillText(`Temps de jeu cumulé sur l'appareil : ${fmtPlaytime(total)}`, W / 2, 500);
 
   // confirmation wipe global
@@ -2323,7 +2309,7 @@ function drawAdmin() {
   ctx.fillStyle = wipeConfirm ? 'rgba(183,28,28,0.9)' : (whov ? 'rgba(239,83,80,0.4)' : 'rgba(239,83,80,0.15)');
   roundRect(wipe.x, wipe.y, wipe.w, wipe.h, 8); ctx.fill();
   ctx.strokeStyle = '#ef5350'; ctx.lineWidth = 1.5; roundRect(wipe.x, wipe.y, wipe.w, wipe.h, 8); ctx.stroke();
-  ctx.fillStyle = '#fff'; ctx.font = 'bold 13px Segoe UI';
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 13px Inter, sans-serif';
   ctx.fillText(wipeConfirm ? '⚠ TOUT EFFACER ?' : '☠ TOUT EFFACER', wipe.x + wipe.w / 2, wipe.y + 26);
 
   const back = { x: 30, y: H - 60, w: 160, h: 40 };
@@ -2331,7 +2317,7 @@ function drawAdmin() {
   ctx.fillStyle = bhov ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.07)';
   roundRect(back.x, back.y, back.w, back.h, 8); ctx.fill();
   ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1.5; roundRect(back.x, back.y, back.w, back.h, 8); ctx.stroke();
-  ctx.fillStyle = '#e0e0e0'; ctx.font = 'bold 13px Segoe UI';
+  ctx.fillStyle = '#e0e0e0'; ctx.font = 'bold 13px Inter, sans-serif';
   ctx.fillText('← PERSONNAGES', back.x + back.w / 2, back.y + 26);
   drawPadlockAnim(); // cadenas qui s'ouvre si le mot de passe vient d'être validé
 }
@@ -2500,7 +2486,7 @@ export function drawAdminButton() {
   ctx.fill(); ctx.stroke();
   ctx.shadowBlur = 0;
   ctx.textAlign = 'center';
-  ctx.font = unlocked ? 'bold 15px Segoe UI' : 'bold 12px Segoe UI';
+  ctx.font = unlocked ? 'bold 15px Inter, sans-serif' : 'bold 12px Inter, sans-serif';
   ctx.fillStyle = unlocked ? '#ffcdd2' : '#78909c';
   ctx.fillText(unlocked ? '🛠 ADMIN' : '🔒 ADMIN', r.x + r.w / 2, r.y + r.h / 2 + 5);
   ctx.restore();
@@ -2539,7 +2525,7 @@ function drawPadlockAnim() {
   ctx.fillStyle = 'rgba(255,255,255,0.5)';
   ctx.beginPath(); ctx.arc(-9, -2, 4, 0, TAU); ctx.fill();
   ctx.textAlign = 'center';
-  ctx.fillStyle = '#ffe9a3'; ctx.font = 'bold 22px Segoe UI';
+  ctx.fillStyle = '#ffe9a3'; ctx.font = 'bold 22px Inter, sans-serif';
   ctx.shadowColor = 'rgba(255,215,64,0.9)'; ctx.shadowBlur = 16;
   ctx.fillText('🔓 ACCÈS AUTORISÉ', 0, 62);
   ctx.restore();
@@ -2563,9 +2549,9 @@ export function drawAdminMenu() {
   ctx.shadowBlur = 0;
 
   ctx.textAlign = 'center';
-  ctx.fillStyle = '#ef5350'; ctx.font = 'bold 22px Segoe UI';
+  ctx.fillStyle = '#ef5350'; ctx.font = 'bold 22px Inter, sans-serif';
   ctx.fillText('🛠 MENU ADMIN', W / 2, L.py + 36);
-  ctx.fillStyle = '#78909c'; ctx.font = '12px Segoe UI';
+  ctx.fillStyle = '#78909c'; ctx.font = '12px Inter, sans-serif';
   ctx.fillText(`Triche — ${G.campaign === 2 ? 'LES ENFERS 🔥' : G.campaign === 1 ? 'LA TERRE GELÉE ❄️' : 'LES TERRES OUBLIÉES 🌿'} • jeu en pause • \` pour fermer`, W / 2, L.py + 56);
 
   // titres de colonnes (le premier bouton 'spawn' varie selon la campagne)
@@ -2574,7 +2560,7 @@ export function drawAdminMenu() {
   const colX = [L.btns.xp.x - 6, L.btns.wave.x - 6, L.btns[firstSpawn].x - 6];
   const colW = [L.btns.xp.w + 12, L.btns.wave.w + 12, L.btns[firstSpawn].w + 12];
   ['ress', 'monde', 'spawn'].forEach((c, i) => {
-    ctx.fillStyle = '#ffd740'; ctx.font = 'bold 13px Segoe UI';
+    ctx.fillStyle = '#ffd740'; ctx.font = 'bold 13px Inter, sans-serif';
     ctx.fillText(catTitles[c], colX[i] + colW[i] / 2, L.py + 84);
     ctx.strokeStyle = 'rgba(255,215,64,0.3)'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(colX[i], L.py + 92); ctx.lineTo(colX[i] + colW[i], L.py + 92); ctx.stroke();
@@ -2591,7 +2577,7 @@ export function drawAdminMenu() {
     ctx.lineWidth = hov ? 2 : 1.2;
     roundRect(r.x, r.y, r.w, r.h, 8); ctx.stroke();
     ctx.fillStyle = active ? '#c8e6c9' : '#fff';
-    ctx.font = 'bold 13px Segoe UI';
+    ctx.font = 'bold 13px Inter, sans-serif';
     ctx.fillText(c[1] + (active ? ' ✓' : ''), r.x + r.w / 2, r.y + r.h / 2 + 5);
   }
 
@@ -2599,7 +2585,7 @@ export function drawAdminMenu() {
   const cl = L.close, chov = G.mouse.x >= cl.x && G.mouse.x <= cl.x + cl.w && G.mouse.y >= cl.y && G.mouse.y <= cl.y + cl.h;
   ctx.fillStyle = chov ? 'rgba(239,83,80,0.8)' : 'rgba(239,83,80,0.3)';
   roundRect(cl.x, cl.y, cl.w, cl.h, 8); ctx.fill();
-  ctx.fillStyle = '#fff'; ctx.font = 'bold 16px Segoe UI';
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 16px Inter, sans-serif';
   ctx.fillText('✕', cl.x + cl.w / 2, cl.y + 23);
   drawPadlockAnim(); // cadenas qui s'ouvre si le mot de passe vient d'être validé
 }
@@ -2689,11 +2675,11 @@ function drawCampaign() {
   bg.addColorStop(0, '#0a1a12'); bg.addColorStop(0.5, '#081420'); bg.addColorStop(1, '#040a14');
   ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
   ctx.textAlign = 'center';
-  ctx.fillStyle = '#ffd740'; ctx.font = '600 44px Segoe UI';
+  ctx.fillStyle = '#ffd740'; ctx.font = '600 44px Inter, sans-serif';
   ctx.shadowColor = 'rgba(255,215,64,0.4)'; ctx.shadowBlur = 18;
   ctx.fillText('🗺️  CAMPAGNES', W / 2, 74);
   ctx.shadowBlur = 0;
-  ctx.fillStyle = '#a89f7c'; ctx.font = 'italic 15px Segoe UI';
+  ctx.fillStyle = '#a89f7c'; ctx.font = 'italic 15px Inter, sans-serif';
   ctx.fillText('Choisissez votre terrain de chasse — chaque campagne a ses mondes, ses monstres et son boss', W / 2, 104);
 
   const N = campaignNodes();
@@ -2711,8 +2697,8 @@ function drawCampaign() {
     return { mx, my };
   };
   const s01 = seg(N[0], N[1]), s12 = seg(N[1], N[2]);
-  if (campaignUnlocked(1)) { ctx.fillStyle = '#ffd740'; ctx.font = 'bold 22px Segoe UI'; ctx.fillText('✓', s01.mx, s01.my + 8); }
-  if (campaignUnlocked(2)) { ctx.fillStyle = '#ffd740'; ctx.font = 'bold 22px Segoe UI'; ctx.fillText('✓', s12.mx, s12.my + 8); }
+  if (campaignUnlocked(1)) { ctx.fillStyle = '#ffd740'; ctx.font = 'bold 22px Inter, sans-serif'; ctx.fillText('✓', s01.mx, s01.my + 8); }
+  if (campaignUnlocked(2)) { ctx.fillStyle = '#ffd740'; ctx.font = 'bold 22px Inter, sans-serif'; ctx.fillText('✓', s12.mx, s12.my + 8); }
 
   for (const c of [0, 1, 2]) {
     const n = N[c], info = CAMPAIGN_INFO[c], unlocked = campaignUnlocked(c);
@@ -2734,15 +2720,15 @@ function drawCampaign() {
     if (!unlocked) {
       ctx.font = '34px serif';
       ctx.fillText('🔒', n.x, n.y - n.r * 0.55);
-      ctx.fillStyle = '#78909c'; ctx.font = 'bold 11px Segoe UI';
+      ctx.fillStyle = '#78909c'; ctx.font = 'bold 11px Inter, sans-serif';
       ctx.fillText(`TERMINER LA CAMPAGNE ${c}`, n.x, n.y + n.r + 22);
     }
-    ctx.fillStyle = unlocked ? '#fff' : '#546e7a'; ctx.font = 'bold 17px Segoe UI';
+    ctx.fillStyle = unlocked ? '#fff' : '#546e7a'; ctx.font = 'bold 17px Inter, sans-serif';
     ctx.fillText(CAMP_NAMES[c], n.x, n.y - n.r - 14);
-    ctx.fillStyle = unlocked ? info.diffColor : '#455a64'; ctx.font = 'bold 12px Segoe UI';
+    ctx.fillStyle = unlocked ? info.diffColor : '#455a64'; ctx.font = 'bold 12px Inter, sans-serif';
     ctx.fillText(info.diff, n.x, n.y + n.r + (unlocked ? 40 : 42));
     if (isSel) {
-      ctx.fillStyle = '#ffd740'; ctx.font = 'bold 13px Segoe UI';
+      ctx.fillStyle = '#ffd740'; ctx.font = 'bold 13px Inter, sans-serif';
       ctx.fillText('▼ sélectionnée', n.x, n.y + n.r + 58);
     }
   }
@@ -2757,13 +2743,13 @@ function drawCampaign() {
   ctx.strokeStyle = `rgba(${CAMP_COLORS[c]},0.6)`; ctx.lineWidth = 2;
   roundRect(fx, fy, fw, fh, 14); ctx.stroke();
   ctx.textAlign = 'left';
-  ctx.fillStyle = CAMP_TEXT[c]; ctx.font = 'bold 20px Segoe UI';
+  ctx.fillStyle = CAMP_TEXT[c]; ctx.font = 'bold 20px Inter, sans-serif';
   ctx.fillText(`${info.icon}  ${CAMP_NAMES[c]}`, fx + 26, fy + 34);
-  ctx.fillStyle = info.diffColor; ctx.font = 'bold 13px Segoe UI';
+  ctx.fillStyle = info.diffColor; ctx.font = 'bold 13px Inter, sans-serif';
   ctx.fillText(info.diff, fx + fw - 26 - ctx.measureText(info.diff).width, fy + 32);
-  ctx.fillStyle = '#cfd8dc'; ctx.font = '14px Segoe UI';
+  ctx.fillStyle = '#cfd8dc'; ctx.font = '14px Inter, sans-serif';
   wrapText(info.desc, fx + 26, fy + 62, fw - 320, 18);
-  ctx.fillStyle = '#78909c'; ctx.font = '12px Segoe UI';
+  ctx.fillStyle = '#78909c'; ctx.font = '12px Inter, sans-serif';
   ctx.fillText(`Boss final : ${info.boss}  ·  ${info.worlds}`, fx + 26, fy + fh - 14);
 
   const pb = campaignPlayBtn();
@@ -2773,7 +2759,7 @@ function drawCampaign() {
   roundRect(pb.x, pb.y, pb.w, pb.h, 10); ctx.fill();
   ctx.strokeStyle = unlocked ? '#81c784' : '#546e7a'; ctx.lineWidth = 2;
   roundRect(pb.x, pb.y, pb.w, pb.h, 10); ctx.stroke();
-  ctx.fillStyle = '#fff'; ctx.font = 'bold 15px Segoe UI'; ctx.textAlign = 'center';
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 15px Inter, sans-serif'; ctx.textAlign = 'center';
   ctx.fillText(unlocked ? `▶  JOUER — CAMPAGNE ${c + 1}` : '🔒  CAMPAGNE VERROUILLÉE', pb.x + pb.w / 2, pb.y + 28);
   ctx.restore();
   const back = { x: 30, y: H - 60, w: 160, h: 40 };
@@ -2782,6 +2768,6 @@ function drawCampaign() {
   roundRect(back.x, back.y, back.w, back.h, 8); ctx.fill();
   ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1.5;
   roundRect(back.x, back.y, back.w, back.h, 8); ctx.stroke();
-  ctx.fillStyle = '#e0e0e0'; ctx.font = 'bold 13px Segoe UI'; ctx.textAlign = 'center';
+  ctx.fillStyle = '#e0e0e0'; ctx.font = 'bold 13px Inter, sans-serif'; ctx.textAlign = 'center';
   ctx.fillText('← MENU', back.x + back.w / 2, back.y + 26);
 }

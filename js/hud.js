@@ -54,7 +54,7 @@ export function drawHUD() {
   const mm = String(Math.floor(t / 60)).padStart(2, '0');
   const ss = String(t % 60).padStart(2, '0');
   const timeLabel = `⏱ ${mm}:${ss}`;
-  ctx.font = 'bold 15px Segoe UI';
+  ctx.font = 'bold 15px Inter, sans-serif';
   const tw = ctx.measureText(timeLabel).width + 26;
   ctx.fillStyle = 'rgba(0,0,0,0.55)';
   roundRect(W / 2 - tw / 2, 8, tw, 26, 13); ctx.fill();
@@ -109,7 +109,7 @@ export function drawHUD() {
   ctx.fillStyle = '#f5eeda'; ctx.font = 'bold 12px Consolas, monospace';
   ctx.fillText(`${Math.floor(p.ultCharge)}%`, 390, 109);
   if (ultReady) {
-    ctx.fillStyle = ultInfo.ready; ctx.font = 'bold 14px Segoe UI';
+    ctx.fillStyle = ultInfo.ready; ctx.font = 'bold 14px Inter, sans-serif';
     ctx.globalAlpha = 0.6 + Math.sin(G.time * 6) * 0.4;
     ctx.fillText('PRÊT !', 490, 109);
     ctx.globalAlpha = 1;
@@ -205,7 +205,7 @@ export function drawHUD() {
     if (s.used) {
       ctx.fillStyle = 'rgba(0,0,0,0.55)';
       roundRect(x, y, w, h, 10); ctx.fill();
-      ctx.fillStyle = '#81c784'; ctx.font = 'bold 13px Segoe UI'; ctx.textAlign = 'center';
+      ctx.fillStyle = '#81c784'; ctx.font = 'bold 13px Inter, sans-serif'; ctx.textAlign = 'center';
       ctx.fillText('✓ UTILISÉ', x + w / 2, y + h / 2 + 5);
     }
     // verrou de changement d'arme : 2s sans attaque, affiché sur les deux slots
@@ -272,7 +272,7 @@ function drawBossBar() {
     : frozen ? ['', 'GLACIATION', 'FUREUR GLACIALE']
     : ['', 'COLÈRE ANCESTRALE', 'FUREUR DU ROI OUBLIÉ'];
   if (e.phase) {
-    ctx.font = 'bold 12px Segoe UI';
+    ctx.font = 'bold 12px Inter, sans-serif';
     ctx.fillStyle = hell ? '#ffab91' : frozen ? '#b3e5fc' : '#ce93d8';
     ctx.fillText(`PHASE ${ph} — ${phNames[e.phase]}`, W / 2, by - 22);
   }
@@ -302,10 +302,10 @@ function drawEquipPanel() {
     if (it) {
       const dur = getDur(inv, id);
       drawItemIcon(it, px + 22, ry + (rowH - 6) / 2, 11);
-      ctx.fillStyle = '#ffe9a3'; ctx.font = 'bold 10px Segoe UI';
+      ctx.fillStyle = '#ffe9a3'; ctx.font = 'bold 10px Inter, sans-serif';
       const name = it.name.length > 15 ? it.name.slice(0, 14) + '…' : it.name;
       ctx.fillText(name, px + 38, ry + 14);
-      ctx.fillStyle = '#8d99ae'; ctx.font = '8px Segoe UI';
+      ctx.fillStyle = '#8d99ae'; ctx.font = '8px Inter, sans-serif';
       ctx.fillText(label, px + 38, ry + 25);
       // barre de durabilité
       const dbx = px + 38, dbw = pw - 60, dby = ry + 31;
@@ -314,11 +314,11 @@ function drawEquipPanel() {
       const dc = dur > 50 ? '#69f0ae' : dur > 25 ? '#ffd740' : '#ff5252';
       ctx.fillStyle = dc;
       if (dur > 0) { roundRect(dbx, dby, dbw * dur / 100, 5, 2.5); ctx.fill(); }
-      ctx.fillStyle = '#8d99ae'; ctx.font = '7px Segoe UI'; ctx.textAlign = 'right';
+      ctx.fillStyle = '#8d99ae'; ctx.font = '7px Inter, sans-serif'; ctx.textAlign = 'right';
       ctx.fillText(dur <= 0 ? 'CASSÉ' : `${Math.round(dur)}%`, px + pw - 12, dby + 5);
       ctx.textAlign = 'left';
     } else {
-      ctx.fillStyle = '#546e7a'; ctx.font = 'italic 10px Segoe UI';
+      ctx.fillStyle = '#546e7a'; ctx.font = 'italic 10px Inter, sans-serif';
       ctx.fillText(`${label} : —`, px + 38, ry + 21);
     }
   });
@@ -443,7 +443,7 @@ export function drawWarnToast() {
   const a = Math.min(1, t.t / 0.4, (6 - t.t) / 0.3 + 1); // fade in/out
   ctx.save();
   ctx.globalAlpha = Math.max(0, Math.min(1, a));
-  ctx.font = 'bold 16px Segoe UI';
+  ctx.font = 'bold 16px Inter, sans-serif';
   const tw = ctx.measureText(t.name).width;
   const bw = tw + 60, bh = 38, bx = W / 2 - bw / 2, by = 64;
   const g = ctx.createLinearGradient(bx, by, bx, by + bh);
@@ -455,7 +455,7 @@ export function drawWarnToast() {
   roundRect(bx, by, bw, bh, 12); ctx.stroke();
   ctx.shadowBlur = 0;
   ctx.textAlign = 'center'; ctx.fillStyle = '#ffe0b2';
-  ctx.font = 'bold 14px Segoe UI';
+  ctx.font = 'bold 14px Inter, sans-serif';
   ctx.fillText(t.name, bx + bw / 2, by + 24);
   ctx.restore();
 }

@@ -13,6 +13,9 @@ import { drawMusicButton, sfxHurt, sfxWave, sfxPickup, sfxBreak, sfxBoss, sfxWar
 import { updateTutorial, drawTutorial } from './tutorial.js';
 import { tickPlaytime } from './chars.js';
 
+// polices de l'interface (canvas) : chargement explicite au démarrage
+if (document.fonts) ['600 16px Inter', '600 38px Cinzel'].forEach(f => document.fonts.load(f));
+
 let lastTime = performance.now();
 
 // rotation des types de boss toutes les 5 vagues

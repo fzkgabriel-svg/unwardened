@@ -12,7 +12,7 @@ export const ctx = canvas.getContext('2d');
 ctx.scale(SS, SS);
 export const W = 1200, H = 640;
 export const TAU = Math.PI * 2;
-export const VERSION = '3.0.0';
+export const VERSION = '3.1.0';
 export const FINAL_WAVE = 20; // vague du boss final (campagne 1) // incrémenter à chaque mise à jour du jeu
 // campagne 2 (The Frozen Land) -> 25 vagues, campagne 3 (Les Enfers) -> 30 vagues
 export function finalWave() { return G.campaign === 2 ? 30 : G.campaign === 1 ? 25 : FINAL_WAVE; }

@@ -258,7 +258,7 @@ function drawHudSpotlight(key) {
   ctx.stroke();
   ctx.setLineDash([]);
   ctx.textAlign = 'center';
-  ctx.font = 'bold 12px Segoe UI';
+  ctx.font = 'bold 12px Inter, sans-serif';
   ctx.fillStyle = '#ffd740';
   ctx.fillText('▼ REGARDE ICI', r.x + r.w / 2, r.y + r.h + 18);
   // bulle zoom en bas d'écran
@@ -279,7 +279,7 @@ function drawHudSpotlight(key) {
   ctx.lineWidth = 2;
   ctx.beginPath(); ctx.roundRect(bx - 7, by - 7, bw + 14, bh + 14, 10); ctx.stroke();
   ctx.drawImage(canvas, r.x * SS, r.y * SS, r.w * SS, r.h * SS, bx, by, bw, bh);
-  ctx.font = 'bold 11px Segoe UI';
+  ctx.font = 'bold 11px Inter, sans-serif';
   ctx.fillStyle = '#ffe9a3';
   ctx.fillText('◉ ZOOM', bx + bw / 2, by - 13);
   ctx.restore();
@@ -312,7 +312,7 @@ export function drawTutorial() {
     ctx.shadowColor = 'rgba(255,215,64,0.8)'; ctx.shadowBlur = 20;
     ctx.fillText('✦ TUTORIEL TERMINÉ ✦', W / 2, H / 2 - 40);
     ctx.shadowBlur = 0;
-    ctx.font = 'italic 16px Segoe UI'; ctx.fillStyle = '#e0e0e0';
+    ctx.font = 'italic 16px Inter, sans-serif'; ctx.fillStyle = '#e0e0e0';
     ctx.fillText('Retour au menu principal…', W / 2, H / 2 - 12);
     ctx.restore();
     return;
@@ -325,7 +325,7 @@ export function drawTutorial() {
   const bw = Math.min(820, W - 80);
   const bx = W / 2 - bw / 2, by = 150;
   // texte tapé lettre par lettre puis enveloppé sur plusieurs lignes
-  ctx.font = 'bold 16px Segoe UI';
+  ctx.font = 'bold 16px Inter, sans-serif';
   const typed = Math.min(s.text.length, Math.floor((t.t / typeDur) * s.text.length));
   const shown = s.text.slice(0, typed);
   const lines = wrapLines(shown, bw - 60);
@@ -361,14 +361,14 @@ export function drawTutorial() {
     ctx.globalAlpha = Math.min(1, (t.t || 0.01) * 4);
   }
   ctx.textAlign = 'right';
-  ctx.font = '11px Segoe UI'; ctx.fillStyle = '#b0a488';
+  ctx.font = '11px Inter, sans-serif'; ctx.fillStyle = '#b0a488';
   ctx.fillText(`Étape ${t.i + 1}/${STEPS.length}`, bx + bw - 16, by + bh - 18);
 
   // ---- indication ENTRÉE : passer à l'étape suivante (cooldown 2,5 s) ----
   const cool = (t.skipCd || 0) > 0;
   ctx.globalAlpha = Math.min(1, (t.t || 0.01) * 4) * (cool ? 0.35 : 0.6);
   ctx.textAlign = 'center';
-  ctx.font = 'italic 12px Segoe UI';
+  ctx.font = 'italic 12px Inter, sans-serif';
   ctx.fillStyle = cool ? '#8a7f5e' : '#d4af37';
   ctx.fillText(
     cool ? `ENTRÉE à nouveau dans ${t.skipCd.toFixed(1)}s` : 'Appuyez sur ENTRÉE pour passer à l\'étape suivante',

@@ -275,41 +275,26 @@ export function audioButtonAt(x, y) {
   return null;
 }
 
-function drawAudioBtn(r, icon, label, active, color) {
+function drawAudioBtn(r, label, active, color) {
   const hov = G.mouse.x >= r.x && G.mouse.x <= r.x + r.w &&
               G.mouse.y >= r.y && G.mouse.y <= r.y + r.h;
   ctx.save();
-  ctx.fillStyle = active ? 'rgba(90,66,8,0.92)' : 'rgba(30,30,34,0.85)';
-  if (hov) ctx.fillStyle = 'rgba(120,90,10,0.95)';
-  ctx.strokeStyle = active ? color : 'rgba(255,255,255,0.3)';
-  ctx.lineWidth = hov ? 3 : 2;
-  ctx.shadowColor = active ? color : 'transparent';
-  ctx.shadowBlur = hov ? 18 : 8;
-  const rad = 9;
-  ctx.beginPath();
-  ctx.moveTo(r.x, r.y + rad);
-  ctx.quadraticCurveTo(r.x, r.y, r.x + rad, r.y);
-  ctx.lineTo(r.x + r.w - rad, r.y);
-  ctx.quadraticCurveTo(r.x + r.w, r.y, r.x + r.w, r.y + rad);
-  ctx.lineTo(r.x + r.w, r.y + r.h - rad);
-  ctx.quadraticCurveTo(r.x + r.w, r.y + r.h, r.x + r.w - rad, r.y + r.h);
-  ctx.lineTo(r.x + rad, r.y + r.h);
-  ctx.quadraticCurveTo(r.x, r.y + r.h, r.x, r.y + r.h - rad);
-  ctx.closePath();
-  ctx.fill(); ctx.stroke();
-  ctx.shadowBlur = 0;
-  ctx.textAlign = 'center';
-  ctx.font = '14px serif';
-  ctx.fillText(active ? icon : '🔇', r.x + 20, r.y + 20);
-  ctx.font = 'bold 10px Segoe UI';
-  ctx.fillStyle = active ? color : '#78909c';
-  ctx.fillText(label, r.x + 52, r.y + 20);
+  ctx.fillStyle = hov ? 'rgba(30,32,36,0.9)' : 'rgba(12,14,16,0.75)';
+  roundRect(r.x, r.y, r.w, r.h, 8); ctx.fill();
+  ctx.strokeStyle = hov ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)'; ctx.lineWidth = 1;
+  roundRect(r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1, 8); ctx.stroke();
+  ctx.fillStyle = active ? color : '#4a4e54';
+  ctx.beginPath(); ctx.arc(r.x + 15, r.y + r.h / 2, 3.5, 0, Math.PI * 2); ctx.fill();
+  ctx.textAlign = 'left';
+  ctx.font = '600 10px Inter, sans-serif'; ctx.letterSpacing = '0.8px';
+  ctx.fillStyle = active ? '#e8e2d2' : '#6f7378';
+  ctx.fillText(label, r.x + 26, r.y + r.h / 2 + 3.5);
   ctx.restore();
 }
 
 export function drawMusicButton() {
-  drawAudioBtn(AUDIO_BTNS.mus, '🎵', 'MUSIQUE', on, '#ffd740');
-  drawAudioBtn(AUDIO_BTNS.sfx, '⚔️', 'EFFETS', sfxOn, '#4fc3f7');
+  drawAudioBtn(AUDIO_BTNS.mus, 'MUSIQUE', on, '#d4b062');
+  drawAudioBtn(AUDIO_BTNS.sfx, 'EFFETS', sfxOn, '#7fb8d6');
 }
 
 // ==================== EFFETS SONORES DE JEU ====================
