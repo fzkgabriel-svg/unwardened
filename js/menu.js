@@ -1769,6 +1769,13 @@ export function playAgain() {
   startGame();
 }
 
+// écran de victoire : enchaîne directement sur la campagne suivante
+export function nextWorld() {
+  resetToMenu();
+  G.campaign = Math.min(2, G.campaign + 1);
+  startGame();
+}
+
 // écran de victoire : le boss final de la vague 20 a été vaincu
 export function drawVictory() {
   const p = G.player;
@@ -1840,13 +1847,16 @@ export function drawVictory() {
   });
 
   // boutons REJOUER / MENU (même géométrie que le game over)
+  // sur la victoire, le bouton devient « MONDE SUIVANT » s'il reste une campagne
   const b = goButtons();
-  drawMenuButton(b.replay, '↻  REJOUER', '#4caf50', '#69f0ae', true);
+  const hasNext = G.campaign < 2;
+  drawMenuButton(b.replay, hasNext ? '▶  MONDE SUIVANT' : '↻  REJOUER',
+    hasNext ? '#1565c0' : '#4caf50', hasNext ? '#64b5f6' : '#69f0ae', true);
   drawMenuButton(b.menu, '⌂  MENU', '#455a64', '#90a4ae', false);
 
   ctx.fillStyle = '#ffe9a3'; ctx.font = 'bold 14px Segoe UI';
   ctx.globalAlpha = 0.6 + Math.sin(G.time * 4) * 0.4;
-  ctx.fillText('R — Rejouer', W / 2, b.replay.y + b.replay.h + 26);
+  ctx.fillText(hasNext ? 'R — Monde suivant' : 'R — Rejouer', W / 2, b.replay.y + b.replay.h + 26);
   ctx.globalAlpha = 1;
 }
 

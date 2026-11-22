@@ -1,5 +1,5 @@
 import { G, canvas, W, H } from './state.js';
-import { startGame, menuButtonAt, gameOverButtonAt, pauseButtonAt, playAgain, resetToMenu, requestResume, forgeClickAt, forgeWheel, achClickAt, achWheel, charClickAt, adminClickAt, switchCharacter, reloadPersistence, durWarnClickAt, durWarnAction, campaignClickAt } from './menu.js';
+import { startGame, menuButtonAt, gameOverButtonAt, pauseButtonAt, playAgain, nextWorld, resetToMenu, requestResume, forgeClickAt, forgeWheel, achClickAt, achWheel, charClickAt, adminClickAt, switchCharacter, reloadPersistence, durWarnClickAt, durWarnAction, campaignClickAt } from './menu.js';
 import { checkAdminPass, createChar } from './chars.js';
 import { adminMenuClickAt, adminButtonAt, adminUnlocked } from './menu.js';
 import { usePotion } from './player.js';
@@ -65,7 +65,8 @@ export function initInput() {
     }
     if (k === 'w' && G.state === 'playing') usePotion();
     if (k === 'e' && G.state === 'playing') tryInteract(); // fouiller un bâtiment / entrer dans un portail
-    if ((k === 'r') && (G.state === 'gameover' || G.state === 'victory')) playAgain();
+    if ((k === 'r') && G.state === 'victory' && G.campaign < 2) nextWorld();
+    else if ((k === 'r') && (G.state === 'gameover' || G.state === 'victory')) playAgain();
     if (k === 'escape') {
       if (G.adminMenu) { G.adminMenu = false; sfxClick(); return; }
       if (G.state === 'playing') G.state = 'paused';
@@ -164,7 +165,11 @@ export function initInput() {
     }
     if (G.state === 'gameover' || G.state === 'victory') {
       const btn = gameOverButtonAt(G.mouse.x, G.mouse.y);
-      if (btn === 'replay') { playAgain(); sfxConfirm(); }
+      if (btn === 'replay') {
+        if (G.state === 'victory' && G.campaign < 2) nextWorld();
+        else playAgain();
+        sfxConfirm();
+      }
       else if (btn === 'menu') { resetToMenu(); sfxClick(); }
       return;
     }
