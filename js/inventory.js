@@ -227,7 +227,7 @@ export function repairItem(inv, id) {
 // Max 100 niveaux. Chaque niveau : +0,5 % de dégâts pour ce type d'arme.
 export const MODE_MAX_LVL = 100;
 export function modeNeed(lvl) { return Math.round(400 + 350 * Math.pow(lvl, 1.5)); }
-export function modeKey(attackMode) { return attackMode === 3 ? 'lance' : 'epee'; }
+export function modeKey(attackMode) { return attackMode === 3 ? 'lance' : attackMode === 5 ? 'arc' : 'epee'; }
 export function modeInfo(inv, key) {
   inv.wmode = inv.wmode || {};
   const total = (inv.wmode[key] && inv.wmode[key].xp) || 0;

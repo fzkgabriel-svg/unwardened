@@ -1,0 +1,210 @@
+// js/bow.js — ARC CINÉTIQUE COSMIQUE : arme légendaire du boss du monde 9.
+// Combat à distance : maintenir clic gauche pour charger, relâcher pour tirer.
+// Clic droit : capacité SINGULARITÉ (projectile gravitationnel + zone d'implosion).
+import { G, TAU } from './state.js';
+import { spawnParticles, addDamageText } from './effects.js';
+import { damageEnemy } from './enemies.js';
+import { playerAngle, waveBonus } from './attacks.js';
+import { worldW, worldH } from './world.js';
+import { sfxBowFire, sfxSingularity } from './audio.js';
+
+export const BOW_SING_CD = 22;          // recharge de la singularité
+const CHARGE_TIME = 1.15;               // temps de charge max (s)
+const MIN_DMG = 0.55, MAX_DMG = 2.6;    // multiplicateur de dégâts selon la charge
+
+export function bowUnlocked() { return !!(G.stats && G.stats.bowUnlocked); }
+
+// état paresseux : G.bow = { charge, singCd, singAnim, recoil }
+function bow() {
+  if (!G.bow) G.bow = { charge: 0, singCd: 0, singAnim: 0, recoil: 0 };
+  return G.bow;
+}
+
+// ---------- TIR ----------
+function fireBolt() {
+  const p = G.player, b = bow();
+  const charge = Math.max(0.18, b.charge); // un appui bref tire quand même une flèche faible
+  const a = playerAngle();
+  const spd = 11 + charge * 6; // vitesse : 11 -> 17 px/frame
+  const dmgMul = MIN_DMG + (MAX_DMG - MIN_DMG) * Math.min(1, charge);
+  const type = charge >= 0.55 ? 'charged' : 'normal';
+  G.bowShots = G.bowShots || [];
+  G.bowShots.push({
+    x: p.x + Math.cos(a) * (p.r + 14), y: p.y + Math.sin(a) * (p.r + 14),
+    px: p.x, py: p.y,
+    vx: Math.cos(a) * spd, vy: Math.sin(a) * spd,
+    r: type === 'charged' ? 9 : 6,
+    dmg: p.attackDamage * dmgMul * waveBonus(),
+    type, life: 2.2, t: 0, trail: [],
+  });
+  p.attackCooldown = 0.28; // cadence max de l'arc
+  b.recoil = 1;            // recul visuel de l'arc
+  sfxBowFire(charge);
+  // buée d'énergie au départ
+  spawnParticles(p.x + Math.cos(a) * (p.r + 16), p.y + Math.sin(a) * (p.r + 16),
+    type === 'charged' ? '#b388ff' : '#40c4ff', type === 'charged' ? 12 : 7, 4);
+  if (type === 'charged') G.screenShake = Math.max(G.screenShake, 2);
+}
+
+// ---------- SINGULARITÉ ----------
+export function doSingularity() {
+  const b = bow(), p = G.player;
+  if (b.singCd > 0 || p.attackCooldown > 0) return false;
+  const a = playerAngle();
+  G.bowShots = G.bowShots || [];
+  G.bowShots.push({
+    x: p.x + Math.cos(a) * (p.r + 16), y: p.y + Math.sin(a) * (p.r + 16),
+    px: p.x, py: p.y,
+    vx: Math.cos(a) * 8.5, vy: Math.sin(a) * 8.5,
+    r: 14, dmg: p.attackDamage * 4.2 * waveBonus(),
+    type: 'sing', life: 3.0, t: 0, trail: [], zoneR: 210,
+  });
+  b.singCd = BOW_SING_CD;
+  b.singAnim = 1;
+  p.attackCooldown = 0.5;
+  b.recoil = 1.6;
+  sfxSingularity();
+  G.screenShake = Math.max(G.screenShake, 5);
+  return true;
+}
+
+// ---------- IMPACTS ----------
+function boltImpact(s) {
+  if (s.impacted) return;
+  s.impacted = true;
+  if (s.type === 'sing') {
+    // zone de distorsion : implosion + aspiration + ralentissement
+    G.singZones = G.singZones || [];
+    G.singZones.push({ x: s.x, y: s.y, r: s.zoneR || 210, t: 0, dur: 3.4 });
+    spawnParticles(s.x, s.y, '#7c4dff', 34, 9);
+    spawnParticles(s.x, s.y, '#18ffff', 22, 7);
+    spawnParticles(s.x, s.y, '#e040fb', 16, 5);
+    addDamageText(s.x, s.y - 26, '⬤ SINGULARITÉ', '#b388ff');
+    G.screenShake = Math.max(G.screenShake, 9);
+  } else {
+    const col = s.type === 'charged' ? '#b388ff' : '#40c4ff';
+    spawnParticles(s.x, s.y, col, s.type === 'charged' ? 18 : 9, s.type === 'charged' ? 7 : 5);
+    if (s.type === 'charged') {
+      // explosion cinétique : petits dégâts de zone
+      const aoe = 74;
+      for (let i = G.enemies.length - 1; i >= 0; i--) {
+        const e = G.enemies[i];
+        if (Math.hypot(e.x - s.x, e.y - s.y) < aoe + e.r) {
+          damageEnemy(e, s.dmg * 0.45, Math.atan2(e.y - s.y, e.x - s.x));
+        }
+      }
+      spawnParticles(s.x, s.y, '#7c4dff', 14, 6);
+      G.screenShake = Math.max(G.screenShake, 4);
+    }
+  }
+}
+
+function shotHitEnemy(s, e) {
+  const a = Math.atan2(s.vy, s.vx);
+  damageEnemy(e, s.dmg, a);
+  if (s.type === 'sing') {
+    boltImpact(s);
+  } else {
+    boltImpact(s);
+  }
+  return true;
+}
+
+// ---------- UPDATE (appelé chaque frame depuis main.js) ----------
+export function updateBow(dt) {
+  const p = G.player, b = bow();
+  const isBow = p.attackMode === 5 && p.alive !== false;
+
+  // --- machine à états de la charge ---
+  if (isBow) {
+    if (G.attackHeld) {
+      if (!b.charging) { b.charging = true; b.charge = 0; }
+      b.charge = Math.min(1, b.charge + dt / CHARGE_TIME);
+      // cristaux aspirés pendant la charge (feedback visuel dans draw)
+    } else if (b.charging) {
+      b.charging = false;
+      fireBolt();
+      b.charge = 0;
+    }
+  } else if (b.charging) {
+    b.charging = false; b.charge = 0; // changement d'arme pendant la charge : annule
+  }
+
+  b.singCd = Math.max(0, b.singCd - dt);
+  b.singAnim = Math.max(0, b.singAnim - dt * 1.4);
+  b.recoil = Math.max(0, b.recoil - dt * 5);
+
+  // --- projectiles de l'arc ---
+  G.bowShots = G.bowShots || [];
+  for (let i = G.bowShots.length - 1; i >= 0; i--) {
+    const s = G.bowShots[i];
+    s.t += dt; s.life -= dt;
+    s.px = s.x; s.py = s.y;
+    // la singularité est légèrement attirée par les ennemis proches (gravité)
+    if (s.type === 'sing') {
+      for (const e of G.enemies) {
+        const d = Math.hypot(e.x - s.x, e.y - s.y);
+        if (d < 260 && d > 1) {
+          const pull = (1 - d / 260) * 0.9;
+          s.vx += ((e.x - s.x) / d) * pull * dt * 60;
+          s.vy += ((e.y - s.y) / d) * pull * dt * 60;
+        }
+      }
+    }
+    s.x += s.vx; s.y += s.vy;
+    // traînée : on garde les positions récentes pour le rendu
+    s.trail.push({ x: s.x, y: s.y });
+    if (s.trail.length > 14) s.trail.shift();
+    // particules de traînée
+    if ((i + (s.t * 60 | 0)) % 3 === 0) {
+      spawnParticles(s.x, s.y, s.type === 'sing' ? '#7c4dff' : (s.type === 'charged' ? '#b388ff' : '#40c4ff'), 1, 0.6);
+    }
+    let dead = s.life <= 0 || s.x < -40 || s.x > worldW() + 40 || s.y < -40 || s.y > worldH() + 40;
+    if (!dead) {
+      for (let j = G.enemies.length - 1; j >= 0; j--) {
+        const e = G.enemies[j];
+        if (Math.hypot(e.x - s.x, e.y - s.y) < s.r + e.r) {
+          shotHitEnemy(s, e);
+          dead = true;
+          break;
+        }
+      }
+    }
+    if (dead) {
+      if (s.life > 0) boltImpact(s); // impact mur/bords ; l'impact ennemi est déjà fait
+      G.bowShots.splice(i, 1);
+    }
+  }
+
+  // --- zones de singularité : aspiration + ralentissement ---
+  G.singZones = G.singZones || [];
+  for (let i = G.singZones.length - 1; i >= 0; i--) {
+    const z = G.singZones[i];
+    z.t += dt;
+    if (z.t >= z.dur) { G.singZones.splice(i, 1); continue; }
+    const k = 1 - z.t / z.dur;
+    for (const e of G.enemies) {
+      const d = Math.hypot(e.x - z.x, e.y - z.y);
+      if (d < z.r + e.r) {
+        // aspiration douce vers le centre + perturbation
+        if (d > 8) {
+          const pull = (1 - d / (z.r + e.r)) * 2.4 * k;
+          e.x -= ((e.x - z.x) / d) * pull * dt * 60 * 0.28;
+          e.y -= ((e.y - z.y) / d) * pull * dt * 60 * 0.28;
+        }
+        e.slow = Math.max(e.slow || 0, 0.6); // distorsion : ralentit les ennemis dans la zone
+        if ((z.t * 8 | 0) !== ((z.t - dt) * 8 | 0)) {
+          damageEnemy(e, 26 * waveBonus() * k, Math.atan2(e.y - z.y, e.x - z.x)); // dps de la distorsion
+        }
+      }
+    }
+    // vortex visuel : particules aspirées
+    if (Math.random() < dt * 22) {
+      const a = Math.random() * TAU, rr = z.r * (0.7 + Math.random() * 0.5);
+      spawnParticles(z.x + Math.cos(a) * rr, z.y + Math.sin(a) * rr, '#7c4dff', 1, 0.4);
+    }
+  }
+}
+
+//Called from main.js for singularity input
+export function trySingularity() { return doSingularity(); }

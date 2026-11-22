@@ -3,6 +3,7 @@ import { roundRect, drawFlaskIcon, drawItemIcon } from './utils.js';
 import { curWorld, RARITY_COLOR } from './world.js';
 import { playerAngle } from './attacks.js';
 import { ITEMS, getDur } from './inventory.js';
+import { drawBowIcon } from './gfx/bow_draw.js';
 
 // Barre de statut stylée : fond sombre, dégradé, reflet, stries animées, bordure
 function drawBar(x, y, w, h, frac, c1, c2, glowColor = null) {
@@ -158,7 +159,11 @@ export function drawHUD() {
     { mode: -2, cd: 0, cd2: p.handUsed ? 0 : p.handCd, icon: 'volcano', key: 'D', sub: null, used: p.handUsed }
   ] : [
     { mode: 1, cd: p.attackCooldown, cd2: p.spinCooldown, icon: 'sword', key: '&', sub: 'D', subColor: '#ff9100' },
-    { mode: 3, cd: p.attackCooldown, cd2: p.shieldCd,  icon: 'lance', key: 'é', sub: 'D', subColor: '#4fc3f7' }
+    { mode: 3, cd: p.attackCooldown, cd2: p.shieldCd,  icon: 'lance', key: 'é', sub: 'D', subColor: '#4fc3f7' },
+    // arc cinétique cosmique : visible seulement une fois débloqué (boss du monde 9)
+    ...(G.stats && G.stats.bowUnlocked ? [{
+      mode: 5, cd: p.attackCooldown, cd2: (G.bow ? G.bow.singCd : 0), icon: 'bow', key: 'X', sub: 'D', subColor: '#b388ff'
+    }] : [])
   ];
   slots.forEach((s, i) => {
     const x = 18 + i * 110, y = H - 78, w = 96, h = 64;
@@ -555,6 +560,9 @@ function drawAttackIcon(kind, x, y, color) {
     ctx.fillStyle = '#ffd740';
     ctx.beginPath(); ctx.arc(0, 14, 2.6, 0, TAU); ctx.fill();
     ctx.strokeStyle = '#b8860b'; ctx.lineWidth = 1; ctx.stroke();
+  } else if (kind === 'bow') {
+    // arc cinétique cosmique : sprite dédié (noyau pulsant)
+    drawBowIcon(0, 0, 1.05);
   } else {
     // bouclier + lance : grand bouclier bossu avec gemme, lance en diagonale
     // lance (derrière le bouclier)

@@ -266,6 +266,7 @@ export function adminUnlockAll() {
   G.stats.campaignDone = { 0: true, 1: true, 2: true, 3: true, 4: true };
   G.stats.iceUlt = true;
   G.stats.hellUlt = true;
+  G.stats.bowUnlocked = true; // arc cinétique cosmique
   saveStats();
   // succès + matériaux : chaque bloc est isolé pour qu'un échec n'annule pas le reste
   if (!G.inv) { try { G.inv = loadInv(); } catch (e) {} }

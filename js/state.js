@@ -12,7 +12,7 @@ export const ctx = canvas.getContext('2d');
 ctx.scale(SS, SS);
 export const W = 1200, H = 640;
 export const TAU = Math.PI * 2;
-export const VERSION = '3.3.0';
+export const VERSION = '3.4.0';
 export const FINAL_WAVE = 20; // vague du boss final (campagne 1) // incrémenter à chaque mise à jour du jeu
 // vagues finales : campagne 2 -> 25, 3 -> 30, 4 (Égouts) -> 35, 5 (Espace) -> 40
 export function finalWave() {
@@ -27,9 +27,11 @@ export const G = {
   keys: {},
   mouse: { x: W / 2, y: H / 2 },
   attackQueued: false,
+  attackHeld: false,   // clic gauche maintenu (charge de l'arc cinétique)
   spinQueued: false,
   ultQueued: false,
   shieldQueued: false,
+  singQueued: false,   // capacité SINGULARITÉ de l'arc (clic droit en mode arc)
   handQueued: false,  // main de feu du Titan de Feu (clic droit pendant la transformation)
 
   // monde procédural (coordonnées monde, caméra dans G.camX/G.camY)
@@ -62,6 +64,8 @@ export const G = {
   portals: [],     // portails d'apparition des monstres
   lightnings: [],  // frappes de foudre du Boss Foudre (téléscopées)
   projectiles: [], // projectiles de glace du Boss Givre
+  bowShots: [],    // projectiles de l'arc cinétique (normal / chargé / singularité)
+  singZones: [],   // zones de distorsion de la singularité {x,y,r,t,dur}
   particles: [],
   damageTexts: [],
   rings: [],

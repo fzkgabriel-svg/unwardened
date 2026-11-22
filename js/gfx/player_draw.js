@@ -3,6 +3,7 @@ import { roundRect, shade, drawFlaskIcon, hexA } from '../utils.js';
 import { playerAngle } from '../attacks.js';
 import { curWorld, CONFIG, RARITY_COLOR } from '../world.js';
 import { drawShadow } from './enemies_draw.js';
+import { drawCosmicBow } from './bow_draw.js';
 
 function drawSpinAnim() {
   const p = G.player;
@@ -585,12 +586,23 @@ export function drawPlayer() {
   // (absente pendant l'intro céleste et pour le titan : il frappe au laser)
   if (!intro && !titan) {
   let swordAngle = angle;
-  if (p.attackMode !== 3 && p.attackCooldown > 0.25) {
+  if (p.attackMode === 1 && p.attackCooldown > 0.25) {
     const t = 1 - (p.attackCooldown - 0.25) / 0.15; // 0->1
     swordAngle = angle - p.attackArc / 2 + p.attackArc * Math.min(1, t);
   }
   ctx.rotate(swordAngle);
-  if (p.attackMode === 3) {
+  if (p.attackMode === 5) {
+    // ARC CINÉTIQUE COSMIQUE : tenue à deux mains, corde tendue par la charge
+    const chg = G.bow ? G.bow.charge : 0;
+    const rec = G.bow ? G.bow.recoil : 0;
+    ctx.save();
+    ctx.translate(p.r - 4, 0);
+    ctx.scale(0.72, 0.72);
+    // posture : le bras avant tend la corde (léger fléchissement avec la charge)
+    ctx.translate(-chg * 3, chg * 2);
+    drawCosmicBow(chg, rec);
+    ctx.restore();
+  } else if (p.attackMode === 3) {
     // lance : jaillit vers l'avant pendant l'estoc (extension = cooldown restant)
     const ext = p.attackCooldown > 0 ? Math.min(1, p.attackCooldown / 0.32) : 0;
     ctx.save();

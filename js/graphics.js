@@ -7,3 +7,4 @@ export * from './gfx/buildings.js';   // bâtiments du monde
 export * from './gfx/worldfx.js';     // portails, fioles, projectiles, feux, effets
 export * from './gfx/entities.js';    // héros, monstres, armes, ataques spéciales
 export * from './gfx/cinematic.js';   // nuages d'intro, B-2, bombe atomique, champignon
+export * from './gfx/bow_draw.js';    // arc cinétique cosmique : arme, projectiles, révélation

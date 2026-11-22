@@ -12,6 +12,7 @@ import { drawMusicButton, sfxHurt, sfxWave, sfxPickup, sfxBreak, sfxBoss, sfxWar
 import { updateTutorial, drawTutorial } from './tutorial.js';
 import { tickPlaytime } from './chars.js';
 import { updateHellEvents, updateFrozenEvents, updateSewerEvents, updateSpaceEvents } from './events.js';
+import { updateBow, doSingularity } from './bow.js';
 import { updateFinalBoss, updateBurrow, collideIceWalls } from './bosses.js';
 import { draw } from './draw.js';
 import { initInput } from './input.js';
@@ -127,7 +128,7 @@ function update(dt) {
   if (keys['q'] || keys['arrowleft']) dx -= 1;
   if (keys['d'] || keys['arrowright']) dx += 1;
   if (p.slowT > 0) p.slowT = Math.max(0, p.slowT - dt);
-  const pSpeed = p.speed * (p.slowT > 0 ? 0.55 : 1) * (p.attackMode === 3 ? 0.7 : 0.93); // ralenti si touché / lance plus lente que l'épée
+  const pSpeed = p.speed * (p.slowT > 0 ? 0.55 : 1) * (p.attackMode === 3 ? 0.7 : p.attackMode === 5 ? 0.97 : 0.93); // lance tank / arc léger / épée
   if (dx || dy) {
     const len = Math.hypot(dx, dy);
     p.x = Math.max(p.r, Math.min(worldW() - p.r, p.x + dx / len * pSpeed));
@@ -146,6 +147,9 @@ function update(dt) {
 
   // Attaques : clic gauche = principale (épée/lance), clic droit = rotation secondaire
   // (verrouillé 2s après un changement d'arme)
+  // arc cinétique : le clic gauche est géré par la charge (updateBow),
+  // les files épée/lance/rotation sont ignorées dans ce mode
+  if (p.attackMode === 5) { G.attackQueued = false; G.spinQueued = false; }
   if (G.attackQueued && p.switchLock <= 0) {
     if (p.attackCooldown <= 0 && p.spinDuration <= 0) {
       G.attackQueued = false;
@@ -167,6 +171,12 @@ function update(dt) {
     G.handQueued = false;
     if (p.ultActive > 0 && p.handCd <= 0 && !p.handUsed) doFireHand();
   }
+  // singularité de l'arc (clic droit en mode arc)
+  if (G.singQueued) {
+    G.singQueued = false;
+    if (p.attackMode === 5) doSingularity();
+  }
+  updateBow(dt); // charge + projectiles + zones de distorsion de l'arc
   p.handCd = Math.max(0, p.handCd - dt);
   if (G.ultQueued) {
     if (p.ultCharge >= 100 && p.ultActive <= 0 && !G.bomber) {
@@ -629,6 +639,7 @@ function update(dt) {
     G.stats.campaignDone[G.campaign] = true;
     if (G.campaign === 1) G.stats.iceUlt = true; // coffre : débloque la Pluie de Glace
     if (G.campaign === 2) G.stats.hellUlt = true; // trône : débloque la Colère Infernale
+    if (G.campaign === 4) { G.stats.bowUnlocked = true; G.bowReveal = G.time; } // ARC CINÉTIQUE COSMIQUE
     saveStats();
     G.enemies.length = 0; G.drops.length = 0; G.fireZones.length = 0;
     G.portals.length = 0; G.projectiles.length = 0; G.lightnings.length = 0;
@@ -636,6 +647,7 @@ function update(dt) {
     G.lasers.length = 0; G.hands.length = 0; G.volcanoes.length = 0; G.hellStorm = null;
     G.acidZones.length = 0; G.blackHoles.length = 0;
     G.acidRain = 0; G.voidStorm = 0;
+    G.bowShots.length = 0; G.singZones.length = 0;
     // salve de fête : or, violet, vert
     const cols = ['#ffd740', '#e040fb', '#69f0ae', '#40c4ff', '#ff8a65'];
     for (let i = 0; i < 6; i++) {

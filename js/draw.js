@@ -2,7 +2,7 @@ import { G, ctx, W, H, TAU, VERSION, finalWave, saveStats } from './state.js';
 import { spawnEnemy, spawnMinibossWave, spawnBossWave, spawnFinalBoss, damageEnemy, enemyTypes } from './enemies.js';
 import { doSlash, doSpin, doThrust, doUlt, doShield, doFireLaser, doFireHand, updateNuke, updateIceUlt, updateLasers, updateHands, updateVolcanoes, updateSewerUlt, updateSpaceUlt } from './attacks.js';
 import { updateEffects, addDamageText, spawnParticles } from './effects.js';
-import { drawBackground, drawEnemy, drawDrops, drawPlayer, drawSlashArc, drawUltFlash, drawMushroom, drawBomber, drawEffects, drawFireZones, drawCraters, drawPortals, drawProjectiles, drawLightnings, drawGrain, drawClouds, dayNight, drawTerrain, drawBuildings, drawWorldPortals, drawObstacle, drawIceStorm, drawLasers, drawHands, drawVolcanoes, drawAcidZones, drawBlackHoles, drawVoidHole } from './graphics.js';
+import { drawBackground, drawEnemy, drawDrops, drawPlayer, drawSlashArc, drawUltFlash, drawMushroom, drawBomber, drawEffects, drawFireZones, drawCraters, drawPortals, drawProjectiles, drawLightnings, drawGrain, drawClouds, dayNight, drawTerrain, drawBuildings, drawWorldPortals, drawObstacle, drawIceStorm, drawLasers, drawHands, drawVolcanoes, drawAcidZones, drawBlackHoles, drawVoidHole, drawBowShots, drawSingZones, drawBowReveal } from './graphics.js';
 import { checkAchievements } from './achievements.js';
 import { wearEquipment, addMaterial } from './inventory.js';
 import { drawHUD, drawAchToast, drawWarnToast } from './hud.js';
@@ -38,6 +38,8 @@ export function draw() {
     }
     drawDrops();
     drawProjectiles();
+    drawBowShots();  // flèches d'énergie de l'arc cinétique
+    drawSingZones(); // zones de distorsion de la singularité
     drawSlashArc();
     drawPlayer();
     drawLightnings(); // télégraphes + bolts par-dessus les entités
@@ -68,6 +70,7 @@ export function draw() {
   }
   if (G.state === 'victory') {
     drawVictory();
+    drawBowReveal(); // cinématique de découverte de l'arc (premières secondes)
     ctx.font = '11px Consolas, monospace';
     ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(232,217,176,0.45)';
     ctx.fillText(`v${VERSION}`, W - 14, H - 12);

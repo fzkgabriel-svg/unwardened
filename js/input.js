@@ -6,6 +6,7 @@ import { usePotion } from './player.js';
 import { tryInteract } from './world.js';
 import { ensureAudio, toggleMusic, toggleSfx, audioButtonAt, sfxClick, sfxConfirm } from './audio.js';
 import { startTutorial, tutorialEnter } from './tutorial.js';
+import { bowUnlocked } from './bow.js';
 
 export function initInput() {
   window.addEventListener('keydown', e => {
@@ -62,6 +63,11 @@ export function initInput() {
     if (modeKeys[k] && G.state === 'playing' && G.player.attackMode !== modeKeys[k]) {
       G.player.attackMode = modeKeys[k];
       G.player.switchLock = 1.25; // 1,25s sans attaque après le changement d'arme
+    }
+    // X : arc cinétique cosmique (arme légendaire, débloquée après le boss du monde 9)
+    if (k === 'x' && G.state === 'playing' && bowUnlocked() && G.player.attackMode !== 5) {
+      G.player.attackMode = 5;
+      G.player.switchLock = 1.25;
     }
     if (k === 'w' && G.state === 'playing') usePotion();
     if (k === 'e' && G.state === 'playing') tryInteract(); // fouiller un bâtiment / entrer dans un portail
@@ -173,14 +179,20 @@ export function initInput() {
       else if (btn === 'menu') { resetToMenu(); sfxClick(); }
       return;
     }
-    if (e.button === 0) G.attackQueued = true;
-    // clic droit : titan = main de feu, sinon rotation (épée) / bouclier (lance)
+    if (e.button === 0) { G.attackQueued = true; G.attackHeld = true; }
+    // clic droit : titan = main de feu, arc = singularité, sinon rotation (épée) / bouclier (lance)
     if (e.button === 2) {
       if (G.player.ultActive > 0) G.handQueued = true;
+      else if (G.player.attackMode === 5) G.singQueued = true;
       else if (G.player.attackMode === 3) G.shieldQueued = true;
       else G.spinQueued = true;
     }
   });
+  // relâchement du clic gauche : déclenche le tir de l'arc (charge)
+  const releaseAttack = () => { G.attackHeld = false; };
+  canvas.addEventListener('mouseup', releaseAttack);
+  window.addEventListener('mouseup', releaseAttack); // même hors canvas
+  window.addEventListener('blur', releaseAttack);    // alt-tab pendant la charge = relâchement
   canvas.addEventListener('contextmenu', e => e.preventDefault());
   // molette : scroll dans la forge et la liste des succès
   canvas.addEventListener('wheel', e => {

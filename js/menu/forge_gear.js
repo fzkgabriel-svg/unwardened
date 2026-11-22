@@ -109,6 +109,7 @@ export function drawHeroPaperdoll(L) {
   }
   // ---- progression ÉPÉE / LANCE : niveaux et XP (coins bas de la forge) ----
   drawModeCard(L.cx + 26, L.cy + L.ch - 106, 'epee', '⚔️', 'ÉPÉE', '#ffb74d');
+  drawModeCard(L.cx + 380, L.cy + L.ch - 106, 'arc', '🏹', 'ARC', '#b388ff', !(G.stats && G.stats.bowUnlocked));
   drawModeCard(L.cx + L.cw - 226, L.cy + L.ch - 106, 'lance', '🔱', 'LANCE', '#4fc3f7');
   // ---- choix de l'ULTIME (touche F en jeu) : en haut à droite ----
   drawUltSelect(L);
@@ -152,22 +153,32 @@ export function drawUltSelect(L) {
   drawOne('hell', '🔥', 'TITAN DE FEU', hellOk ? 'titan 10 s : laser de feu dévastateur · charge lente' : 'trône du Baron de l\'Enfer', '#ff7043', !hellOk);
 }
 
-// carte de progression d'un type d'arme (épée / lance)
-function drawModeCard(x, y, key, icon, label, color) {
+// carte de progression d'un type d'arme (épée / lance / arc)
+function drawModeCard(x, y, key, icon, label, color, locked = false) {
   const info = modeInfo(G.inv, key);
   const w = 200, h = 78;
-  ctx.fillStyle = 'rgba(255,255,255,0.05)';
+  ctx.fillStyle = locked ? 'rgba(20,16,40,0.55)' : 'rgba(255,255,255,0.05)';
   roundRect(x, y, w, h, 10); ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,0.16)'; ctx.lineWidth = 1;
+  ctx.strokeStyle = locked ? 'rgba(124,77,255,0.45)' : 'rgba(255,255,255,0.16)'; ctx.lineWidth = 1;
   roundRect(x, y, w, h, 10); ctx.stroke();
   ctx.textAlign = 'left';
   ctx.font = '17px serif'; ctx.fillText(icon, x + 12, y + 24);
-  ctx.fillStyle = color; ctx.font = 'bold 13px Inter, sans-serif';
+  ctx.fillStyle = locked ? '#7c6aa8' : color; ctx.font = 'bold 13px Inter, sans-serif';
   ctx.fillText(label, x + 38, y + 22);
-  ctx.fillStyle = '#ffe9a3'; ctx.font = 'bold 15px Inter, sans-serif';
-  ctx.fillText(`Niv. ${info.lvl}`, x + w - 78, y + 24);
+  ctx.fillStyle = locked ? '#5a5470' : '#ffe9a3'; ctx.font = 'bold 15px Inter, sans-serif';
+  ctx.fillText(locked ? '???' : `Niv. ${info.lvl}`, x + w - 78, y + 24);
   ctx.fillStyle = '#8d99ae'; ctx.font = '10px Inter, sans-serif';
-  ctx.fillText(`+${Math.round((modeMult(G.inv, key) - 1) * 100)}% dégâts`, x + 38, y + 40);
+  ctx.fillText(locked ? 'arme légendaire' : `+${Math.round((modeMult(G.inv, key) - 1) * 100)}% dégâts`, x + 38, y + 40);
+  if (locked) {
+    // padlock + condition de déblocage
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    roundRect(x, y, w, h, 10); ctx.fill();
+    ctx.font = 'bold 11px Inter, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillStyle = '#b388ff';
+    ctx.fillText('🔒 VAINCRE', x + w / 2, y + 60);
+    ctx.fillText('L\'ABOMINATION COSMIQUE', x + w / 2, y + 73);
+    return;
+  }
   // barre d'XP vers le niveau suivant
   const bx = x + 12, bw = w - 24, by = y + 52;
   ctx.fillStyle = 'rgba(255,255,255,0.12)'; roundRect(bx, by, bw, 7, 3.5); ctx.fill();

@@ -507,3 +507,30 @@ export function sfxWarn() { // alerte : deux notes graves descendantes
   osc('sawtooth', 220, 110, t + 0.12, 0.55, 0.1);
   nz(t, 0.3, 0.05, 'lowpass', 700, 1);
 }
+
+// ---------- ARC CINÉTIQUE COSMIQUE ----------
+export function sfxBowFire(power = 0.5) { // tir : zap électronique montant, puissance = charge
+  if (!sfxReady()) return; const t = ST();
+  const p = Math.min(1, Math.max(0, power));
+  // corps :-descente rapide type laser
+  osc('sawtooth', 1400 + p * 900, 180, t, 0.14 + p * 0.1, 0.10 + p * 0.08);
+  // sifflement d'énergie
+  nz(t, 0.12 + p * 0.12, 0.10 + p * 0.10, 'bandpass', 3600 + p * 2400, 3);
+  // clic cristallin en fin de charge
+  if (p > 0.55) {
+    osc('sine', 2200, 3200, t + 0.03, 0.18, 0.06);
+    nz(t + 0.02, 0.1, 0.08, 'highpass', 6000);
+  }
+}
+export function sfxSingularity() { // SINGULARITÉ : compression gravitationnelle + explosion
+  if (!sfxReady()) return; const t = ST();
+  // montée sub-grave de compression
+  osc('sine', 60, 240, t, 0.5, 0.22);
+  osc('sine', 90, 30, t + 0.42, 0.5, 0.24); // chute = implosion
+  // shimmer cosmique
+  for (let i = 0; i < 4; i++) {
+    osc('sine', 900 + i * 380, 1400 + i * 500, t + 0.1 + i * 0.07, 0.4, 0.04);
+  }
+  nz(t + 0.45, 0.4, 0.16, 'lowpass', 900, 1); // boom sourd de la distorsion
+  nz(t, 0.5, 0.05, 'highpass', 4000);
+}
