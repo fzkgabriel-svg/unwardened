@@ -31,7 +31,7 @@ export function drawForgeView() {
   ctx.fillStyle = '#ffd740'; ctx.font = 'bold 28px Inter, sans-serif';
   ctx.fillText('FORGE', W / 2 + 14, L.cy + 44);
   ctx.fillStyle = '#a89f7c'; ctx.font = 'italic 14px Inter, sans-serif';
-  ctx.fillText('Forgez des équipements avec les matériaux des monstres', W / 2, L.cy + 62);
+  ctx.fillText('Forgez des équipements avec les matériaux des monstres', W / 2, L.cy + 58);
 
   // onglets
   for (const [key, label] of [['craft', '🔨 FORGER'], ['inv', '🎒 INVENTAIRE'], ['hero', '🧍 PERSONNAGE']]) {

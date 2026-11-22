@@ -576,7 +576,7 @@ export function heroTabs(L) {
 // cartes d'armes de la colonne COMPÉTENCES (personnage) : ordre = SKILL_DEF de forge_gear.js
 export function heroSkillCards(L) {
   const col = heroColLayout(L).right;
-  const x = col.x + 14, w = col.w - 28, ch = 76, gap = 12, y0 = col.y + 54;
+  const x = col.x + 14, w = col.w - 28, ch = 84, gap = 12, y0 = col.y + 54;
   return ['epee', 'arc', 'lance'].map((key, i) => ({
     key, x, y: y0 + i * (ch + gap), w, h: ch
   }));
@@ -587,7 +587,7 @@ export function heroEquipRows(L) {
   const CL = heroColLayout(L);
   const col = CL.left;
   const x = col.x + 10, w = col.w - 20;
-  const y0 = col.y + 36, rh = 46, gap = 4;
+  const y0 = col.y + 56, rh = 46, gap = 4;
   return ['weapon', 'armor', 'helm', 'gloves', 'charm', 'boots'].map((slot, i) => ({
     slot, x, y: y0 + i * (rh + gap), w, h: rh
   }));
@@ -601,7 +601,7 @@ export function heroDoll(L) {
 
 // sélecteur d'ultime : 3 boutons compacts sur la bande du bas (gauche)
 export function ultBtns(L) {
-  const y = L.cy + L.ch - 48, h = 34;
+  const y = L.cy + L.ch - 68, h = 34;
   const w = 196, gap = 10, x0 = L.cx + 24;
   return {
     nuke:  { x: x0, y, w, h },

@@ -115,7 +115,7 @@ function drawHeroCenter(L, CL) {
     ['📦', `${s.totalRuns || 0} parties`], ['🌊', `vag. ${s.bestWave || 0}`],
     ['💀', `${(s.totalKills || 0).toLocaleString('fr-FR')} kills`], ['⏱', fmtPlaytime(s.playtime || 0)]
   ];
-  const rw = 120, gap = 10, rx0 = D.x - (recs.length * rw + (recs.length - 1) * gap) / 2;
+  const rw = 126, gap = 10, rx0 = D.x - (recs.length * rw + (recs.length - 1) * gap) / 2;
   const ry = D.y + 104;
   recs.forEach((r, i) => {
     const rx = rx0 + i * (rw + gap);
@@ -124,9 +124,9 @@ function drawHeroCenter(L, CL) {
     ctx.strokeStyle = 'rgba(255,215,64,0.25)'; ctx.lineWidth = 1;
     roundRect(rx, ry, rw, 32, 8); ctx.stroke();
     ctx.fillStyle = '#d4b062'; ctx.font = `12px ${UI}`; ctx.textAlign = 'center';
-    ctx.fillText(r[0], rx + 20, ry + 20);
+    ctx.fillText(r[0], rx + 22, ry + 20);
     ctx.fillStyle = '#e8e0c8'; ctx.font = `bold 10.5px ${UI}`;
-    ctx.fillText(fitText(String(r[1]), rw - 48), rx + rw / 2 + 8, ry + 20);
+    ctx.fillText(fitText(String(r[1]), rw - 52), rx + rw / 2 + 10, ry + 20);
   });
 }
 
@@ -290,9 +290,9 @@ function drawProgressionStrip(L) {
   const done = Object.values(G.stats.campaignDone || {}).filter(Boolean).length;
   const ach = `${achievementCount()}/${ACHIEVEMENTS.length}`;
   const txt = `🏆 ${ach} succès · 🗺️ ${done}/5 campagnes · 🌊 vag. ${s.bestWave || 0} · 💀 ${(s.totalKills || 0).toLocaleString('fr-FR')} · ⏱ ${fmtPlaytime(s.playtime || 0)}`;
-  const x = L.cx + L.cw - 20;
+  const x = L.cx + L.cw - 24;
   ctx.textAlign = 'right'; ctx.font = `bold 11px ${UI}`; ctx.fillStyle = '#c9b98a';
-  ctx.fillText(fitText(txt, 330), x, L.cy + L.ch - 34);
+  ctx.fillText(fitText(txt, 360), x, L.cy + L.ch - 38);
   ctx.textAlign = 'left';
 }
 
