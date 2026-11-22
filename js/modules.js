@@ -141,7 +141,7 @@ export function activateModule() {
     case 'ruee': {
       // dash vers la dernière direction de déplacement (ou vers la droite)
       const dx = p.lastDx !== undefined ? p.lastDx : 1, dy = p.lastDy !== undefined ? p.lastDy : 0;
-      p.dashT = 0.24; p.dashDx = dx; p.dashDy = dy;
+      p.dashT = 0.5; p.dashDx = dx; p.dashDy = dy;
       spawnParticles(p.x, p.y, m.col, 14, 5);
       break;
     }
@@ -207,7 +207,7 @@ export function updateModules(dt) {
   // dash : déplacement rapide + traînée
   if (p.dashT > 0) {
     p.dashT = Math.max(0, p.dashT - dt);
-    const sp = p.speed * 3.4;
+    const sp = p.speed * 4.6;
     p.x = Math.max(p.r, Math.min(G.world ? worldWSafe() - p.r : p.x + sp * dt, p.x + p.dashDx * sp * dt));
     p.y = Math.max(p.r, Math.min(worldHSafe() - p.r, p.y + p.dashDy * sp * dt));
     spawnParticles(p.x, p.y, '#18ffff', 2, 2.5);
