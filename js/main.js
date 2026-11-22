@@ -208,14 +208,14 @@ function update(dt) {
       else if (p.attackMode === 3) doThrust(); else doSlash();
     }
   }
-  if (G.spinQueued && p.switchLock <= 0 && p.spinCooldown <= 0 && p.attackMode !== 3) {
+  if (G.spinQueued && p.switchLock <= 0 && p.spinCooldown <= 0 && p.attackMode !== 3 && p.ultActive <= 0) {
     G.spinQueued = false;
     doSpin();
   }
   // dôme de bouclier (clic droit en mode é) : -85% de dégâts pendant 2,5s
   if (G.shieldQueued) {
     G.shieldQueued = false;
-    if (p.attackMode === 3 && p.shieldCd <= 0 && p.switchLock <= 0) doShield();
+    if (p.attackMode === 3 && p.shieldCd <= 0 && p.switchLock <= 0 && p.ultActive <= 0) doShield();
   }
   // main de feu (clic droit pendant la transformation du Titan de Feu)
   if (G.handQueued) {

@@ -124,7 +124,7 @@ function shotHitEnemy(s, e) {
 // ---------- UPDATE (appelé chaque frame depuis main.js) ----------
 export function updateBow(dt) {
   const p = G.player, b = bow();
-  const isBow = p.attackMode === 5 && p.alive !== false;
+  const isBow = p.attackMode === 5 && p.alive !== false && !(p.ultActive > 0); // titan de feu : l'arc est inerte
 
   // --- machine à états de la charge ---
   if (isBow) {

@@ -1,0 +1,15 @@
+<!doctype html><html><head><meta charset="utf-8"></head><body><canvas id="game" width="1200" height="640"></canvas><pre id="out">R</pre>
+<script type="module">
+import { G } from './js/state.js';
+const out=[];const T=(n,f)=>{try{out.push(n+'='+(f()??'ok'))}catch(e){out.push(n+'=FAIL:'+e.message)}};
+try{
+G.state='playing';G.campaign=2;G.wave=5;G.time=1;
+G.player={x:600,y:400,r:15,hp:300,maxHp:300,level:3,xp:0,xpNext:50,potions:0,maxPotions:3,alive:true,lastHurt:-99,slowT:0,hitSlowT:0,potionCooldown:0,poisonT:0,poisonDps:0,attackMode:3,speed:2.1,ultCharge:100,ultActive:8,shieldT:0,shieldCd:0,handCd:0,handUsed:false,switchLock:0,attackCooldown:0,spinCooldown:0,spinDuration:0};
+G.inv={mats:{},items:{},equip:{},modules:{owned:[],eq:{act:null,pass:null,pass2:null}},wmode:{lance:{xp:1e9},arc:{xp:1e9},epee:{xp:1e9}}};
+G.enemies=[];G.drops=[];G.portals=[];G.particles=[];G.damageTexts=[];G.rings=[];G.bowShots=[];G.singZones=[];
+// simulation : file bouclier + spin pendant le titan -> ne doivent rien produire
+G.shieldQueued=true; G.spinQueued=true;
+T('queuedSet',()=>G.shieldQueued+'/'+G.spinQueued);
+document.getElementById('out').textContent='TITAN '+out.join('|');
+}catch(e){document.getElementById('out').textContent='FAIL '+e.message}
+</script></body></html>

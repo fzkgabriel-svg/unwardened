@@ -81,19 +81,20 @@ export function initInput() {
     // " = arc en priorité quand les deux sont possédés — le X est réservé aux modules
     const meleeKeys = { '&': 1, '1': 1 };
     if (meleeKeys[k] && G.state === 'playing' && G.player.attackMode !== meleeKeys[k]
+        && G.player.ultActive <= 0 // titan de feu : arme scellée pendant la transformation
         && weaponAllowed(G.inv, modeKey(meleeKeys[k]))) {
       G.player.attackMode = meleeKeys[k];
       G.player.switchLock = 1.25; // 1,25s sans attaque après le changement d'arme
     }
     const heavyKeys = { 'é': 3, '3': 3, "'": 3 };
-    if (heavyKeys[k] && G.state === 'playing') {
+    if (heavyKeys[k] && G.state === 'playing' && G.player.ultActive <= 0) {
       const target = weaponAllowed(G.inv, 'lance') ? 3 : weaponAllowed(G.inv, 'arc') ? 5 : null;
       if (target && G.player.attackMode !== target) {
         G.player.attackMode = target;
         G.player.switchLock = 1.25;
       }
     }
-    if (k === '"' && G.state === 'playing') {
+    if (k === '"' && G.state === 'playing' && G.player.ultActive <= 0) {
       const target = weaponAllowed(G.inv, 'arc') ? 5 : weaponAllowed(G.inv, 'lance') ? 3 : null;
       if (target && G.player.attackMode !== target) {
         G.player.attackMode = target;
