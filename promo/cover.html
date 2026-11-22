@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>body{margin:0;background:#000}canvas{display:block}</style></head>
+<body>
+<canvas id="c"></canvas>
+<script>
+// Cover adaptative : cover.html#1920x1080 | #800x1200 | #800x800 | (défaut 1600x900)
+const m = (location.hash || '').match(/(\d+)x(\d+)/);
+const cw = m ? +m[1] : 1600, ch = m ? +m[2] : 900;
+const cv = document.getElementById('c'), x = cv.getContext('2d');
+cv.width = cw; cv.height = ch;
+const W = cw, H = ch, TAU = Math.PI * 2;
+const land = W >= H, port = H > W;
+const u = Math.min(W, H) / 620; // échelle globale des éléments
+
+// ---------- ciel ----------
+const sky = x.createLinearGradient(0, 0, 0, H);
+sky.addColorStop(0, '#05030f'); sky.addColorStop(0.45, '#140b2e');
+sky.addColorStop(0.75, '#2a1245'); sky.addColorStop(1, '#0a0618');
+x.fillStyle = sky; x.fillRect(0, 0, W, H);
+const nStars = Math.round(W * H / 14000);
+for (let i = 0; i < nStars; i++) {
+  const sx = (i * 733) % W, sy = (i * 389) % (H * 0.5);
+  x.globalAlpha = (0.4 + ((i * 37) % 10) / 14) * 0.8;
+  x.fillStyle = i % 7 ? '#cfd8dc' : '#ffd740';
+  const r = 1 + (i % 5 === 0 ? 1.5 : 0);
+  x.fillRect(sx, sy, r, r);
+}
+x.globalAlpha = 1;
+// lune
+const mx = W * 0.83, my = H * 0.15, mr = H * 0.075;
+const mg = x.createRadialGradient(mx, my, mr * 0.1, mx, my, mr * 2.2);
+mg.addColorStop(0, 'rgba(255,241,118,0.9)'); mg.addColorStop(0.35, 'rgba(255,213,79,0.35)'); mg.addColorStop(1, 'rgba(255,213,79,0)');
+x.fillStyle = mg; x.beginPath(); x.arc(mx, my, mr * 2.2, 0, TAU); x.fill();
+x.fillStyle = '#fff59d'; x.beginPath(); x.arc(mx, my, mr * 0.32, 0, TAU); x.fill();
+x.fillStyle = 'rgba(179,157,219,0.5)';
+x.beginPath(); x.arc(mx - mr * 0.14, my - mr * 0.1, mr * 0.06, 0, TAU); x.fill();
+x.beginPath(); x.arc(mx + mr * 0.12, my + mr * 0.15, mr * 0.045, 0, TAU); x.fill();
+
+// ---------- collines + sol ----------
+const hy = H * (port ? 0.62 : 0.70);
+x.fillStyle = '#1a1030';
+x.beginPath(); x.moveTo(0, hy);
+for (let i = 0; i <= 8; i++) {
+  const px = i * (W / 8), py = hy - H * 0.08 + Math.sin(i * 1.7) * H * 0.06 + (i % 2) * H * 0.03;
+  x.quadraticCurveTo(px - W / 16, py - H * 0.06, px, py);
+}
+x.lineTo(W, H); x.lineTo(0, H); x.closePath(); x.fill();
+const gr = x.createLinearGradient(0, hy, 0, H);
+gr.addColorStop(0, '#22371a'); gr.addColorStop(1, '#0d1608');
+x.fillStyle = gr;
+x.beginPath(); x.moveTo(0, hy + H * 0.03);
+for (let i = 0; i <= 10; i++) x.quadraticCurveTo(i * W / 10 - W / 20, hy - H * 0.02 + Math.sin(i * 2.3) * H * 0.03, i * W / 10, hy + H * 0.03 + Math.sin(i * 1.1) * H * 0.02);
+x.lineTo(W, H); x.lineTo(0, H); x.closePath(); x.fill();
+
+// ---------- positions selon le format ----------
+const P = land
+  ? { hero: [0.80, 0.76, 1.15], boss: [0.20, 0.76, 1.45], titleY: 0.17, badgeY: 0.40 }
+  : port
+  ? { hero: [0.62, 0.82, 0.85], boss: [0.38, 0.50, 1.05], titleY: 0.14, badgeY: 0.28 }
+  : { hero: [0.75, 0.78, 0.95], boss: [0.27, 0.76, 1.15], titleY: 0.14, badgeY: 0.32 };
+
+// ---------- boss final ----------
+function finalBoss(sx, sy, s) {
+  x.save(); x.translate(sx, sy); x.scale(s * u * 1.35, s * u * 1.35);
+  const ag = x.createRadialGradient(0, -60, 10, 0, -60, 150);
+  ag.addColorStop(0, 'rgba(224,64,251,0.35)'); ag.addColorStop(1, 'rgba(74,20,140,0)');
+  x.fillStyle = ag; x.beginPath(); x.arc(0, -60, 150, 0, TAU); x.fill();
+  const bg = x.createLinearGradient(0, -160, 0, 90);
+  bg.addColorStop(0, '#6a1b9a'); bg.addColorStop(0.5, '#4a148c'); bg.addColorStop(1, '#160029');
+  x.fillStyle = bg;
+  x.beginPath();
+  x.moveTo(0, -170); x.quadraticCurveTo(60, -120, 48, -20);
+  x.quadraticCurveTo(40, 70, 0, 90); x.quadraticCurveTo(-40, 70, -48, -20);
+  x.quadraticCurveTo(-60, -120, 0, -170); x.closePath(); x.fill();
+  x.fillStyle = '#1a0030';
+  for (const sd of [-1, 1]) {
+    x.beginPath(); x.moveTo(sd * 22, -140);
+    x.quadraticCurveTo(sd * 66, -190, sd * 44, -225);
+    x.quadraticCurveTo(sd * 32, -160, sd * 14, -130); x.closePath(); x.fill();
+  }
+  x.fillStyle = '#f3e5f5';
+  x.beginPath(); x.arc(-12, -110, 5, 0, TAU); x.fill();
+  x.beginPath(); x.arc(12, -110, 5, 0, TAU); x.fill();
+  x.restore();
+}
+
+// ---------- héros ----------
+function hero(sx, sy, s, flip) {
+  x.save(); x.translate(sx, sy); x.scale(flip * s * u, s * u);
+  x.fillStyle = '#101828';
+  x.beginPath();
+  x.moveTo(0, -95); x.quadraticCurveTo(-34, -60, -40, 10); x.lineTo(-30, 95);
+  x.quadraticCurveTo(0, 112, 30, 95); x.lineTo(40, 10); x.quadraticCurveTo(34, -60, 0, -95);
+  x.closePath(); x.fill();
+  x.fillStyle = '#1c2942';
+  x.beginPath(); x.ellipse(0, -45, 24, 34, 0, 0, TAU); x.fill();
+  x.fillStyle = '#2c3e50';
+  x.beginPath(); x.arc(0, -82, 17, 0, TAU); x.fill();
+  x.fillStyle = '#ffd740';
+  x.beginPath(); x.moveTo(-3, -96); x.quadraticCurveTo(-26, -128, -44, -118); x.quadraticCurveTo(-20, -108, 2, -92); x.closePath(); x.fill();
+  x.strokeStyle = '#eceff1'; x.lineWidth = 7; x.lineCap = 'round';
+  x.beginPath(); x.moveTo(26, -60); x.lineTo(70, -150); x.stroke();
+  x.strokeStyle = '#ffd740'; x.lineWidth = 3;
+  x.beginPath(); x.moveTo(70, -150); x.lineTo(78, -166); x.stroke();
+  const lg = x.createLinearGradient(26, -60, 70, -150);
+  lg.addColorStop(0, 'rgba(255,240,150,0)'); lg.addColorStop(1, 'rgba(255,240,150,0.8)');
+  x.strokeStyle = lg; x.lineWidth = 12;
+  x.beginPath(); x.moveTo(28, -62); x.lineTo(68, -148); x.stroke();
+  x.restore();
+}
+finalBoss(P.boss[0] * W, P.boss[1] * H, P.boss[2]);
+hero(P.hero[0] * W, P.hero[1] * H, P.hero[2], -1);
+
+// ---------- braises ----------
+const nEm = Math.round(W * H / 20000);
+for (let i = 0; i < nEm; i++) {
+  const ex = (i * 211) % W, ey = H * 0.35 + ((i * 137) % (H * 0.55));
+  x.globalAlpha = (0.3 + ((i * 53) % 10) / 12) * 0.9;
+  x.fillStyle = i % 3 ? '#ff8a50' : i % 3 === 1 ? '#ffd740' : '#e040fb';
+  x.beginPath(); x.arc(ex + Math.sin(i) * u * 4, ey, (1.5 + (i % 4)) * u * 0.55, 0, TAU); x.fill();
+}
+x.globalAlpha = 1;
+
+// ---------- titre ----------
+x.textAlign = 'center';
+const ts = Math.min(H * 0.115, W * 0.15);
+const tg = x.createLinearGradient(W / 2 - ts * 4.5, 0, W / 2 + ts * 4.5, 0);
+tg.addColorStop(0, '#8a6d1f'); tg.addColorStop(0.3, '#d4af37');
+tg.addColorStop(0.5, '#fff3b0'); tg.addColorStop(0.7, '#d4af37'); tg.addColorStop(1, '#8a6d1f');
+x.font = `700 ${ts}px Georgia, serif`;
+x.shadowColor = 'rgba(212,175,55,0.65)'; x.shadowBlur = ts * 0.45;
+x.fillStyle = tg;
+const ty = P.titleY * H;
+x.fillText('LES TERRES', W / 2, ty);
+x.fillText('OUBLIÉES', W / 2, ty + ts * 1.15);
+x.shadowBlur = 0;
+x.strokeStyle = 'rgba(212,175,55,0.55)'; x.lineWidth = Math.max(1, u * 1.4);
+x.beginPath();
+x.moveTo(W / 2 - ts * 4, ty + ts * 1.55); x.lineTo(W / 2 - ts * 0.8, ty + ts * 1.55);
+x.moveTo(W / 2 + ts * 0.8, ty + ts * 1.55); x.lineTo(W / 2 + ts * 4, ty + ts * 1.55); x.stroke();
+x.fillStyle = '#d4af37';
+x.beginPath(); x.moveTo(W / 2, ty + ts * 1.4); x.lineTo(W / 2 + ts * 0.13, ty + ts * 1.55); x.lineTo(W / 2, ty + ts * 1.7); x.lineTo(W / 2 - ts * 0.13, ty + ts * 1.55); x.closePath(); x.fill();
+x.font = `italic ${ts * 0.3}px Georgia, serif`; x.fillStyle = '#c9b98a';
+x.fillText('~ Un RPG 2D de survie apocalyptique ~', W / 2, ty + ts * 2.15);
+// badges
+const badges = ['20 VAGUES', 'BOSS FINAL', 'FORGE', 'MONDES PROCÉDURAUX'];
+x.font = `bold ${ts * 0.24}px Segoe UI`;
+let bx = W / 2 - (badges.length * (ts * 2.6 + u * 14)) / 2, by = P.badgeY * H;
+for (const b of badges) {
+  const w = x.measureText(b).width + ts * 0.55;
+  x.fillStyle = 'rgba(0,0,0,0.55)';
+  x.beginPath(); x.roundRect(bx, by, w, ts * 0.52, ts * 0.26); x.fill();
+  x.strokeStyle = 'rgba(255,215,64,0.5)'; x.lineWidth = 1.5;
+  x.beginPath(); x.roundRect(bx, by, w, ts * 0.52, ts * 0.26); x.stroke();
+  x.fillStyle = '#ffd740';
+  x.fillText(b, bx + w / 2, by + ts * 0.37);
+  bx += w + u * 14;
+}
+// cadre + vignette
+x.strokeStyle = 'rgba(212,175,55,0.4)'; x.lineWidth = Math.max(2, u * 2);
+x.strokeRect(u * 12, u * 12, W - u * 24, H - u * 24);
+x.strokeStyle = 'rgba(212,175,55,0.18)'; x.lineWidth = 1;
+x.strokeRect(u * 20, u * 20, W - u * 40, H - u * 40);
+const vg = x.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.75);
+vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.55)');
+x.fillStyle = vg; x.fillRect(0, 0, W, H);
+</script>
+</body></html>
