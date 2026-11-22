@@ -17,7 +17,8 @@ export function drawMinimap() {
 
   // ---- panneau objectif (parchemin, AU-DESSUS de la carte) ----
   const ow = 210, oh = 54;
-  const ox = mx + MS / 2 - ow / 2, oy = my - 6 - oh - 8;
+  // centré sur la carte mais jamais coupé par le bord droit de l'écran
+  const ox = Math.min(mx + MS / 2 - ow / 2, W - ow - 10), oy = my - 6 - oh - 8;
   parchment(ox, oy, ow, oh, 0.9);
   ctx.strokeStyle = HPAL.goldLo; ctx.lineWidth = 1;
   roundRect(ox + 2.5, oy + 2.5, ow - 5, oh - 5, 5); ctx.stroke();

@@ -238,7 +238,7 @@ export function updateTutorial(dt) {
 // ---------- rendu ----------
 // Zones du HUD mises en évidence (zoom + contour) pendant les étapes
 const HUD_SPOT = {
-  wave: { x: 1000, y: 386, w: 216, h: 62 }, // parchemin vague/monstres au-dessus de la minimap
+  wave: { x: 976, y: 386, w: 216, h: 62 }, // parchemin vague/monstres au-dessus de la minimap
   xp:   { x: 14, y: 88, w: 330, h: 18 },    // barre XP (y≈92 absolu après remontée des barres)
 };
 
