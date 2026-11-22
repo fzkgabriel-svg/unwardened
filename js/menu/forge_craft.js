@@ -2,7 +2,7 @@ import { G, ctx, W, H, TAU, saveStats, finalWave } from '../state.js';
 import { roundRect, drawMatIcon, drawItemIcon, itemTier } from '../utils.js';
 import { regenerateDecor } from '../graphics.js';
 import { ACHIEVEMENTS, unlocked, achievementCount, checkAchievements, achInfo, isClaimed, claimReward, achTabList, unclaimedInTab, adminUnlockAll } from '../achievements.js';
-import { ITEMS, MATS, ITEM_RARITY, canCraft, craft, toggleEquip, equipBonuses, getDur, canRepair, repairItem, repairCost, loadInv, addMaterial, modeInfo, addWmodeXp, modeMult, MODE_MAX_LVL, setInvNoSave, itemBonuses } from '../inventory.js';
+import { ITEMS, MATS, ITEM_RARITY, canCraft, craft, toggleEquip, equipBonuses, getDur, canRepair, repairItem, repairCost, loadInv, addMaterial, modeInfo, addWmodeXp, modeMult, MODE_MAX_LVL, setInvNoSave, itemBonuses, DUR_MAX, durState, damagedItems, repairAllCost } from '../inventory.js';
 import { spawnEnemy, spawnFinalBoss } from '../enemies.js';
 import { gainXp } from '../player.js';
 import { curWorld, syncCamera, regenerateWorld, reloadWorlds, campaignStart } from '../world.js';
@@ -10,7 +10,7 @@ import { sfxCraft, sfxRepair, sfxEquip, sfxConfirm, sfxClick } from '../audio.js
 import { MAX_SLOTS, activeSlot, allSlots, slotMeta, slotSummary, createChar, selectChar, deselectChar, resetChar, fmtPlaytime, fmtDate, checkAdminPass, adminOK as _adminOK, adminList, adminWipeAll, adminLock } from '../chars.js';
 import { inR, fitText, wrapLines, hexA, fmtTime, overline, panel, overlineCentered, drawMenuButton, drawAdminPwInput, menuButtons, menuButtonAt, adminUnlocked, campaignUnlocked, UI, SERIF, C_TEXT, C_MUTED, C_GOLD, MENU_X, MENU_W, MENU_ITEMS } from './common.js';
 
-import { craftTabs, craftZones, craftUI, forgeScroll, forgeScrollMax, upgradeCards, upgradeCost, upgradeXpGain } from './forge_state.js';
+import { craftTabs, craftZones, craftUI, forgeScroll, forgeScrollMax, upgradeCards, upgradeCost, upgradeXpGain, repairRows, repairAllBtn, repairRowBtn, SLOT_LABEL } from './forge_state.js';
 
 // animation de forge cinématique : halo de foyer, braises, enclume sur souche,
 // lingot qui rougeoie, marteau avec traînée de mouvement, impacts étincelants
@@ -272,6 +272,7 @@ export function drawForgeCraft(L) {
   // ---------- chips de catégories ----------
   for (const t of craftTabs(L)) fchip(t.r, t.label, craftUI.cat === t.key, t.n);
   if (craftUI.cat === 'upgrade') { drawUpgradeTab(L); return; }
+  if (craftUI.cat === 'repair') { drawRepairTab(L); return; }
 
   const Z = craftZones(L);
   const { lx, lw, cx2, cw2, rx, rw, y0, y1 } = Z;
@@ -465,3 +466,110 @@ function drawUpgradeTab(L) {
   }
 }
 
+
+// ---------- RÉPARATION : équipements endommagés + réparation groupée ----------
+const DUR_COL = { ok: '#69f0ae', warn: '#ffd740', crit: '#ff9800', broken: '#ff5252' };
+
+function drawRepairTab(L) {
+  const all = damagedItems(G.inv);
+  const rows = repairRows(L);
+  const total = repairAllCost(G.inv);
+  const anyOk = all.some(id => canRepair(G.inv, id));
+
+  // en-tête
+  ctx.textAlign = 'left';
+  ctx.fillStyle = C_GOLD; ctx.font = `bold 13px ${UI}`;
+  ctx.fillText('🔧 RÉPARATION', L.cx + 30, L.cy + 142);
+  ctx.fillStyle = C_MUTED; ctx.font = `italic 11px ${UI}`;
+  ctx.fillText(all.length
+    ? `${all.length} équipement${all.length > 1 ? 's' : ''} endommagé${all.length > 1 ? 's' : ''} — le coût suit l'usure (~50 % du prix de forge au total)`
+    : 'Tous tes équipements sont en parfait état', L.cx + 30, L.cy + 160);
+
+  // coût total à gauche du bouton « tout réparer »
+  const ab = repairAllBtn(L);
+  if (total) {
+    ctx.textAlign = 'right'; ctx.font = `10.5px Consolas, monospace`;
+    let tx = ab.x - 14;
+    const parts = Object.keys(total).map(m => `${MATS[m].name} ×${total[m]}`);
+    ctx.fillStyle = '#d4b062';
+    ctx.fillText(fitText(parts.join('  ·  '), 300), tx, ab.y + ab.h / 2 + 4);
+  }
+  // bouton RÉPARER TOUT
+  const okAll = anyOk;
+  ctx.fillStyle = okAll ? 'rgba(255,140,0,0.35)' : 'rgba(255,255,255,0.05)';
+  roundRect(ab.x, ab.y, ab.w, ab.h, 8); ctx.fill();
+  ctx.strokeStyle = okAll ? '#ff9800' : 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1.5;
+  roundRect(ab.x, ab.y, ab.w, ab.h, 8); ctx.stroke();
+  ctx.fillStyle = okAll ? '#ffe0b2' : '#78909c'; ctx.font = `bold 12px ${UI}`; ctx.textAlign = 'center';
+  ctx.fillText(okAll ? '🔧  RÉPARER TOUT' : (all.length ? 'SOUS LES FERS' : 'RIEN À FAIRE'), ab.x + ab.w / 2, ab.y + ab.h / 2 + 4);
+
+  if (!rows.length) {
+    ctx.fillStyle = '#69f0ae'; ctx.font = `italic 13px ${UI}`; ctx.textAlign = 'center';
+    ctx.fillText('Aucun équipement à réparer — frappe et forge pour les user !', L.cx + L.cw / 2, L.cy + 300);
+    return;
+  }
+
+  // liste scrollable (clip)
+  const vy0 = L.cy + 174, vy1 = L.cy + L.ch - 10;
+  ctx.save();
+  ctx.beginPath(); ctx.rect(L.cx + 16, vy0, L.cw - 32, vy1 - vy0); ctx.clip();
+  for (const row of rows) {
+    const it = ITEMS[row.id];
+    if (!it) continue;
+    const dur = getDur(G.inv, row.id);
+    const st = durState(dur);
+    const col = DUR_COL[st];
+    const hov = inR(row, G.mouse.x, G.mouse.y);
+    // carte teintée par l'état
+    ctx.fillStyle = st === 'broken' ? 'rgba(255,60,60,0.10)' : st === 'crit' ? 'rgba(255,140,0,0.10)'
+      : st === 'warn' ? 'rgba(255,215,0,0.07)' : hov ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.045)';
+    roundRect(row.x, row.y, row.w, row.h, 9); ctx.fill();
+    ctx.strokeStyle = col; ctx.lineWidth = st === 'ok' ? 1 : 1.8;
+    roundRect(row.x, row.y, row.w, row.h, 9); ctx.stroke();
+    const cy = row.y + row.h / 2;
+    // icône
+    drawItemIcon(it, row.x + 30, cy, 17);
+    // nom + emplacement
+    ctx.textAlign = 'left';
+    ctx.fillStyle = st === 'broken' ? '#ff8a80' : '#ffe9a3'; ctx.font = `bold 13px ${UI}`;
+    ctx.fillText(fitText(it.name + (st === 'broken' ? ' 💥' : ''), 240), row.x + 52, cy - 6);
+    ctx.fillStyle = '#90a4ae'; ctx.font = `10px ${UI}`;
+    ctx.fillText(SLOT_LABEL[it.slot] || it.slot.toUpperCase(), row.x + 52, cy + 12);
+    // barre de durabilité + valeurs
+    const bx = row.x + 300, bw = 190, by = cy - 7;
+    ctx.fillStyle = 'rgba(0,0,0,0.4)'; roundRect(bx - 1, by - 1, bw + 2, 12, 6); ctx.fill();
+    ctx.fillStyle = col;
+    if (dur > 0) roundRect(bx, by, bw * dur / DUR_MAX, 10, 5), ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.font = `bold 10px Consolas, monospace`; ctx.textAlign = 'center';
+    ctx.fillText(`${Math.round(dur)} / ${DUR_MAX}`, bx + bw / 2, by + 9);
+    // coût en matériaux
+    const rc = repairCost(G.inv, row.id);
+    const okR = canRepair(G.inv, row.id);
+    ctx.textAlign = 'left'; ctx.font = `10.5px Consolas, monospace`;
+    let cxm = bx + bw + 16;
+    for (const m in rc) {
+      const have = G.inv.mats[m] || 0;
+      ctx.fillStyle = have >= rc[m] ? '#a5d6a7' : '#ef9a9a';
+      ctx.fillText(`${MATS[m].name} ${have}/${rc[m]}`, cxm, cy + 4);
+      cxm += ctx.measureText(`${MATS[m].name} ${have}/${rc[m]}`).width + 12;
+    }
+    // bouton réparer
+    const rb = repairRowBtn(row);
+    ctx.fillStyle = okR ? 'rgba(76,175,80,0.4)' : 'rgba(255,255,255,0.06)';
+    roundRect(rb.x, rb.y, rb.w, rb.h, 8); ctx.fill();
+    ctx.strokeStyle = okR ? '#81c784' : 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1.4;
+    roundRect(rb.x, rb.y, rb.w, rb.h, 8); ctx.stroke();
+    ctx.fillStyle = okR ? '#fff' : '#78909c'; ctx.font = `bold 11.5px ${UI}`; ctx.textAlign = 'center';
+    ctx.fillText(okR ? '🔧 RÉPARER' : 'MANQUE MATS', rb.x + rb.w / 2, rb.y + rb.h / 2 + 4);
+  }
+  ctx.restore();
+  // scrollbar
+  const smax = forgeScrollMax();
+  if (smax > 0) {
+    const tx = L.cx + L.cw - 22, ty = vy0, th = vy1 - vy0;
+    ctx.fillStyle = 'rgba(255,255,255,0.12)'; roundRect(tx, ty, 6, th, 3); ctx.fill();
+    const thumbH = Math.max(24, th * (th / (th + smax)));
+    const thumbY = ty + (th - thumbH) * (forgeScroll / smax);
+    ctx.fillStyle = 'rgba(255,215,64,0.6)'; roundRect(tx, thumbY, 6, thumbH, 3); ctx.fill();
+  }
+}

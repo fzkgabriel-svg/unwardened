@@ -2,7 +2,7 @@ import { G, ctx, W, H, TAU, saveStats, finalWave } from '../state.js';
 import { roundRect, drawMatIcon, drawItemIcon, itemTier } from '../utils.js';
 import { regenerateDecor } from '../graphics.js';
 import { ACHIEVEMENTS, unlocked, achievementCount, checkAchievements, achInfo, isClaimed, claimReward, achTabList, unclaimedInTab, adminUnlockAll } from '../achievements.js';
-import { ITEMS, MATS, ITEM_RARITY, canCraft, craft, toggleEquip, useConsumable, equipBonuses, getDur, canRepair, repairItem, repairCost, loadInv, addMaterial, modeInfo, addWmodeXp, modeMult, MODE_MAX_LVL, setInvNoSave, toggleLoadoutWeapon } from '../inventory.js';
+import { ITEMS, MATS, ITEM_RARITY, canCraft, craft, toggleEquip, useConsumable, equipBonuses, getDur, canRepair, repairItem, repairCost, loadInv, addMaterial, modeInfo, addWmodeXp, modeMult, MODE_MAX_LVL, setInvNoSave, toggleLoadoutWeapon, damagedItems, repairAll, repairAllCost, DUR_MAX, durState } from '../inventory.js';
 import { spawnEnemy, spawnFinalBoss } from '../enemies.js';
 import { gainXp } from '../player.js';
 import { curWorld, syncCamera, regenerateWorld, reloadWorlds, campaignStart } from '../world.js';
@@ -26,6 +26,9 @@ export function forgeScrollMax() {
   if (forgeTab === 'inv') {
     const g = invCells(L);
     return Math.max(0, g.totalH - g.view.h);
+  }
+  if (forgeTab === 'craft' && craftUI.cat === 'repair') {
+    return Math.max(0, repairCount() * 64 - (L.ch - 188));
   }
   if (forgeTab === 'craft' && craftUI.cat !== 'upgrade') {
     const rows = craftList(L).length;
@@ -153,14 +156,15 @@ export const CRAFT_CATS = [
   ['weapon',  'ARMES'],
   ['armor',   'ARMURES'],
   ['charm',   'ACCESSOIRES'],
-  ['upgrade', 'AMÉLIORATIONS']
+  ['upgrade', 'AMÉLIORATIONS'],
+  ['repair',  'RÉPARATION']
 ];
 export function craftCatOf(it) { return invCatOf(it); } // même classification que l'inventaire
 
 // ids de recettes visibles pour la catégorie forge courante
 export function craftList(L) {
   const cat = craftUI.cat;
-  if (cat === 'upgrade') return [];
+  if (cat === 'upgrade' || cat === 'repair') return [];
   let ids = Object.keys(ITEMS);
   if (cat !== 'all') ids = ids.filter(id => craftCatOf(ITEMS[id]) === cat);
   // tri : fabricables d'abord, puis par rareté décroissante
@@ -174,11 +178,11 @@ export function craftList(L) {
 // chips de catégories forge (partagé dessin / clic)
 export function craftTabs(L) {
   const tx = L.cx + 30, ty = L.cy + 96, th = 30;
-  const cw = (L.cw - 60 - 4 * 8) / 5;
+  const cw = (L.cw - 60 - 5 * 8) / 6;
   return CRAFT_CATS.map(([key, label], i) => ({
     key, label,
     r: { x: tx + i * (cw + 8), y: ty, w: cw, h: th },
-    n: key === 'upgrade' ? 3 : craftList(L).length
+    n: key === 'upgrade' ? 3 : key === 'repair' ? repairCount() : craftList(L).length
   }));
 }
 
@@ -221,6 +225,26 @@ export function upgradeCards(L) {
     btn: { x: x0 + i * (cw + gap) + 18, y: y0 + ch - 52, w: cw - 36, h: 36 }
   }));
 }
+// ---------- RÉPARATION : liste des équipements endommagés ----------
+export function repairCount() { return damagedItems(G.inv).length; }
+// lignes de la liste de réparation (scroll forgeScroll, tri : plus endommagé d'abord)
+export function repairRows(L) {
+  const y0 = L.cy + 178, y1 = L.cy + L.ch - 14;
+  const lx = L.cx + 30, lw = L.cw - 60;
+  const rh = 56, gap = 8;
+  return damagedItems(G.inv).map((id, i) => ({
+    id, x: lx, y: y0 + i * (rh + gap) - forgeScroll, w: lw, h: rh
+  })).filter(r => r.y + r.h > y0 - 60 && r.y < y1 + 60);
+}
+// bouton « tout réparer » en haut à droite de l'onglet
+export function repairAllBtn(L) {
+  return { x: L.cx + L.cw - 240, y: L.cy + 130, w: 210, h: 30 };
+}
+// bouton de réparation d'une ligne (à droite de la ligne)
+export function repairRowBtn(row) {
+  return { x: row.x + row.w - 150, y: row.y + row.h / 2 - 15, w: 130, h: 30 };
+}
+
 // liste des objets possédés pour l'inventaire (rétro-compat : utilisé par les anciens appels)
 export function invItems(L) {
   const g = invCells(L);
@@ -238,7 +262,7 @@ export const SLOT_LABEL = { weapon: '⚔️ ARME', armor: '🛡️ ARMURE', helm
 function itemDetailLayout(dur, conso) {
   const cw = 620, ch = conso ? 470 : 500, cx = W / 2 - cw / 2, cy = H / 2 - ch / 2;
   const by = cy + ch - 66;
-  const two = dur < 100 && !conso;
+  const two = dur < DUR_MAX && !conso;
   return {
     cx, cy, cw, ch,
     close: { x: cx + cw - 48, y: cy + 12, w: 36, h: 32 },
@@ -282,7 +306,7 @@ export function drawItemDetail() {
   ctx.fillStyle = broken ? '#ff8a80' : equipped ? '#69f0ae' : mateIt ? '#ffcc80' : '#90a4ae';
   ctx.font = 'italic 12.5px Inter, sans-serif';
   const statusTxt = conso ? `Consommable · tu en possèdes ×${qty}`
-    : broken ? '💥 CASSÉ — répare-le pour le rééquiper'
+    : broken ? '💥 CASSÉ — reste équipé mais sans aucun bonus : répare-le !'
     : equipped ? '✓ Actuellement équipé'
     : mateIt ? `🔄 Équiper remplacera : ${mateIt.name} (${mateIt.desc})`
     : 'Dans ton inventaire';
@@ -318,10 +342,11 @@ export function drawItemDetail() {
     ctx.fillText('🔧 DURABILITÉ', L.cx + 42, dy);
     const dbx = L.cx + 42, dbw = L.cw - 84, dby = dy + 8;
     ctx.fillStyle = 'rgba(255,255,255,0.12)'; roundRect(dbx, dby, dbw, 12, 6); ctx.fill();
-    const dc = dur > 50 ? '#69f0ae' : dur > 25 ? '#ffd740' : '#ff5252';
-    if (dur > 0) { ctx.fillStyle = dc; roundRect(dbx, dby, dbw * dur / 100, 12, 6); ctx.fill(); }
+    const st = durState(dur);
+    const dc = st === 'ok' ? '#69f0ae' : st === 'warn' ? '#ffd740' : '#ff5252';
+    if (dur > 0) { ctx.fillStyle = dc; roundRect(dbx, dby, dbw * dur / DUR_MAX, 12, 6); ctx.fill(); }
     ctx.fillStyle = '#fff'; ctx.font = 'bold 11px Inter, sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText(broken ? 'CASSÉ' : `${Math.round(dur)} %`, dbx + dbw / 2, dby + 10);
+    ctx.fillText(broken ? 'CASSÉ' : `${Math.round(dur)} / ${DUR_MAX}`, dbx + dbw / 2, dby + 10);
     ctx.textAlign = 'left';
     ctx.font = 'bold 13px Inter, sans-serif'; ctx.fillStyle = '#ffd740';
     ctx.fillText('💰 RÉPARATION', L.cx + 42, dy + 42);
@@ -331,12 +356,12 @@ export function drawItemDetail() {
       ctx.fillText(fitText(Object.keys(rc).map(m => `${MATS[m].name} ×${rc[m]}`).join('  ·  '), L.cw - 240), L.cx + 140, dy + 42);
     } else {
       ctx.fillStyle = '#69f0ae';
-      ctx.fillText(dur >= 100 ? 'Parfaite — aucune réparation nécessaire' : 'Matériaux insuffisants', L.cx + 140, dy + 42);
+      ctx.fillText(dur >= DUR_MAX ? 'Parfaite — aucune réparation nécessaire' : 'Matériaux insuffisants', L.cx + 140, dy + 42);
     }
   }
 
   // boutons : RÉPARER + ÉQUIPER (ou UTILISER pour un conso)
-  if (!conso && dur < 100) {
+  if (!conso && dur < DUR_MAX) {
     const okR = canRepair(G.inv, id);
     const rb = L.repair;
     ctx.fillStyle = okR ? 'rgba(255,140,0,0.4)' : 'rgba(255,255,255,0.06)';
@@ -436,6 +461,27 @@ export function forgeClickAt(x, y) {
         craftUI.cat = t.key; forgeScroll = 0; craftUI.sel = null; itemDetail = null;
         return 'ctab';
       }
+    }
+    if (craftUI.cat === 'repair') {
+      // RÉPARER TOUT : consomme les matériaux de tout ce qui est abordable
+      const all = repairAllBtn(L);
+      const total = repairAllCost(G.inv);
+      const anyOk = damagedItems(G.inv).some(id => canRepair(G.inv, id));
+      if (inR(all, x, y) && anyOk) {
+        const r = repairAll(G.inv);
+        if (r.repaired) { sfxRepair(); forgeScroll = 0; }
+        return 'repairall';
+      }
+      for (const row of repairRows(L)) {
+        const rb = repairRowBtn(row);
+        if (inR(rb, x, y)) {
+          if (canRepair(G.inv, row.id)) { repairItem(G.inv, row.id); sfxRepair(); return 'repair'; }
+          return 'repairno';
+        }
+        // clic sur la ligne -> fiche détail de l'objet
+        if (inR(row, x, y)) { itemDetail = row.id; return 'open'; }
+      }
+      return null;
     }
     if (craftUI.cat === 'upgrade') {
       // AMÉLIORER une arme : dépense des matériaux pour +10 % du XP requis

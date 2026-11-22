@@ -2,7 +2,7 @@ import { G, ctx, W, H, TAU, saveStats, finalWave } from '../state.js';
 import { roundRect, drawMatIcon, drawItemIcon, itemTier } from '../utils.js';
 import { regenerateDecor } from '../graphics.js';
 import { ACHIEVEMENTS, unlocked, achievementCount, checkAchievements, achInfo, isClaimed, claimReward, achTabList, unclaimedInTab, adminUnlockAll } from '../achievements.js';
-import { ITEMS, MATS, canCraft, craft, toggleEquip, equipBonuses, getDur, canRepair, repairItem, repairCost, loadInv, addMaterial, modeInfo, addWmodeXp, modeMult, MODE_MAX_LVL, setInvNoSave, modeKey, WEAPON_MODES } from '../inventory.js';
+import { ITEMS, MATS, canCraft, craft, toggleEquip, equipBonuses, getDur, canRepair, repairItem, repairCost, loadInv, addMaterial, modeInfo, addWmodeXp, modeMult, MODE_MAX_LVL, setInvNoSave, modeKey, WEAPON_MODES, DUR_MAX } from '../inventory.js';
 import { spawnEnemy, spawnFinalBoss } from '../enemies.js';
 import { gainXp } from '../player.js';
 import { curWorld, syncCamera, regenerateWorld, reloadWorlds, campaignStart } from '../world.js';
@@ -43,11 +43,12 @@ export function startGame() {
   if (G.state !== 'menu') return;
   if (activeSlot() < 0) { G.menuView = 'characters'; return; } // il faut un héros
   // avertissement bloquant : équipement à moins de 20 % -> popup de confirmation
+  const DUR_WARN = DUR_MAX * 0.2;
   if (!G._durBypass) {
     const low = [];
     for (const s in G.inv.equip) {
       const id = G.inv.equip[s];
-      if (id && getDur(G.inv, id) < 20) low.push(ITEMS[id].name);
+      if (id && getDur(G.inv, id) < DUR_WARN) low.push(ITEMS[id].name);
     }
     if (low.length) { G.durWarn = low; return; }
   }
@@ -83,8 +84,9 @@ export function startGame() {
   G.achToast = null; G.warnToast = null;
   for (const slot in G.inv.equip) {
     const id = G.inv.equip[slot];
-    if (id && getDur(G.inv, id) < 20) {
-      G.warnToast = { name: `⚠️ ${ITEMS[id].name} : durabilité ${Math.floor(getDur(G.inv, id))} % — répare-le à la forge !`, t: 6 };
+    const d = id ? getDur(G.inv, id) : DUR_MAX;
+    if (id && d < DUR_WARN) {
+      G.warnToast = { name: `⚠️ ${ITEMS[id].name} : durabilité ${Math.round(d / DUR_MAX * 100)} % — répare-le à la forge !`, t: 6 };
       break;
     }
   }

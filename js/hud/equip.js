@@ -3,7 +3,7 @@
 // sélection (l'arme active porte la couleur de son mode). Aucun panneau.
 import { G, ctx, W } from '../state.js';
 import { roundRect } from '../utils.js';
-import { ITEMS, getDur } from '../inventory.js';
+import { ITEMS, getDur, DUR_MAX, durState } from '../inventory.js';
 import { drawItemIcon } from '../utils.js';
 import { HPAL } from './frame.js';
 
@@ -43,9 +43,10 @@ export function drawEquipPanel() {
       const dbw = 26, dbx = cx - dbw / 2, dby = cy + 17;
       ctx.fillStyle = 'rgba(0,0,0,0.6)';
       roundRect(dbx - 1, dby - 1, dbw + 2, 4, 2); ctx.fill();
-      const dc = dur > 50 ? HPAL.green : dur > 25 ? '#d4a84b' : HPAL.red;
+      const st = durState(dur);
+      const dc = st === 'ok' ? HPAL.green : st === 'warn' ? '#d4a84b' : HPAL.red;
       ctx.fillStyle = broken ? HPAL.red : dc;
-      if (dur > 0) { roundRect(dbx, dby, dbw * dur / 100, 2, 1); ctx.fill(); }
+      if (dur > 0) { roundRect(dbx, dby, dbw * dur / DUR_MAX, 2, 1); ctx.fill(); }
     } else {
       // emplacement vide : cercle pointillé discret
       ctx.strokeStyle = 'rgba(216,196,154,0.22)'; ctx.lineWidth = 1;

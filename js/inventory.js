@@ -169,7 +169,12 @@ const KEY = () => storeKey('inv_v3');
 export function loadInv() {
   try {
     const d = JSON.parse(localStorage.getItem(KEY()));
-    if (d && d.mats && d.items && d.equip) { d.dur = d.dur || {}; d.wmode = d.wmode || {}; d.buffs = d.buffs || {}; d.weapons = d.weapons || ['epee', 'lance']; return d; }
+    if (d && d.mats && d.items && d.equip) {
+      d.dur = d.dur || {}; d.wmode = d.wmode || {}; d.buffs = d.buffs || {}; d.weapons = d.weapons || ['epee', 'lance'];
+      // migration durabilité : l'ancienne échelle 0-100 devient 0-DUR_MAX (×2)
+      for (const k in d.dur) if (d.dur[k] > 0) d.dur[k] = Math.min(DUR_MAX, Math.round(d.dur[k] * (DUR_MAX / 100)));
+      return d;
+    }
   } catch (e) {}
   // reset complet : on efface toutes les anciennes sauvegardes d'inventaire
   for (const k of ['rpg2d_inv', 'rpg2d_inv_v2', 'rpg2d_inv_v3', KEY()]) {
@@ -203,7 +208,7 @@ export function craft(inv, id) {
   for (const k in it.cost) inv.mats[k] -= it.cost[k];
   inv.items[id] = it.conso ? (inv.items[id] || 0) + 1 : true; // conso = compteur
   inv.dur = inv.dur || {};
-  inv.dur[id] = 100; // tout objet forgé commence à 100 % de durabilité
+  inv.dur[id] = DUR_MAX; // tout objet forgé commence à durabilité maximale
   saveInv(inv);
   return true;
 }
@@ -211,7 +216,8 @@ export function craft(inv, id) {
 export function toggleEquip(inv, id) {
   const it = ITEMS[id];
   if (it && it.conso) return false; // un consommable ne s'équipe pas
-  if (getDur(inv, id) <= 0) return false; // un objet cassé ne s'équipe pas
+  // un objet cassé ne peut pas être ÉQUIPÉ, mais peut être retiré s'il l'est déjà
+  if (getDur(inv, id) <= 0 && inv.equip[it.slot] !== id) return false;
   const slot = it.slot;
   inv.equip[slot] = inv.equip[slot] === id ? null : id;
   saveInv(inv);
@@ -233,47 +239,68 @@ export function useConsumable(inv, id) {
 }
 
 // ---------- DURABILITÉ ----------
-// inv.dur[id] = 0-100, persisté avec l'inventaire ; absent = 100 (objets anciens)
+// inv.dur[id] = 0-DUR_MAX, persisté avec l'inventaire ; absent = DUR_MAX (objets anciens)
+export const DUR_MAX = 200;
 export function getDur(inv, id) {
-  return inv.dur && inv.dur[id] !== undefined ? inv.dur[id] : 100;
+  return inv.dur && inv.dur[id] !== undefined ? inv.dur[id] : DUR_MAX;
 }
 function setDur(inv, id, v) {
   inv.dur = inv.dur || {};
-  inv.dur[id] = Math.max(0, Math.min(100, v));
+  inv.dur[id] = Math.max(0, Math.min(DUR_MAX, v));
 }
+// couleur d'état d'une durabilité (partagée menus + HUD)
+export function durState(d) { return d <= 0 ? 'broken' : d < DUR_MAX * 0.3 ? 'crit' : d < DUR_MAX * 0.6 ? 'warn' : 'ok'; }
 
-// usure à chaque coup subi : l'armure trinque le plus, l'arme et le talisman moins.
-// Retourne { broken, wear } : nom du premier objet cassé + usure par objet
-// (id -> % de durabilité perdue), pour le résumé de fin de partie.
-const SLOT_WEAR = { weapon: 1.5, armor: 3.0, helm: 2.2, gloves: 1.2, charm: 1.0, boots: 0.8 };
+// usure à chaque coup SUBI : l'armure trinque le plus, le casque et les gants moins.
+// L'arme ne use plus ici : elle s'use à l'attaque (wearWeaponUse).
+// Un objet à 0 % RESTE équipé mais ne donne plus aucun bonus (equipBonuses
+// ignore dur <= 0) — il n'est ni perdu ni déséquippé : il faut le réparer.
+const SLOT_WEAR = { armor: 3.0, helm: 2.2, gloves: 1.2, charm: 1.0, boots: 0.8 };
 export function wearEquipment(inv) {
   if (!inv || !inv.equip) return { broken: null, wear: {} };
   let broken = null;
   const wear = {};
   for (const slot in inv.equip) {
     const id = inv.equip[slot];
-    if (!id) continue;
+    if (!id || slot === 'weapon') continue; // l'arme use à l'attaque, pas en encaissant
     const d0 = getDur(inv, id);
     const d = d0 - SLOT_WEAR[slot] * (0.75 + Math.random() * 0.5);
     const lost = d0 - Math.max(0, d);
     if (lost > 0) wear[id] = (wear[id] || 0) + lost;
     if (d <= 0) {
+      if (d0 > 0) broken = broken || (ITEMS[id] ? ITEMS[id].name : id); // alerte seulement à la cassure
       setDur(inv, id, 0);
-      inv.equip[slot] = null; // cassé : déséquipé, à réparer à la forge
-      broken = broken || (ITEMS[id] ? ITEMS[id].name : id);
     } else setDur(inv, id, d);
   }
   saveInv(inv);
   return { broken, wear };
 }
 
-// coût de réparation : ~50 % du coût de forge, proportionnel à l'usure
+// usure de l'arme à chaque attaque : ~0,22 pt par coup de mêlée, 0,14 par trait d'arc.
+// Retourne le nom de l'arme si elle vient de casser (transition >0 -> 0).
+export function wearWeaponUse(inv, pts) {
+  const id = inv && inv.equip ? inv.equip.weapon : null;
+  if (!id) return null;
+  const d0 = getDur(inv, id);
+  const d = d0 - pts * (0.8 + Math.random() * 0.4);
+  if (d <= 0) {
+    setDur(inv, id, 0);
+    saveInv(inv);
+    return d0 > 0 ? (ITEMS[id] ? ITEMS[id].name : id) : null;
+  }
+  setDur(inv, id, d);
+  saveInv(inv);
+  return null;
+}
+
+// ---------- RÉPARATION ----------
+// coût : ~50 % du coût de forge, proportionnel à l'usure (réparation complète = 50 %)
 export function repairCost(inv, id) {
-  const missing = 100 - getDur(inv, id);
+  const missing = DUR_MAX - getDur(inv, id);
   if (missing <= 0) return null;
   const cost = {};
   for (const m in ITEMS[id].cost) {
-    cost[m] = Math.max(1, Math.ceil(ITEMS[id].cost[m] * (missing / 100) * 0.5));
+    cost[m] = Math.max(1, Math.ceil(ITEMS[id].cost[m] * (missing / DUR_MAX) * 0.5));
   }
   return cost;
 }
@@ -287,9 +314,42 @@ export function repairItem(inv, id) {
   if (!canRepair(inv, id)) return false;
   const c = repairCost(inv, id);
   for (const m in c) inv.mats[m] -= c[m];
-  setDur(inv, id, 100);
+  setDur(inv, id, DUR_MAX);
   saveInv(inv);
   return true;
+}
+// tous les équipements possédés endommagés (dur < max), cassés d'abord puis par usure
+export function damagedItems(inv) {
+  return Object.keys(inv.items || {})
+    .filter(id => ITEMS[id] && !ITEMS[id].conso && getDur(inv, id) < DUR_MAX)
+    .sort((a, b) => getDur(inv, a) - getDur(inv, b));
+}
+// coût total pour tout réparer (null si rien à réparer)
+export function repairAllCost(inv) {
+  const ids = damagedItems(inv);
+  if (!ids.length) return null;
+  const cost = {};
+  for (const id of ids) {
+    const c = repairCost(inv, id);
+    if (!c) continue;
+    for (const m in c) cost[m] = (cost[m] || 0) + c[m];
+  }
+  return Object.keys(cost).length ? cost : null;
+}
+// répare tout ce qui est abordable ; retourne { repaired, skipped, cost }
+export function repairAll(inv) {
+  let repaired = 0;
+  const cost = {};
+  for (const id of damagedItems(inv)) {
+    if (!canRepair(inv, id)) continue;
+    const c = repairCost(inv, id);
+    for (const m in c) { inv.mats[m] -= c[m]; cost[m] = (cost[m] || 0) + c[m]; }
+    setDur(inv, id, DUR_MAX);
+    repaired++;
+  }
+  const skipped = damagedItems(inv).length;
+  saveInv(inv);
+  return { repaired, skipped, cost };
 }
 
 // ---------- PROGRESSION ÉPÉE / LANCE ----------

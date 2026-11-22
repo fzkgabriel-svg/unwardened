@@ -5,6 +5,14 @@ import { worldW, worldH } from './world.js';
 import { sfxSlash, sfxThrust, sfxSpin, sfxShield, sfxNuke, sfxBossAtk } from './audio.js';
 import { waveBonus, clampW, clampH, playerAngle, inMeleeArc } from './attacks_util.js';
 import { doIceUlt, doHellUlt } from './attacks_ult.js';
+import { wearWeaponUse } from './inventory.js';
+
+// usure de l'arme équipée à chaque attaque (0 % = cassée, sans bonus jusqu'à réparation)
+function weaponWear(pts) {
+  if (!G.inv) return;
+  const broken = wearWeaponUse(G.inv, pts);
+  if (broken) addDamageText(G.player.x, G.player.y - 42, `💥 ${broken} CASSÉ !`, '#ff5252');
+}
 export * from './attacks_util.js';
 export * from './attacks_ult.js';
 
@@ -25,6 +33,7 @@ export function doSlash() {
     }
   }
   p.attackCooldown = 0.4;
+  weaponWear(0.22); // l'épée s'use à chaque coup porté
   if (hit) {
     spawnParticles(p.x + Math.cos(angle) * p.attackRange * 0.6, p.y + Math.sin(angle) * p.attackRange * 0.6, '#fff176', 8, 6);
     G.screenShake = Math.max(G.screenShake, 3); // micro-secousse à l'impact
@@ -50,6 +59,7 @@ export function doSpin() {
   p.spinDuration = 0.35;
   G.spinUsed = (G.spinUsed || 0) + 1; // compteur tutoriel
   G.rings.push({ x: p.x, y: p.y, r: 10, maxR: p.spinRadius, life: 25, maxLife: 25, color: '#ff9100' });
+  weaponWear(0.3); // la rotation use l'épée un peu plus (zone large)
   let hit = false;
   for (let i = G.enemies.length - 1; i >= 0; i--) {
     const e = G.enemies[i];
@@ -88,6 +98,7 @@ export function doThrust() {
     }
   }
   p.attackCooldown = 0.32; // la lance frappe plus vite que l'épée (0,4s)
+  weaponWear(0.18); // l'arme s'use à chaque estoc
   if (hit) {
     spawnParticles(p.x + Math.cos(angle) * p.attackRange * 0.5, p.y + Math.sin(angle) * p.attackRange * 0.5, '#ffe082', 10, 7);
     G.screenShake = Math.max(G.screenShake, 3); // micro-secousse percutante

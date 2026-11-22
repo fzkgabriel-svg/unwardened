@@ -4,7 +4,7 @@ import { doSlash, doSpin, doThrust, doUlt, doShield, doFireLaser, doFireHand, up
 import { updateEffects, addDamageText, spawnParticles } from './effects.js';
 import { drawBackground, drawEnemy, drawDrops, drawPlayer, drawSlashArc, drawUltFlash, drawMushroom, drawBomber, drawEffects, drawFireZones, drawCraters, drawPortals, drawProjectiles, drawLightnings, drawGrain, drawClouds, dayNight, drawTerrain, drawBuildings, drawWorldPortals, drawObstacle, drawIceStorm, drawLasers, drawHands, drawVolcanoes, drawAcidZones, drawBlackHoles, drawVoidHole } from './graphics.js';
 import { checkAchievements } from './achievements.js';
-import { wearEquipment, addMaterial } from './inventory.js';
+import { wearEquipment, addMaterial, getDur, DUR_MAX, ITEMS } from './inventory.js';
 import { drawHUD, drawAchToast, drawWarnToast } from './hud.js';
 import { drawMenu, drawGameOver, drawPauseMenu, drawVictory, recordRun, drawAdminMenu, drawAdminButton, drawDurWarnPopup } from './menu.js';
 import { initWorlds, updateCamera, worldW, worldH, checkWavePortal, syncCamera, resolveObstacles, curWorld } from './world.js';
@@ -49,6 +49,16 @@ export function damagePlayer(dmg, slow = 1.0) {
     const w = wearEquipment(G.inv);
     if (w.wear) for (const id in w.wear) G.runWear[id] = (G.runWear[id] || 0) + w.wear[id];
     if (w.broken) { addDamageText(p.x, p.y - 42, `💥 ${w.broken} CASSÉ !`, '#ff5252'); sfxBreak(); }
+    // alerte : un équipement sous 30 % de durabilité -> toast d'avertissement
+    for (const s in G.inv.equip) {
+      const id = G.inv.equip[s];
+      if (!id) continue;
+      const d = getDur(G.inv, id);
+      if (d > 0 && d < DUR_MAX * 0.3) {
+        G.warnToast = { name: `⚠️ ${ITEMS[id] ? ITEMS[id].name : id} : durabilité critique (${Math.round(d / DUR_MAX * 100)} %) — répare à la forge !`, t: 5 };
+        break;
+      }
+    }
   }
   if (p.hp <= 0) {
     p.hp = 0; p.alive = false; G.gameOver = true;

@@ -7,6 +7,7 @@ import { damageEnemy } from './enemies.js';
 import { playerAngle, waveBonus } from './attacks.js';
 import { worldW, worldH } from './world.js';
 import { sfxBowFire, sfxSingularity } from './audio.js';
+import { wearWeaponUse } from './inventory.js';
 
 export const BOW_SING_CD = 22;          // recharge de la singularité
 const CHARGE_TIME = 1.15;               // temps de charge max (s)
@@ -39,6 +40,8 @@ function fireBolt() {
     type, life: 2.2, t: 0, trail: [],
   });
   p.attackCooldown = BOW_SHOT_CD; // cadence de tir de l'arc (anti-spam)
+  const broken = wearWeaponUse(G.inv, 0.14); // l'arc s'use à chaque trait
+  if (broken) addDamageText(p.x, p.y - 42, `💥 ${broken} CASSÉ !`, '#ff5252');
   b.recoil = 1;            // recul visuel de l'arc
   sfxBowFire(charge);
   // buée d'énergie au départ
@@ -62,6 +65,8 @@ export function doSingularity() {
   });
   b.singCd = BOW_SING_CD;
   b.singAnim = 1;
+  const broken = wearWeaponUse(G.inv, 0.5); // la singularité use l'arc davantage
+  if (broken) addDamageText(p.x, p.y - 42, `💥 ${broken} CASSÉ !`, '#ff5252');
   p.attackCooldown = 0.5;
   b.recoil = 1.6;
   sfxSingularity();
