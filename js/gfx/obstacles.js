@@ -237,7 +237,7 @@ function drawMountain(o, ice, hell = false, sewer = false, space = false) {
 }
 
 // rocher : groupe de 2-3 blocs arrondis avec facettes
-function drawBoulder(o, ice, hell = false) {
+function drawBoulder(o, ice, hell = false, sewer = false, space = false) {
   const r = o.r;
   // ombre
   ctx.fillStyle = 'rgba(0,0,0,0.3)';
