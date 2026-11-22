@@ -12,6 +12,7 @@ import { initWorlds, updateCamera, worldW, worldH, checkWavePortal, syncCamera, 
 import { drawMusicButton, sfxHurt, sfxWave, sfxPickup, sfxBreak, sfxBoss, sfxWarn, sfxPhase, sfxBossAtk } from './audio.js';
 import { updateTutorial, drawTutorial } from './tutorial.js';
 import { tickPlaytime } from './chars.js';
+import { drawShop, drawShopBtn } from './shop.js';
 
 // ---------- DESSIN ----------
 export function draw() {
@@ -76,7 +77,7 @@ export function draw() {
     ctx.font = '11px Consolas, monospace';
     ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(232,217,176,0.45)';
     ctx.fillText(`v${VERSION}`, W - 14, H - 12);
-    drawMusicButton();
+    drawMusicButton(); drawShopBtn();
     ctx.restore();
     return;
   }
@@ -86,7 +87,7 @@ export function draw() {
     ctx.font = '11px Consolas, monospace';
     ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(232,217,176,0.45)';
     ctx.fillText(`v${VERSION}`, W - 14, H - 12);
-    drawMusicButton();
+    drawMusicButton(); drawShopBtn();
     ctx.restore();
     return;
   }
@@ -106,7 +107,7 @@ export function draw() {
   drawClouds(); // ouverture par les nuages au lancement
   drawBomber(); // B-2 + bombe en chute (coords écran, au-dessus du monde)
   drawGrain(); // grain photographique par-dessus le monde (pas le HUD)
-  drawMusicButton(); // pastille son ON/OFF (coin haut-droit)
+  drawMusicButton(); drawShopBtn(); // pastilles son/effets/boutique (coin haut-droit)
   if (G.state === 'playing' || G.state === 'paused') {
     drawAdminButton(); // bouton 🛠 admin (actif seulement si mot de passe validé)
     drawAdminMenu();   // panneau de triche (se dessine si ouvert)
@@ -129,6 +130,7 @@ export function draw() {
   }
   if (G.state === 'gameover') drawGameOver();
   if (G.state === 'paused' && !G.adminMenu && !G.adminInput) drawPauseMenu(); // l'admin passe au-dessus
+  if (G.shopOpen) drawShop(); // boutique : matériaux contre émeraudes
   // version du jeu, en bas à droite (visible partout : menu, partie, game over)
   ctx.font = '11px Consolas, monospace';
   ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(232,217,176,0.45)';

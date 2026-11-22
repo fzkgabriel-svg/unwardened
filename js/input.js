@@ -5,6 +5,7 @@ import { adminMenuClickAt, adminButtonAt, adminUnlocked } from './menu.js';
 import { usePotion } from './player.js';
 import { tryInteract } from './world.js';
 import { ensureAudio, toggleMusic, toggleSfx, audioButtonAt, sfxClick, sfxConfirm } from './audio.js';
+import { shopButtonAt, shopClickAt, shopDay } from './shop.js';
 import { startTutorial, tutorialEnter } from './tutorial.js';
 import { bowUnlocked } from './bow.js';
 import { modeKey, weaponAllowed } from './inventory.js';
@@ -114,6 +115,15 @@ export function initInput() {
     if ((G.state === 'playing' || G.state === 'paused') && adminButtonAt(G.mouse.x, G.mouse.y)) {
       if (adminUnlocked()) { G.adminMenu = true; sfxClick(); }
       else { G.adminInput = { text: '' }; G.adminPwErr = false; sfxClick(); }
+      return;
+    }
+    // boutique ouverte : elle intercepte tous les clics
+    if (G.shopOpen) { shopClickAt(G.mouse.x, G.mouse.y); return; }
+    // bouton 💰 boutique : à côté des pastilles son/effets (menu + en jeu)
+    if (['menu', 'playing', 'paused', 'gameover', 'victory'].includes(G.state) && shopButtonAt(G.mouse.x, G.mouse.y)) {
+      G.shopOpen = true; G.shopQty = {}; G.shopConfirm = null; G.shopFlash = null;
+      if (G.inv) shopDay(G.inv); // réinitialise le stock si nouveau jour
+      sfxClick();
       return;
     }
     // boutons audio : pastilles MUSIQUE / EFFETS (ON/OFF directs)
