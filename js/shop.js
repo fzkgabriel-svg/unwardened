@@ -289,9 +289,9 @@ export function shopLayout() {
     minus: { x: dx + dw - 360, y: dy + 74, w: 34, h: 34 },
     plus:  { x: dx + dw - 288, y: dy + 74, w: 34, h: 34 },
     buy:   { x: dx + dw - 240, y: dy + 68, w: 200, h: 44 },
-    confirmBtn: { x: W / 2 - 130, y: H / 2 + 90, w: 120, h: 36 },
-    confirmNo:  { x: W / 2 + 10,  y: H / 2 + 90, w: 120, h: 36 },
-    confirmPanel: { x: W / 2 - 230, y: H / 2 - 110, w: 460, h: 220 },
+    confirmBtn: { x: W / 2 - 130, y: H / 2 + 62, w: 120, h: 36 },
+    confirmNo:  { x: W / 2 + 10,  y: H / 2 + 62, w: 120, h: 36 },
+    confirmPanel: { x: W / 2 - 240, y: H / 2 - 118, w: 480, h: 236 },
     // onglets MATÉRIAUX / MODULES
     tabs: {
       mats: { x: W / 2 - 212, y: 80, w: 200, h: 32 },
@@ -465,30 +465,35 @@ export function drawShop() {
     }
     ctx.textAlign = 'center';
     ctx.fillStyle = cEdge; ctx.font = 'bold 19px Cinzel, serif';
-    ctx.fillText(cf.mod ? 'Confirmer l\'achat du module' : 'Confirmer l\'achat', W / 2, P.y + 42);
+    ctx.fillText(cf.mod ? 'Confirmer l\'achat du module' : 'Confirmer l\'achat', W / 2, P.y + 40);
+    // colonne icône à gauche, colonne texte alignée à gauche à droite
+    const ix = P.x + 52, tx = P.x + 104;
+    ctx.textAlign = 'left';
     if (cf.mod) {
       const m = MODULES[cf.mod];
-      drawModuleIcon(cf.mod, W / 2 - 130, P.y + 105, 1.4);
+      drawModuleIcon(cf.mod, ix, P.y + 102, 1.35);
       ctx.fillStyle = m.col; ctx.font = 'bold 16px Inter, sans-serif';
-      ctx.fillText(m.name, W / 2 - 60, P.y + 100);
+      ctx.fillText(m.name, tx, P.y + 92);
       ctx.fillStyle = C_MUT; ctx.font = '12px Inter, sans-serif';
-      ctx.fillText(`${m.rar} · ${m.type.toUpperCase()} — module unique`, W / 2, P.y + 126);
-      ctx.fillStyle = '#8d99ae'; ctx.font = '11px Inter, sans-serif';
-      ctx.fillText(`Coût : ${cf.cost} émeraudes — solde après : ${emeralds(inv) - cf.cost} ◆`, W / 2, P.y + 148);
-      ctx.fillText('Équipe-le ensuite dans le menu MODULES', W / 2, P.y + 166);
+      ctx.fillText(`${m.rar} · ${m.type.toUpperCase()} — module unique`, tx, P.y + 114);
+      ctx.fillStyle = '#8d99ae'; ctx.font = '11.5px Inter, sans-serif';
+      ctx.fillText(`Coût : ${cf.cost} émeraudes — solde après : ${emeralds(inv) - cf.cost} ◆`, tx, P.y + 148);
+      ctx.fillStyle = C_MUT; ctx.font = '11px Inter, sans-serif';
+      ctx.fillText('Équipe-le ensuite dans le menu MODULES', tx, P.y + 172);
     } else {
       const { key, qty, cost } = cf;
       const info = MATS[key], cfg = SHOP[key];
-      drawMatIcon(key, W / 2 - 130, P.y + 105, 16);
+      drawMatIcon(key, ix, P.y + 102, 17);
       ctx.fillStyle = info.color || C_TXT; ctx.font = 'bold 16px Inter, sans-serif';
-      ctx.fillText(`${qty} × ${info.name}`, W / 2 - 60, P.y + 100);
-      ctx.fillStyle = C_MUT; ctx.font = '12px Inter, sans-serif';
-      ctx.fillText(`Coût : ${cost} émeraudes — solde après : ${emeralds(inv) - cost} ◆`,
-        W / 2, P.y + 132);
-      ctx.fillStyle = '#8d99ae'; ctx.font = '11px Inter, sans-serif';
-      ctx.fillText(`Stock restant : ${shopStockLeft(inv, key) - qty}/${cfg.stock == null ? '∞' : cfg.stock}`,
-        W / 2, P.y + 152);
+      ctx.fillText(`${qty} × ${info.name}`, tx, P.y + 92);
+      ctx.fillStyle = '#8d99ae'; ctx.font = '11.5px Inter, sans-serif';
+      ctx.fillText(`Coût : ${cost} émeraudes — solde après : ${emeralds(inv) - cost} ◆`, tx, P.y + 124);
+      ctx.fillStyle = C_MUT; ctx.font = '11px Inter, sans-serif';
+      ctx.fillText(`Stock restant : ${shopStockLeft(inv, key) - qty}/${cfg.stock == null ? '∞' : cfg.stock}`, tx, P.y + 148);
     }
+    // filet séparateur au-dessus des boutons
+    ctx.strokeStyle = 'rgba(255,215,64,0.18)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(P.x + 24, P.y + P.h - 56); ctx.lineTo(P.x + P.w - 24, P.y + P.h - 56); ctx.stroke();
     for (const [r, label, col] of [[L.confirmBtn, '✔ ACHETER', '#2ecc71'], [L.confirmNo, '✕ ANNULER', '#a55']]) {
       const h = inR(r, G.mouse.x, G.mouse.y);
       ctx.fillStyle = h ? hexA(col, 0.9) : hexA(col, 0.55);
