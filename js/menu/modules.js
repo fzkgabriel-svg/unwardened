@@ -27,24 +27,34 @@ function layout() {
   const dw = Math.min(360, W * 0.3), dy = 190, dh = 400;
   const det = { x: W - dw - 34, y: dy, w: dw, h: dh };
   // grille des modules (gauche), tous les modules : possédés + verrouillés
+  // DÉFILANTE : 4 colonnes, hauteur fixe par carte, scroll vertical à la molette
   const gx = 34, gy = 192, gw = det.x - gx - 18, gh = 400;
-  const cols = 4, rows = 3;
-  const cw = (gw - (cols - 1) * 12) / cols, ch = (gh - (rows - 1) * 12) / rows;
+  const cols = 4, cw = (gw - (cols - 1) * 12) / cols, ch = 138;
   const ownedSet = G.inv ? modState(G.inv).owned : [];
   const ids = [...MOD_IDS].sort((a, b) => (ownedSet.includes(b) ? 1 : 0) - (ownedSet.includes(a) ? 1 : 0));
+  const rows = Math.ceil(ids.length / cols);
+  const contentH = rows * (ch + 12);
+  const scrollMax = Math.max(0, contentH - gh);
+  const sc = Math.max(0, Math.min(scrollMax, G.modScroll || 0));
+  G.modScroll = sc;
   const cards = ids.map((id, i) => ({
-    id, x: gx + (i % cols) * (cw + 12), y: gy + Math.floor(i / cols) * (ch + 12), w: cw, h: ch, i,
+    id, x: gx + (i % cols) * (cw + 12), y: gy + Math.floor(i / cols) * (ch + 12) - sc, w: cw, h: ch, i,
   }));
   const btnY = det.y + det.h - 50;
   // bas du panneau : [équiper/installé] à gauche + [améliorer] à droite
   const bw = det.w - 40, uw = Math.min(150, bw * 0.44);
   const ew = bw - uw - 12;
   return {
-    slots, cards, det,
+    slots, cards, det, grid: { x: gx, y: gy - 4, w: gw, h: gh + 8 }, scrollMax,
     equipBtn: { x: det.x + 20, y: btnY, w: ew, h: 40 },
     upBtn: { x: det.x + 20 + ew + 12, y: btnY, w: uw, h: 40 },
     shopBtn: { x: det.x + 20, y: btnY, w: det.w - 40, h: 40 },
   };
+}
+
+// molette : scroll de la grille des modules
+export function modWheel(dy) {
+  G.modScroll = Math.max(0, Math.min((layout().scrollMax || 0), (G.modScroll || 0) + dy * 0.5));
 }
 
 // ---------- clics ----------
@@ -655,7 +665,21 @@ export function drawModulesView() {
   ctx.fillStyle = CYAN;
   ctx.fillText(`MODULES · ${ms.owned.length}/${MOD_IDS.length} DÉBLOQUÉS`, 34, 190);
   ctx.letterSpacing = '0px';
+  // grille rognée à la zone visible (les cartes défilent sous l'en-tête)
+  ctx.save();
+  ctx.beginPath(); ctx.rect(L.grid.x, L.grid.y, L.grid.w, L.grid.h); ctx.clip();
   for (const c of L.cards) drawCard(c, t);
+  ctx.restore();
+  // scrollbar verticale discrète
+  if (L.scrollMax > 0) {
+    const gx = L.grid.x + L.grid.w - 8, gy = L.grid.y, gh = L.grid.h;
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    roundRect(gx, gy, 5, gh, 3); ctx.fill();
+    const thumbH = Math.max(30, gh * (gh / (gh + L.scrollMax)));
+    const thumbY = gy + (gh - thumbH) * ((G.modScroll || 0) / L.scrollMax);
+    ctx.fillStyle = 'rgba(24,255,255,0.45)';
+    roundRect(gx, thumbY, 5, thumbH, 3); ctx.fill();
+  }
   // détail
   if (G.modSel && MODULES[G.modSel]) drawDetail(L, G.modSel, t);
   else drawEmptyDetail(L, t);

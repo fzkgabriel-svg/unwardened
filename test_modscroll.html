@@ -1,0 +1,21 @@
+<!doctype html><html><head><meta charset="utf-8"></head><body><canvas id="game" width="1200" height="640"></canvas><pre id="out">R</pre>
+<script>
+window.onerror=(m,s,l)=>{document.getElementById('out').textContent='JSERR '+m+' @'+l};
+</script>
+<script type="module">
+import { G } from './js/state.js';
+import { modWheel, drawModulesView } from './js/menu/modules.js';
+const out=[];
+try{
+G.state='menu';G.menuView='modules';G.time=1;G.mouse={x:0,y:0};
+G.inv={mats:{emeraude:0},items:{},equip:{},modules:{owned:['bouclier'],eq:{act:null,pass:null,pass2:null}},wmode:{}};
+G.stats={campaignDone:{3:true,5:true},ngPlus:0};
+drawModulesView();
+out.push('draw=ok');
+modWheel(500);
+out.push('scroll='+Math.round(G.modScroll||0));
+modWheel(-9999);
+out.push('back='+Math.round(G.modScroll||0));
+document.getElementById('out').textContent='SCROLL '+out.join('|');
+}catch(e){document.getElementById('out').textContent='FAIL '+e.message+' '+(e.stack||'').split('\n')[1]}
+</script></body></html>

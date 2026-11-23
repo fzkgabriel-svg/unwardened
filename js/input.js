@@ -10,7 +10,7 @@ import { startTutorial, tutorialEnter } from './tutorial.js';
 import { bowUnlocked } from './bow.js';
 import { modeKey, weaponAllowed } from './inventory.js';
 import { activateModule, modulesUnlocked } from './modules.js';
-import { modClickAt } from './menu/modules.js';
+import { modClickAt, modWheel } from './menu/modules.js';
 
 export function initInput() {
   window.addEventListener('keydown', e => {
@@ -256,6 +256,9 @@ export function initInput() {
     } else if (G.state === 'menu' && G.menuView === 'achievements') {
       e.preventDefault();
       achWheel(e.deltaY);
+    } else if (G.state === 'menu' && G.menuView === 'modules') {
+      e.preventDefault();
+      modWheel(e.deltaY);
     }
   }, { passive: false });
 }
