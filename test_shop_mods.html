@@ -4,7 +4,7 @@
 <pre id="out">RUNNING</pre>
 <script type="module">
 import { G, ctx } from './js/state.js';
-import { shopLayout, shopClickAt, drawShop, buyModule, modStockLeft, MOD_RAR_STOCK, MODSHOP, shopDay, buyMaterial } from './js/shop.js';
+import { shopLayout, shopClickAt, drawShop, buyModule, modShopToday, MOD_DAY_COUNT, MOD_POOL, shopDay, buyMaterial } from './js/shop.js';
 import { MODULES, modState } from './js/modules.js';
 import { drawBossBar } from './js/hud/boss.js';
 const out = [];
@@ -20,7 +20,8 @@ try {
   T('tabs', () => !!(L.tabs.mats && L.tabs.mods));
   T('cards', () => L.modCards.length);
   T('detail', () => !!L.modDetail && !!L.modBuy);
-  T('modshop', () => MODSHOP.length);
+  T('modshop', () => modShopToday().length + '/' + MOD_DAY_COUNT + ' pool=' + MOD_POOL.length);
+  T('drawStable', () => modShopToday().join(',') === modShopToday().join(',') ? 'stable' : 'unstable');
 
   // rendu des deux onglets
   T('drawMats', () => { G.shopTab = 'mats'; drawShop(); return 'ok'; });
@@ -32,29 +33,24 @@ try {
   T('clickCard', () => { const c = L.modCards[0]; const r = shopClickAt(c.x + 10, c.y + 10); return r + ':' + G.shopModSel; });
   T('drawModDetail', () => { drawShop(); return 'ok'; });
 
-  // stock par rareté
-  T('stockLeg', () => modStockLeft(G.inv, 'Légendaire'));
-  T('stockCom', () => modStockLeft(G.inv, 'Commun'));
-
-  // achat via confirmation : surcharge (Rare, 160◆)
-  G.inv.mats.emeraude = 2000;
-  const idRare = MODSHOP.find(i => MODULES[i].rar === 'Rare');
-  T('buyRare', () => { const r = buyModule(G.inv, idRare); return r.ok + ':' + (G.inv.mats.emeraude) + ':' + modState(G.inv).owned.includes(idRare) + ':pool=' + (shopDay(G.inv).bought['pool:Rare'] || 0); });
-  T('stockRareAfter', () => modStockLeft(G.inv, 'Rare'));
-  // double achat -> refusé
-  T('rebuy', () => buyModule(G.inv, idRare).ok);
-  // fonds insuffisants
-  T('poor', () => { G.inv.mats.emeraude = 5; const r = buyModule(G.inv, MODSHOP.find(i => MODULES[i].rar === 'Commun')); return r.ok + ':' + r.msg.slice(0, 20); });
-  // quota rare : Rare stock=3, acheter 2 de plus
-  G.inv.mats.emeraude = 5000;
-  const rares = MODSHOP.filter(i => MODULES[i].rar === 'Rare' && !modState(G.inv).owned.includes(i));
-  for (const id of rares.slice(0, 2)) buyModule(G.inv, id);
-  T('poolRareUsed', () => shopDay(G.inv).bought['pool:Rare']);
-  // légendaire : stock 1 -> une seule vente par jour
-  const leg = MODSHOP.find(i => MODULES[i].rar === 'Légendaire');
-  T('buyLeg1', () => { const r = buyModule(G.inv, leg); return r.ok + ':' + r.msg + ':em=' + G.inv.mats.emeraude + ':left=' + modStockLeft(G.inv, 'Légendaire'); });
-  const leg2 = MODSHOP.find(i => MODULES[i].rar === 'Légendaire' && i !== leg);
-  T('leg2Blocked', () => leg2 ? buyModule(G.inv, leg2).ok : 'only1');
+  // tirage du jour : uniquement les 4 modules du jour sont achetables
+  const today = modShopToday();
+  const offSale = MOD_POOL.find(i => !today.includes(i));
+  T('offSaleBlocked', () => offSale ? buyModule(G.inv, offSale).ok + ':' + buyModule(G.inv, offSale).msg.slice(0, 25) : 'pool=today');
+  // achat du 1er module du jour
+  G.inv.mats.emeraude = 9999;
+  const idBuy = today[0];
+  T('buyToday', () => { const r = buyModule(G.inv, idBuy); return r.ok + ':' + (G.inv.mats.emeraude) + ':' + modState(G.inv).owned.includes(idBuy); });
+  // achat unique : un 2e achat du même module est refusé à jamais
+  T('rebuy', () => buyModule(G.inv, idBuy).ok + ':' + buyModule(G.inv, idBuy).msg.slice(0, 15));
+  // fonds insuffisants sur un module du jour
+  T('poor', () => { G.inv.mats.emeraude = 5; const r = buyModule(G.inv, today[1]); return r.ok + ':' + r.msg.slice(0, 20); });
+  // achat des 3 modules restants du jour
+  G.inv.mats.emeraude = 99999;
+  for (const id of today.slice(1)) buyModule(G.inv, id);
+  T('allTodayOwned', () => today.every(i => modState(G.inv).owned.includes(i)));
+  // tout le pool : les modules hors tirage restent refusés
+  T('poolRestBlocked', () => MOD_POOL.filter(i => !today.includes(i)).every(i => !buyModule(G.inv, i).ok));
 
   // matériaux : l'onglet MATÉRIAUX reste fonctionnel
   T('buyMat', () => { const r = buyMaterial(G.inv, 'cuir', 2); return r.ok + ':' + (G.inv.mats.cuir || 0); });

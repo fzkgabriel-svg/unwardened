@@ -2,7 +2,7 @@
 <script type="module">
 import { G } from './js/state.js';
 import { MODULES, MOD_IDS, modDmgMult, modDmgReduce, activateModule, modState } from './js/modules.js';
-import { MODSHOP, modStockLeft, modDayLeft, buyModule, MOD_DAY_CAP } from './js/shop.js';
+import { MOD_POOL, modShopToday, MOD_DAY_COUNT, buyModule } from './js/shop.js';
 import { damageEnemy } from './js/enemies.js';
 const out=[];const T=(n,f)=>{try{out.push(n+'='+(f()??'ok'))}catch(e){out.push(n+'=FAIL:'+e.message)}};
 try{
@@ -12,7 +12,7 @@ G.player={x:600,y:320,r:15,hp:90,maxHp:200,level:10,xp:0,xpNext:50,potions:0,max
 G.inv={mats:{emeraude:99999,cristal:50},items:{},equip:{},modules:{owned:[],eq:{act:null,pass:null,pass2:null},levels:{}},wmode:{}};
 G.enemies=[];G.drops=[];G.portals=[];G.particles=[];G.damageTexts=[];G.rings=[];G.bowShots=[];G.singZones=[];G.modCds={};G.modBuffs={};
 for(let i=0;i<8;i++)G.enemies.push({x:600+(i-4)*60,y:320,r:14,hp:500,maxHp:500,type:'goblin',name:'g',speed:0,dmg:0,xp:0,color:'#f00',alive:true,spawnT:0});
-T('mods',()=>MOD_IDS.length+' shop='+MODSHOP.length+' cap='+MOD_DAY_CAP);
+T('mods',()=>MOD_IDS.length+' pool='+MOD_POOL.length+' today='+modShopToday().length+'/'+MOD_DAY_COUNT);
 T('newMods',()=>['rage','carapace','supernova','meteorite'].every(id=>MODULES[id]&&MODULES[id].price>0));
 // passif rage : hp<50% -> dmgMult>1 ; carapace : dmgReduce>0
 G.inv.modules.eq.pass='rage';G.inv.modules.eq.pass2='carapace';G.inv.modules.owned.push('rage','carapace');
@@ -28,8 +28,8 @@ T('meteorite',()=>{activateModule();return 'ok'});
 // stock : cap 4/jour
 G.inv.modules={owned:[],eq:{act:null,pass:null,pass2:null},levels:{}};
 let buys=0,msgs=[];
-for(const id of MODSHOP){const r=buyModule(G.inv,id);if(r.ok)buys++;else msgs.push(r.msg);}
-T('dayCap',()=>buys+'/'+MOD_DAY_CAP+' left='+modDayLeft(G.inv)+' '+msgs.slice(0,2).join(';'));
+for(const id of modShopToday()){const r=buyModule(G.inv,id);if(r.ok)buys++;else msgs.push(r.msg);}
+T('dayBuy',()=>buys+'/'+MOD_DAY_COUNT+' offsaleBlocked='+MOD_POOL.filter(i=>!modShopToday().includes(i)).every(i=>!buyModule(G.inv,i).ok)+' '+msgs.slice(0,2).join(';'));
 document.getElementById('out').textContent='MODS '+out.join('|');
 }catch(e){document.getElementById('out').textContent='FAIL '+e.message}
 </script></body></html>

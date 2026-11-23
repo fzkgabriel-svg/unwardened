@@ -65,36 +65,40 @@ export function shopCountdown() {
   return Math.max(0, Math.floor((mid - n) / 1000));
 }
 
-// ---------- MODULES À VENTE (émeraudes, une seule fois chacun) ----------
-export const MODSHOP = MOD_IDS.filter(id => MODULES[id].price > 0);
-// stock quotidien : quotas par rareté + plafond global de 4 modules par jour.
-// Persisté dans inv.shop.bought -> réinitialisé à minuit, impossible à
-// contourner en relançant le jeu (sauvegarde locale).
-export const MOD_RAR_STOCK = { 'Commun': 4, 'Rare': 3, 'Épique': 2, 'Légendaire': 1, 'Mythique': 1 };
-export const MOD_DAY_CAP = 4; // au maximum 4 modules achetés par jour, toutes raretés confondues
-export const RAR_COL = { 'Commun': '#b0bec5', 'Rare': '#4fc3f7', 'Épique': '#ce93d8', 'Légendaire': '#ffd740', 'Mythique': '#ff5252' };
-export function modDayBought(inv) { return (shopDay(inv).bought['pool:total']) || 0; }
-export function modDayLeft(inv) { return Math.max(0, MOD_DAY_CAP - modDayBought(inv)); }
-export function modStockLeft(inv, rar) {
-  const max = MOD_RAR_STOCK[rar] ?? 1;
-  const bought = (shopDay(inv).bought['pool:' + rar]) || 0;
-  // le stock affiché est limité par le quota de rareté ET le plafond journalier
-  return Math.max(0, Math.min(max - bought, modDayLeft(inv)));
+// ---------- MODULES À VENTE : tirage quotidien de 4 modules au sort ----------
+// Chaque jour à minuit, 4 modules sont tirés aléatoirement parmi ceux en
+// vente (price > 0). Le tirage est déterministe (seed = date) : il est
+// identique pour tout le monde ce jour-là et ne change pas en relançant
+// le jeu. Chaque module n'est achetable qu'UNE SEULE FOIS (anti-doublon).
+export const MOD_POOL = MOD_IDS.filter(id => MODULES[id].price > 0);
+export const MOD_DAY_COUNT = 4;
+// RNG déterministe (mulberry32) pour un tirage stable dans la journée
+function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+function mulberry32(a) { return function () { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+// les 4 modules du jour (triés par rareté décroissante pour la mise en page)
+export function modShopToday() {
+  const d = new Date();
+  const seed = hashStr(`${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`);
+  const rng = mulberry32(seed);
+  const pool = [...MOD_POOL];
+  for (let i = pool.length - 1; i > 0; i--) { const j = (rng() * (i + 1)) | 0; [pool[i], pool[j]] = [pool[j], pool[i]]; }
+  const rarRank = { 'Légendaire': 0, 'Mythique': 0, 'Épique': 1, 'Rare': 2, 'Commun': 3 };
+  return pool.slice(0, MOD_DAY_COUNT)
+    .sort((a, b) => (rarRank[MODULES[a].rar] ?? 9) - (rarRank[MODULES[b].rar] ?? 9));
 }
+export const RAR_COL = { 'Commun': '#b0bec5', 'Rare': '#4fc3f7', 'Épique': '#ce93d8', 'Légendaire': '#ffd740', 'Mythique': '#ff5252' };
+// un module est achetable s'il est dans le tirage du jour, pas possédé,
+// et que le joueur a assez d'émeraudes — une seule fois par compte
+export function modOnSaleToday(inv, id) { return !!(inv && modShopToday().includes(id)); }
 export function buyModule(inv, id) {
   const m = MODULES[id];
   if (!m || m.price <= 0) return { ok: false, msg: 'Module indisponible' };
+  if (!modShopToday().includes(id)) return { ok: false, msg: 'Pas en vente aujourd\'hui — revenez demain !' };
   const ms = modState(inv);
   if (ms.owned.includes(id)) return { ok: false, msg: 'Déjà possédé' };
-  if (modDayLeft(inv) <= 0) return { ok: false, msg: `Limite de ${MOD_DAY_CAP} modules par jour atteinte` };
-  const left = modStockLeft(inv, m.rar);
-  if (left <= 0) return { ok: false, msg: `Stock ${m.rar} épuisé aujourd'hui` };
   if ((inv.mats.emeraude || 0) < m.price) return { ok: false, msg: `Il faut ${m.price} émeraudes` };
   inv.mats.emeraude -= m.price;
   ownModule(inv, id);
-  const sd = shopDay(inv);
-  sd.bought['pool:' + m.rar] = (sd.bought['pool:' + m.rar] || 0) + 1;
-  sd.bought['pool:total'] = (sd.bought['pool:total'] || 0) + 1;
   saveInv(inv);
   return { ok: true, msg: `MODULE ${m.name.toUpperCase()} DÉBLOQUÉ !` };
 }
@@ -159,14 +163,12 @@ export function shopClickAt(x, y) {
     }
     // panneau de détail : bouton ACHETER
     const mid = G.shopModSel;
-    if (mid && MODULES[mid] && MODSHOP.includes(mid)) {
+    if (mid && MODULES[mid] && modShopToday().includes(mid)) {
       if (inR(L.modBuy, x, y)) {
         const m = MODULES[mid];
         const owned = modState(inv).owned.includes(mid);
-        const left = modStockLeft(inv, m.rar);
         if (owned) { G.shopFlash = { msg: `${m.name} : déjà possédé`, t: G.time, bad: true }; sfxClick(); return 'deny'; }
-        if (left <= 0) { G.shopFlash = { msg: `Stock ${m.rar} épuisé aujourd'hui`, t: G.time, bad: true }; sfxClick(); return 'deny'; }
-        if (emeralds(inv) < m.price) { G.shopFlash = { msg: `Il faut ${m.price} émeraudes pour ${m.name}`, t: G.time, bad: true }; G.shopMood = 'sad'; G.shopMoodT = G.time; sfxClick(); return 'deny'; }
+        if ((inv.mats.emeraude || 0) < m.price) { G.shopFlash = { msg: `Il faut ${m.price} émeraudes pour ${m.name}`, t: G.time, bad: true }; G.shopMood = 'sad'; G.shopMoodT = G.time; sfxClick(); return 'deny'; }
         G.shopConfirm = { mod: mid, cost: m.price };
         sfxClick(); return 'buy';
       }
@@ -263,13 +265,14 @@ export function shopLayout() {
       mats: { x: W / 2 - 212, y: 80, w: 200, h: 32 },
       mods: { x: W / 2 + 12,  y: 80, w: 200, h: 32 },
     },
-    // grille des modules (onglet MODULES) : 7 colonnes — 2 lignes suffisent
-    // pour les 14 modules sans chevaucher le panneau de détail
+    // grille des modules (onglet MODULES) : les 4 modules tirés au sort
+    // aujourd'hui, centrés en une seule ligne sous les onglets
     modCards: (() => {
-      const cols = 7, cw = 158, ch = 140, gap = 10;
-      const x0 = W / 2 - (cols * cw + (cols - 1) * gap) / 2, y0 = 122;
-      return MODSHOP.map((id, i) => ({
-        id, x: x0 + (i % cols) * (cw + gap), y: y0 + Math.floor(i / cols) * (ch + gap), w: cw, h: ch,
+      const today = modShopToday();
+      const cols = today.length, cw = 232, ch = 150, gap = 16;
+      const x0 = W / 2 - (cols * cw + (cols - 1) * gap) / 2, y0 = 130;
+      return today.map((id, i) => ({
+        id, x: x0 + i * (cw + gap), y: y0, w: cw, h: ch,
       }));
     })(),
     // panneau de détail module (bas d'écran, sous la grille)
@@ -335,7 +338,7 @@ export function drawShop() {
   ctx.fillText(tab === 'mods' ? '⚡ SANCTUAIRE DES MODULES' : '💰 BOUTIQUE DU MAÎTRE MARCHAND', W / 2, 44);
   ctx.fillStyle = C_MUT; ctx.font = 'italic 11.5px Inter, sans-serif';
   ctx.fillText(tab === 'mods'
-    ? `Modules anciens en vente — max ${MOD_DAY_CAP}/jour, stock renouvelé à minuit`
+    ? `Tirage du jour : ${MOD_DAY_COUNT} modules au hasard — chaque module ne s'achète qu'une seule fois`
     : 'Matériaux contre émeraudes — les stocks rares se renouvellent chaque jour', W / 2, 66);
 
   // ===== ONGLETS =====
@@ -831,7 +834,6 @@ function drawModCard(cd, t, inv) {
   const hov = inR(cd, G.mouse.x, G.mouse.y) && !owned;
   const sel = G.shopModSel === cd.id;
   const afford = emeralds(inv) >= m.price;
-  const left = modStockLeft(inv, m.rar);
   const col = RAR_COL[m.rar] || m.col;
   const { x, y, w, h } = cd;
   ctx.save();
@@ -888,9 +890,9 @@ function drawModCard(cd, t, inv) {
   ctx.fillStyle = owned ? '#69f0ae' : afford ? '#ffd740' : '#6f7378';
   ctx.fillText(owned ? '✔ POSSÉDÉ' : `${m.price} ◆`, x + w / 2, y + 118);
   if (!owned) {
-    ctx.fillStyle = left <= 0 ? '#ff8a80' : 'rgba(160,200,230,0.65)';
+    ctx.fillStyle = 'rgba(160,200,230,0.65)';
     ctx.font = '9px Inter, sans-serif';
-    ctx.fillText(left <= 0 ? 'STOCK RARE ÉPUISÉ' : `stock ${m.rar} : ${left}`, x + w / 2, y + 131);
+    ctx.fillText('✦ tirage du jour — unique', x + w / 2, y + 131);
     if (sel) {
       ctx.fillStyle = col; ctx.font = '8.5px Inter, sans-serif';
       ctx.fillText('▼ détails', x + w / 2, y - 8);
@@ -903,7 +905,7 @@ function drawModCard(cd, t, inv) {
 function drawModDetail(L, inv, t) {
   const d = L.modDetail;
   const mid = G.shopModSel;
-  if (!mid || !MODULES[mid] || !MODSHOP.includes(mid)) {
+  if (!mid || !MODULES[mid] || !modShopToday().includes(mid)) {
     // hint
     ctx.fillStyle = 'rgba(79,195,247,0.05)';
     roundRect(d.x, d.y, d.w, d.h, 12); ctx.fill();
@@ -917,8 +919,7 @@ function drawModDetail(L, inv, t) {
   const m = MODULES[mid];
   const owned = modState(inv).owned.includes(mid);
   const col = RAR_COL[m.rar] || m.col;
-  const left = modStockLeft(inv, m.rar);
-  const afford = emeralds(inv) >= m.price && !owned && left > 0;
+  const afford = emeralds(inv) >= m.price && !owned;
   // panneau verre
   const dg = ctx.createLinearGradient(d.x, d.y, d.x + d.w, d.y + d.h);
   dg.addColorStop(0, 'rgba(10,20,42,0.92)'); dg.addColorStop(1, 'rgba(6,10,24,0.92)');
@@ -964,8 +965,8 @@ function drawModDetail(L, inv, t) {
   ctx.fillStyle = '#7d9db8'; ctx.font = '10.5px Inter, sans-serif';
   const cdTxt = m.cd > 0 ? `recharge ${m.cd} s · s'améliore niv 1→3` : 'effet permanent · s\'améliore niv 1→3';
   ctx.fillText(cdTxt, tx, statY);
-  ctx.fillStyle = left <= 0 ? '#ff8a80' : '#69f0ae'; ctx.font = 'bold 11px Consolas, monospace';
-  ctx.fillText(owned ? '✔ DÉJÀ POSSÉDÉ' : left <= 0 ? `stock ${m.rar} : ÉPUISÉ` : `stock ${m.rar} : ${left} aujourd'hui`, tx + 250, statY);
+  ctx.fillStyle = '#69f0ae'; ctx.font = 'bold 11px Consolas, monospace';
+  ctx.fillText(owned ? '✔ DÉJÀ POSSÉDÉ — ACHAT UNIQUE' : '✦ en vente aujourd\'hui', tx + 250, statY);
   // bouton ACHETER
   const b = L.modBuy;
   const hov = inR(b, G.mouse.x, G.mouse.y);
@@ -975,7 +976,7 @@ function drawModDetail(L, inv, t) {
   ctx.lineWidth = 1.6; roundRect(b.x, b.y, b.w, b.h, 10); ctx.stroke();
   ctx.fillStyle = owned ? '#69f0ae' : afford ? '#fff' : '#6f7378';
   ctx.font = 'bold 13px Inter, sans-serif'; ctx.textAlign = 'center';
-  ctx.fillText(owned ? '✔ DÉJÀ DANS VOTRE INVENTAIRE' : left <= 0 ? 'STOCK ÉPUISÉ' : afford ? `⚡ ACHETER · ${m.price} ◆` : `IL FAUT ${m.price} ◆`, b.x + b.w / 2, b.y + b.h / 2 + 5);
+  ctx.fillText(owned ? '✔ DÉJÀ DANS VOTRE INVENTAIRE' : afford ? `⚡ ACHETER · ${m.price} ◆` : `IL FAUT ${m.price} ◆`, b.x + b.w / 2, b.y + b.h / 2 + 5);
   // équiper -> rappel menu modules
   if (!owned) {
     ctx.fillStyle = 'rgba(160,200,230,0.5)'; ctx.font = '9.5px Inter, sans-serif'; ctx.textAlign = 'center';
