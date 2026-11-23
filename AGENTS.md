@@ -20,7 +20,7 @@ Jeu HTML5 Canvas / JavaScript ES modules. Servi en HTTP (ES modules incompatible
 - `js/menu.js` : orchestrateur menus ; sous-modules `js/menu/` (flow, forge, forge_state, forge_craft, forge_gear, forge_fx, heros, achv, admin, campaign, end, common). Forge = 3 onglets (FORGER/INVENTAIRE/PERSONNAGE) avec sous-onglets de catégories, recherche, tri, fiche détail, améliorations d'armes.
 - `js/inventory.js` : mats, items (rareté `rar`, slots weapon/armor/helm/gloves/charm/boots/conso), craft, équipement, durabilité, buffs consommables.
 - `js/achievements.js` : 34 succès, raretés, récompenses.
-- `js/tutorial.js` : tutoriel 12 étapes (retour menu, Entrée = étape suivante, cooldown 2,5 s).
+- `js/tutorial.js` : tutoriel interactif 15 étapes (infos + actions à réussir), panneau bas avec progression/boutons Suivant-Précédent-Passer, progression persistée dans localStorage `rpg2d_tut`.
 - `js/hud.js` : orchestrateur HUD ; sous-modules `js/hud/` (frame, profile, skills, boss, map, equip, toasts) — HUD médiéval fantastique. Minimap : bâtiments = brouillard de guerre, lacs, obstacles.
 - `js/main.js` : game loop, collisions, update.
 

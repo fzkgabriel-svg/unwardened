@@ -6,7 +6,7 @@ import { usePotion } from './player.js';
 import { tryInteract } from './world.js';
 import { ensureAudio, toggleMusic, toggleSfx, audioButtonAt, audioPanelClickAt, audioPanelDragAt, audioPanelDragEnd, sfxClick, sfxConfirm } from './audio.js';
 import { shopButtonAt, shopClickAt, shopDay } from './shop.js';
-import { startTutorial, tutorialEnter } from './tutorial.js';
+import { startTutorial, tutorialEnter, tutorialClickAt } from './tutorial.js';
 import { bowUnlocked } from './bow.js';
 import { modeKey, weaponAllowed } from './inventory.js';
 import { activateModule, modulesUnlocked } from './modules.js';
@@ -245,6 +245,10 @@ export function initInput() {
       }
       else if (btn === 'menu') { resetToMenu(); sfxClick(); }
       return;
+    }
+    // tutoriel : les clics sur le panneau (boutons, zones) ne déclenchent pas d'attaque
+    if (G.tutorial && G.state === 'playing') {
+      if (tutorialClickAt(G.mouse.x, G.mouse.y)) { sfxClick(); return; }
     }
     if (e.button === 0) { G.attackQueued = true; G.attackHeld = true; }
     // clic droit : titan = main de feu, arc = singularité, sinon rotation (épée) / bouclier (lance)
