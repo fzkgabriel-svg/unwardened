@@ -9,7 +9,7 @@ export function gainXp(amount) {
     p.xp -= p.xpNext;
     p.level++;
     p.xpNext = Math.floor(p.xpNext * 1.34); // croissance assouplie : ×1,34/niv au lieu de ×1,5
-    p.maxHp += 20;
+    p.maxHp += 30;
     p.hp = p.maxHp;
     p.attackDamage += 8;
     p.spinDamage += 6;
