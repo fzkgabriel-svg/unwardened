@@ -11,7 +11,7 @@ import { bowUnlocked } from './bow.js';
 import { weaponAllowed, loadoutOf, WEAPON_MODES } from './inventory.js';
 import { activateModule, modulesUnlocked } from './modules.js';
 import { modClickAt, modWheel } from './menu/modules.js';
-import { statsButtons, acctClick, acctKey, lbClickAt, lbKey, openLeaderboard, inR, siteWebButton } from './menu.js';
+import { statsButtons, acctClick, acctKey, lbClickAt, lbKey, openLeaderboard, inR, siteWebButton, forgeUnlocked } from './menu.js';
 import { SITE_URL } from './net.js';
 
 export function initInput() {
@@ -255,7 +255,11 @@ export function initInput() {
       if (btn === 'tutoriel') { startTutorial(); sfxConfirm(); return; }
       if (btn === 'stats') { G.menuView = 'stats'; sfxClick(); return; }
       if (btn === 'ach') { G.menuView = 'achievements'; sfxClick(); return; }
-      if (btn === 'forge') { G.menuView = 'forge'; sfxClick(); return; }
+      if (btn === 'forge') {
+        if (forgeUnlocked()) { G.menuView = 'forge'; sfxClick(); }
+        else sfxClick(); // verrouillé : premier mort requis
+        return;
+      }
       if (btn === 'modules') {
         if (modulesUnlocked()) { G.menuView = 'modules'; G.modSel = null; G.modViewT = G.time; sfxConfirm(); }
         else sfxClick(); // verrouillé : boss du monde 4 non vaincu

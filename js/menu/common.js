@@ -147,7 +147,26 @@ export function drawAdminPwInput() {
   ctx.restore();
 }
 
+// ---------- portes de progression ----------
+// le tutoriel est sauvegardé globalement (toutes characters confondues)
+function tutDone() {
+  try { const t = JSON.parse(localStorage.getItem('rpg2d_tut') || 'null'); return !!(t && t.done); }
+  catch (e) { return false; }
+}
+// une première connexion doit passer par le tutoriel avant la campagne ;
+// les anciens personnages (progression existante) sont dispensés
+export function tutorialRequired() {
+  const s = G.stats || {};
+  return !tutDone() && !(s.games > 0 || s.bestWave > 0 ||
+    (s.campaignDone && Object.values(s.campaignDone).some(Boolean)));
+}
+// la forge se débloque à la première mort (recordRun compte aussi la victoire)
+export function forgeUnlocked() {
+  const s = G.stats || {};
+  return !!(s.forgeUnlocked || s.games > 0 || s.runs > 0);
+}
 export function campaignUnlocked(c) {
+  if (tutorialRequired()) return false; // tutoriel obligatoire d'abord
   if (c === 0) return true;
   // chaque campagne se débloque en terminant la précédente
   return !!(G.stats.campaignDone && G.stats.campaignDone[c - 1]);

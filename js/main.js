@@ -86,6 +86,7 @@ export function damagePlayer(dmg, slow = 1.0, killer = null) {
     // cinématique de mort : le héros s'effondre pendant 1,8s avant le game over
     G.state = 'dying'; G.deathT = 1.8;
     G.deathDir = Math.random() < 0.5 ? -1 : 1;
+    G.stats.forgeUnlocked = true; // première mort : la forge s'ouvre au menu
     recordRun();
     // salve de mort : gerbe rouge, débris d'armure, onde de choc
     spawnParticles(p.x, p.y, '#ff1744', 30, 8);

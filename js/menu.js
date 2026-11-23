@@ -8,7 +8,7 @@ import { gainXp } from './player.js';
 import { curWorld, syncCamera, regenerateWorld, reloadWorlds, campaignStart } from './world.js';
 import { sfxCraft, sfxRepair, sfxEquip, sfxConfirm, sfxClick } from './audio.js';
 import { MAX_SLOTS, activeSlot, allSlots, slotMeta, slotSummary, createChar, selectChar, deselectChar, resetChar, fmtPlaytime, fmtDate, checkAdminPass, adminOK as _adminOK, adminList, adminWipeAll, adminLock } from './chars.js';
-import { inR, fitText, wrapLines, hexA, fmtTime, overline, panel, overlineCentered, drawMenuButton, drawAdminPwInput, menuButtons, menuButtonAt, adminUnlocked, campaignUnlocked, UI, SERIF, C_TEXT, C_MUTED, C_GOLD, MENU_X, MENU_W, MENU_ITEMS } from './menu/common.js';
+import { inR, fitText, wrapLines, hexA, fmtTime, overline, panel, overlineCentered, drawMenuButton, drawAdminPwInput, menuButtons, menuButtonAt, adminUnlocked, campaignUnlocked, forgeUnlocked, UI, SERIF, C_TEXT, C_MUTED, C_GOLD, MENU_X, MENU_W, MENU_ITEMS } from './menu/common.js';
 import { drawAchievementsCard } from './menu/achv.js';
 import { drawForgeView } from './menu/forge.js';
 import { drawCharacters } from './menu/heros.js';
@@ -99,8 +99,8 @@ export function drawMenu() {
 
   const b = menuButtons();
   MENU_ITEMS.forEach(([k, label], i) => {
-    const locked = k === 'modules' && !modulesUnlocked();
-    drawNavItem(b[k], locked ? '🔒 MODULES' : label, i === 0, k === 'ach' && unclaimedInTab(-1));
+    const locked = (k === 'modules' && !modulesUnlocked()) || (k === 'forge' && !forgeUnlocked());
+    drawNavItem(b[k], locked ? `🔒 ${label}` : label, i === 0, k === 'ach' && unclaimedInTab(-1));
   });
 
   // ==== colonne droite : héros actif + contrôles ====

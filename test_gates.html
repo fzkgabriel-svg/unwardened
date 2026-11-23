@@ -1,0 +1,33 @@
+<!DOCTYPE html><html><body><canvas id="game" width="1280" height="720"></canvas><pre id="out">RUN…</pre>
+<script type="module">
+const out = [];
+const ok = (n, c) => out.push((c ? 'PASS' : 'FAIL') + ' ' + n);
+try {
+  const { G } = await import('./js/state.js');
+  const { campaignUnlocked, tutorialRequired, forgeUnlocked } = await import('./js/menu/common.js');
+
+  // nouveau personnage : stats vides, pas de tutoriel fait
+  G.stats = {};
+  localStorage.removeItem('rpg2d_tut');
+  ok('tutoriel requis (nouveau)', tutorialRequired() === true);
+  ok('campagne 0 verrouillée', campaignUnlocked(0) === false);
+  ok('forge verrouillée', forgeUnlocked() === false);
+
+  // après le tutoriel
+  localStorage.setItem('rpg2d_tut', JSON.stringify({ i: -1, done: true }));
+  ok('tutoriel plus requis', tutorialRequired() === false);
+  ok('campagne 0 débloquée', campaignUnlocked(0) === true);
+  ok('forge toujours verrouillée', forgeUnlocked() === false);
+
+  // première mort : recordRun a tourné → games = 1
+  G.stats.games = 1;
+  ok('forge débloquée après mort', forgeUnlocked() === true);
+
+  // ancien personnage : progression existante → dispensé du tutoriel
+  localStorage.removeItem('rpg2d_tut');
+  G.stats = { bestWave: 12, games: 3 };
+  ok('ancien perso dispensé', tutorialRequired() === false);
+  ok('campagne 0 ouverte pour ancien', campaignUnlocked(0) === true);
+} catch (e) { out.push('FAIL ' + e.message); }
+document.getElementById('out').textContent = out.join('\n');
+</script></body></html>

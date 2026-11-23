@@ -6,7 +6,7 @@
 import { G, ctx, W, H, TAU } from '../state.js';
 import { roundRect, hexA } from '../utils.js';
 import { WORLDS, campaignStart, campaignEnd } from '../world_data.js';
-import { campaignUnlocked, inR, UI, SERIF, C_TEXT, C_MUTED } from './common.js';
+import { campaignUnlocked, tutorialRequired, inR, UI, SERIF, C_TEXT, C_MUTED } from './common.js';
 import { sfxClick, sfxPortal } from '../audio.js';
 import { startGame } from './flow.js';
 
@@ -695,6 +695,19 @@ export function drawCampaign() {
   ctx.shadowBlur = 0; ctx.letterSpacing = '0px';
   ctx.font = `italic 13.5px ${UI}`; ctx.fillStyle = C_MUTED;
   ctx.fillText('Survolez les territoires — cliquez pour explorer un monde', W / 2, 88);
+
+  // bannière : le tutoriel est obligatoire avant la première campagne
+  if (tutorialRequired()) {
+    ctx.font = `700 14px ${UI}`;
+    const msg = '✦ LE TUTORIEL EST OBLIGATOIRE — RETOURNE AU MENU ET CHOISIS « TUTORIEL » ✦';
+    const tw = ctx.measureText(msg).width + 44;
+    ctx.fillStyle = 'rgba(212,175,55,0.12)';
+    roundRect(W / 2 - tw / 2, 104, tw, 32, 16); ctx.fill();
+    ctx.strokeStyle = 'rgba(212,175,55,0.55)'; ctx.lineWidth = 1.4;
+    roundRect(W / 2 - tw / 2 + 0.5, 104.5, tw - 1, 31, 16); ctx.stroke();
+    ctx.fillStyle = '#ffd740';
+    ctx.fillText(msg, W / 2, 125);
+  }
 
   // ---- fiche + boutons ----
   const c = G.campaignSel === undefined || G.campaignSel === null ? 0 : G.campaignSel;
