@@ -94,7 +94,7 @@ export function drawMenu() {
   ctx.save();
   ctx.font = `600 52px ${SERIF}`; ctx.letterSpacing = '3px';
   ctx.fillStyle = C_TEXT;
-  ctx.fillText('KAELORYN STUDIO', MENU_X - 3, 196);
+  ctx.fillText('UNWARDENED', MENU_X - 3, 196);
   ctx.restore();
 
   const b = menuButtons();

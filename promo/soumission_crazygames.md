@@ -1,4 +1,4 @@
-# CANDIDATURE CRAZYGAMES — « Les Terres Oubliées »
+# CANDIDATURE CRAZYGAMES — « Unwardened »
 
 Tout ce qui suit est prêt à copier-coller dans le formulaire de soumission.
 
@@ -6,7 +6,7 @@ Tout ce qui suit est prêt à copier-coller dans le formulaire de soumission.
 
 ## NOM DU JEU
 
-**Les Terres Oubliées**
+**Unwardened**
 
 (sous-titre possible : « RPG 2D — Survie & Apocalypse »)
 
@@ -24,7 +24,7 @@ Action / RPG / Survie
 
 ## DESCRIPTION LONGUE
 
-> **Les Terres Oubliées** est un RPG 2D de survie jouable au clavier et à la souris.
+> **Unwardened** est un RPG 2D de survie jouable au clavier et à la souris.
 >
 > Explorez un monde généré procéduralement de 5400×3600 pixels : plaines, secteurs, champs labourés et une vingtaine de bâtiments abandonnés à fouiller pour de l'expérience et des fioles.
 >
