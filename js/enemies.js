@@ -244,10 +244,10 @@ export function damageEnemy(e, dmg, angle) {
     addDamageText(e.x, e.y - 16, `+${e.xp} XP`, '#40c4ff');
     gainXp(e.xp);
     // charge de l'ultime selon la sélection : Titan de Feu très lent (×0,22),
-    // Pluie de Glace un peu plus simple (×1,4)
+    // Pluie de Glace nettement plus difficile (×0,3 — ~3× plus de cibles que la bombe)
     const sel = G.stats.ultSel || 'nuke';
     const ultMult = sel === 'hell' && G.stats.hellUlt ? 0.22
-      : sel === 'glace' && G.stats.iceUlt ? 1.4 : 1;
+      : sel === 'glace' && G.stats.iceUlt ? 0.3 : 1;
     const gain = e.isBoss ? 30 : e.isMini ? 15 : 4;
     G.player.ultCharge = Math.min(100, G.player.ultCharge + gain * ultMult);
     // drop de fiole au sol : monstre 3%, mini-boss 8%, boss 15%,
