@@ -7,7 +7,7 @@ import { damageEnemy } from './js/enemies.js';
 const out=[];const T=(n,f)=>{try{out.push(n+'='+(f()??'ok'))}catch(e){out.push(n+'=FAIL:'+e.message)}};
 try{
 G.state='playing';G.campaign=4;G.wave=10;G.time=10;
-G.stats={campaignDone:{5:true}};
+G.stats={campaignDone:{3:true,5:true}}; // niveau 4 terminé -> modules débloqués
 G.player={x:600,y:320,r:15,hp:90,maxHp:200,level:10,xp:0,xpNext:50,potions:0,maxPotions:3,alive:true,lastHurt:-99,slowT:0,hitSlowT:0,potionCooldown:0,attackMode:1,speed:2.1,ultCharge:0,ultActive:0,switchLock:0,attackCooldown:0,spinCooldown:0,spinDuration:0,modShield:0};
 G.inv={mats:{emeraude:99999,cristal:50},items:{},equip:{},modules:{owned:[],eq:{act:null,pass:null,pass2:null},levels:{}},wmode:{}};
 G.enemies=[];G.drops=[];G.portals=[];G.particles=[];G.damageTexts=[];G.rings=[];G.bowShots=[];G.singZones=[];G.modCds={};G.modBuffs={};

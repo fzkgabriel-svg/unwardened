@@ -5,7 +5,16 @@ import { G, ctx, W, H, TAU } from './state.js';
 import { roundRect, drawMatIcon, hexA } from './utils.js';
 import { MATS, addMaterial, loadInv, saveInv } from './inventory.js';
 import { MODULES, MOD_IDS, ownModule, modState, drawModuleIcon } from './modules.js';
+import { diffProg } from './difficulty.js';
 import { sfxClick, sfxPickup, sfxBuy, sfxDeny, sfxTab } from './audio.js';
+
+// ---------- DÉBLOCAGE : l'onglet MODULES s'ouvre après le niveau 4 ----------
+// « niveau 4 » = le 4e territoire de campagne, LES ÉGOUTS (index 3) — sa
+// récompense de victoire est justement le système de modules. Il faut
+// l'avoir terminé en Normal (le Difficile/Expert l'exige déjà).
+export function modsUnlocked() {
+  try { return !!diffProg(3).n; } catch { return false; }
+}
 
 // catalogue : clef = matériau vendu (JAMAIS 'emeraude' — on n'achète pas la monnaie)
 // stock: null = illimité · sinon unités max par jour
@@ -124,6 +133,7 @@ export function modOnSaleToday(inv, id) { return !!(inv && modShopToday().includ
 export function buyModule(inv, id) {
   const m = MODULES[id];
   if (!m || m.price <= 0) return { ok: false, msg: 'Module indisponible' };
+  if (!modsUnlocked()) return { ok: false, msg: 'Réussissez le niveau 4 (LES ÉGOUTS) pour débloquer les modules' };
   if (!modShopToday().includes(id)) return { ok: false, msg: 'Pas en vente aujourd\'hui — revenez demain !' };
   const ms = modState(inv);
   if (ms.owned.includes(id)) return { ok: false, msg: 'Déjà possédé' };
@@ -180,9 +190,15 @@ export function shopClickAt(x, y) {
     if (inR(L.confirmNo, x, y)) { G.shopConfirm = null; sfxClick(); return 'deny'; }
     return 'inside';
   }
-  // onglets MATÉRIAUX / MODULES
+  // onglets MATÉRIAUX / MODULES (MODULES verrouillé avant le niveau 4)
   if (inR(L.tabs.mats, x, y)) { setShopTab('mats'); return 'tab'; }
-  if (inR(L.tabs.mods, x, y)) { setShopTab('mods'); return 'tab'; }
+  if (inR(L.tabs.mods, x, y)) {
+    if (!modsUnlocked()) {
+      G.shopFlash = { msg: '🔒 Réussissez le niveau 4 (LES ÉGOUTS) pour débloquer les modules', t: G.time, bad: true };
+      sfxDeny(); return 'deny';
+    }
+    setShopTab('mods'); return 'tab';
+  }
   // ===== onglet MODULES : reliquaire =====
   if ((G.shopTab || 'mats') === 'mods') {
     // clic sur une carte -> panneau de détail
@@ -350,7 +366,8 @@ export function drawShop() {
   }
   ctx.globalAlpha = 1;
 
-  const tab = G.shopTab || 'mats';
+  const wantTab = G.shopTab || 'mats';
+  const tab = wantTab === 'mods' && !modsUnlocked() ? 'mats' : wantTab;
   // transition d'onglet : fondu + léger glissement du contenu
   const tabK = Math.min(1, (t - (G.shopTabT ?? t)) / 0.28);
   const tabEase = 1 - Math.pow(1 - tabK, 3);
@@ -796,12 +813,14 @@ function drawDetail(L, inv, t) {
 
 // ---------- ONGLETS MATÉRIAUX / MODULES ----------
 function drawShopTabs(L, t, tab) {
+  const modsOk = modsUnlocked();
   for (const [key, label, icon, col] of [
     ['mats', 'MATÉRIAUX', '💰', '#d4b062'],
-    ['mods', 'MODULES', '✦', '#d8b45a'],
+    ['mods', modsOk ? 'MODULES' : 'MODULES 🔒', '✦', modsOk ? '#d8b45a' : '#5a6472'],
   ]) {
     const r = L.tabs[key], act = tab === key;
-    const hov = inR(r, G.mouse.x, G.mouse.y);
+    const locked = key === 'mods' && !modsOk;
+    const hov = !locked && inR(r, G.mouse.x, G.mouse.y);
     ctx.save();
     // fond : verre sombre, actif = lueur de sa couleur
     const g = ctx.createLinearGradient(r.x, r.y, r.x, r.y + r.h);
@@ -816,9 +835,13 @@ function drawShopTabs(L, t, tab) {
       ctx.fillStyle = hexA(col, 0.55 + 0.3 * Math.sin(t * 5));
       roundRect(r.x + r.w / 2 - 34, r.y + r.h - 4, 68, 3, 2); ctx.fill();
     }
-    ctx.fillStyle = act ? '#fff' : hov ? '#cfd8dc' : '#8d99ae';
+    ctx.fillStyle = locked ? '#5a6472' : act ? '#fff' : hov ? '#cfd8dc' : '#8d99ae';
     ctx.font = '700 12.5px Inter, sans-serif'; ctx.textAlign = 'center';
     ctx.fillText(`${icon}  ${label}`, r.x + r.w / 2, r.y + r.h / 2 + 4.5);
+    if (locked) {
+      ctx.fillStyle = '#7d8aa0'; ctx.font = '9px Inter, sans-serif';
+      ctx.fillText('NIVEAU 4 À TERMINER', r.x + r.w / 2, r.y + r.h + 13);
+    }
     ctx.restore();
   }
 }
