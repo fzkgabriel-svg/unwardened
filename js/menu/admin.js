@@ -328,8 +328,8 @@ function applyAdminCheat(id) {
   }
 }
 
-// ---------- bouton admin 🛠 (tout en haut à droite) ----------
-export const ADMIN_BTN = { x: W - 96, y: 8, w: 88, h: 34 };
+// ---------- bouton admin 🛠 (en haut à droite, à gauche des RÉGLAGES) ----------
+export const ADMIN_BTN = { x: W - 256, y: 12, w: 88, h: 34 };
 export function adminButtonAt(x, y) {
   const r = ADMIN_BTN;
   return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
