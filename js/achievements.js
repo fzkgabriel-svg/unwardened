@@ -101,7 +101,30 @@ export const ACHIEVEMENTS = [
   { id: 'sto_pass2',   icon: '⚡', name: 'Second souffle',        desc: 'Débloquer le 2ᵉ emplacement de module passif',      t: (G) => !!((G.inv && G.inv.modules && G.inv.modules.pass2Unlocked) || (G.stats && G.stats.campaignDone && G.stats.campaignDone[5])), tab: 5 },
   { id: 'sto_flawless',icon: '🛡️', name: 'Ancrage céleste',       desc: 'Atteindre la vague 40 en Tempêtes en subissant < 1800 dégâts', t: (G) => G.campaign === 5 && G.wave >= 40 && G.dmgTaken < 1800, tab: 5 },
   { id: 'sto_marathon',icon: '⌛', name: 'Sentinelle des cimes',  desc: 'Survivre 12 minutes en Royaume des Tempêtes',      t: (G) => G.campaign === 5 && G.runTime >= 720, tab: 5 },
+  // ---------- FORGE : fabrication & collection d'objets ----------
+  { id: 'forge_first', icon: '🔨', name: 'Première lame',        desc: 'Posséder un objet forgé',                           t: (G) => craftedCount(G) >= 1 },
+  { id: 'forge_10',    icon: '⚒️', name: 'Armurier',             desc: 'Posséder 10 objets forgés',                         t: (G) => craftedCount(G) >= 10 },
+  { id: 'forge_25',    icon: '🏺', name: 'Maître forgeron',      desc: 'Posséder 25 objets forgés',                         t: (G) => craftedCount(G) >= 25 },
+  // ---------- COLLECTION : matériaux & richesses ----------
+  { id: 'hoard_50',    icon: '🎒', name: 'Boursier',             desc: 'Cumuler 50 matériaux',                              t: (G) => matTotal(G) >= 50 },
+  { id: 'hoard_200',   icon: '💰', name: 'Trésorier',            desc: 'Cumuler 200 matériaux',                             t: (G) => matTotal(G) >= 200 },
+  { id: 'hoard_500',   icon: '🐉', name: 'Garde-manger du dragon', desc: 'Cumuler 500 matériaux',                          t: (G) => matTotal(G) >= 500 },
 ];
+
+// compte les objets forgés possédés (hors consommables)
+function craftedCount(G) {
+  const it = (G.inv && G.inv.items) || {};
+  let n = 0;
+  for (const k in it) if (it[k] && !(ITEMS[k] && ITEMS[k].conso)) n++;
+  return n;
+}
+// total des matériaux en stock
+function matTotal(G) {
+  const m = (G.inv && G.inv.mats) || {};
+  let n = 0;
+  for (const k in m) n += m[k] || 0;
+  return n;
+}
 
 // rareté des succès : plus c'est rare, plus la récompense est précieuse
 export const RARITY = {
@@ -207,12 +230,84 @@ const REWARDS = {
   sto_pass2:    ['legendaire',{ cristal: 10, essence: 10, or: 10 }],
   sto_flawless: ['legendaire',{ cristal: 9, essence: 9, or: 9 }],
   sto_marathon: ['epique',    { cristal: 6, essence: 6, or: 6 }],
+  // forge & collection
+  forge_first:  ['rare',      { fer: 3, cuir: 2 }],
+  forge_10:     ['epique',    { or: 3, essence: 2, fer: 4 }],
+  forge_25:     ['legendaire',{ or: 6, essence: 5, cristal: 3 }],
+  hoard_50:     ['rare',      { cuir: 2, fer: 2 }],
+  hoard_200:    ['epique',    { or: 4, essence: 3 }],
+  hoard_500:    ['legendaire',{ or: 8, essence: 6, cristal: 4 }],
 };
 
-// infos d'affichage (rareté + récompense) d'un succès
+// infos d'affichage (clé + rareté + récompense) d'un succès
 export function achInfo(id) {
   const [r, rw] = REWARDS[id] || ['commun', {}];
-  return { rarity: RARITY[r], reward: rw };
+  return { key: r, rarity: RARITY[r], reward: rw };
+}
+
+// catégories d'affichage du registre des exploits
+export const CATS = [
+  { id: 'all',         label: 'Tous',        icon: '✦' },
+  { id: 'exploration', label: 'Exploration', icon: '🧭' },
+  { id: 'combat',      label: 'Combat',      icon: '⚔️' },
+  { id: 'progression', label: 'Progression', icon: '📈' },
+  { id: 'forge',       label: 'Forge',       icon: '⚒️' },
+  { id: 'collection',  label: 'Collection',  icon: '🎒' },
+  { id: 'secret',      label: 'Secrets',     icon: '🔒' },
+];
+// catégorie d'un succès : les succès 'hidden' forment la catégorie Secrets
+export function achCat(a) {
+  if (a.hidden) return 'secret';
+  const id = a.id;
+  if (/^forge_/.test(id)) return 'forge';
+  if (/^hoard_/.test(id)) return 'collection';
+  // boss de monde, coffres, trônes, 2e emplacement passif -> exploration
+  if (/^(ice|hell|sew|spa|sto)_(boss|chest|throne|hole)$/.test(id) || id === 'sto_pass2') return 'exploration';
+  if (/^(level|potion)_/.test(id)) return 'progression';
+  return 'combat';
+}
+export function achCatList(cat) {
+  return ACHIEVEMENTS.filter(a => cat === 'all' || achCat(a) === cat);
+}
+
+// kills par type d'ennemi -> clé stats.typeKills (pour les barres de progression)
+const TYPE_KILLS = {
+  exter: 'spider', witch: 'witch', ice_yeti: 'yeti', ice_hunter: 'hunter', ice_alpha: 'alpha',
+  hell_imp: 'imp', hell_demon: 'demon', hell_golem: 'golemEnf',
+  sew_rat: 'rat', sew_crapaud: 'crapaud', sew_ver: 'ver',
+  spa_alien: 'alien', spa_drone: 'drone', spa_tentacule: 'tentacule',
+  sto_courant: 'courant', sto_esprit: 'esprit', sto_gardien: 'gardien', sto_colosse: 'colosse',
+};
+// progression affichable d'un succès : {cur, max, pct} ou null (objectif binaire/mystère)
+export function achProgress(a) {
+  const s = effStats();
+  const id = a.id;
+  let m;
+  const set = (c, mx) => ({ cur: Math.min(c, mx), max: mx, pct: Math.max(0, Math.min(1, c / mx)) });
+  if (id === 'first_blood') return set(s.totalKills || 0, 1);
+  if ((m = id.match(/^slayer_(\d+)$/))) return set(s.totalKills || 0, +m[1]);
+  if ((m = id.match(/^wave_(\d+)$/))) return set(G.wave || 0, +m[1]);
+  if ((m = id.match(/^(?:ice|hell|sew|spa|sto)_wave_(\d+)$/))) return set(G.wave || 0, +m[1]);
+  if ((m = id.match(/^level_(\d+)$/))) return set(G.player.level || 1, +m[1]);
+  if ((m = id.match(/^dmg_(\d+)k$/))) return set(s.totalDamage || 0, +m[1] * 1000);
+  if ((m = id.match(/^potion_(\d+)$/))) return set(s.totalPotions || 0, +m[1]);
+  if ((m = id.match(/^boss_(\d+)$/))) return set(s.totalBossKills || 0, +m[1]);
+  if ((m = id.match(/^marathon_(\d+)$/))) return set(G.runTime || 0, +m[1] * 60);
+  if ((m = id.match(/^(ult|ice_ult|hell_ult)_(\d+)$/))) {
+    const key = m[1] === 'ult' ? 'ultsUsed' : m[1] === 'ice_ult' ? 'iceUlts' : 'hellUlts';
+    return set(s[key] || 0, +m[2]);
+  }
+  if (id === 'night_owl') return set(G.nightTime || 0, 120);
+  if (id === 'speedrun') return set(G.wave || 0, 20);
+  for (const pre in TYPE_KILLS) {
+    if (id.startsWith(pre + '_') && (m = id.match(/_(\d+)$/))) {
+      return set(((s.typeKills || {})[TYPE_KILLS[pre]] || 0), +m[1]);
+    }
+  }
+  if ((m = id.match(/^forge_(\d+)$/))) return set(craftedCount(G), +m[1]);
+  if (id === 'forge_first') return set(craftedCount(G), 1);
+  if ((m = id.match(/^hoard_(\d+)$/))) return set(matTotal(G), +m[1]);
+  return null;
 }
 
 // un succès est réclamé une seule fois ; l'ancien format 'true' compte comme non réclamé
@@ -228,9 +323,16 @@ export function claimReward(id) {
   if (!a || !u || isClaimed(id)) return false;
   const rw = (REWARDS[id] || [])[1] || {};
   for (const m in rw) addMaterial(G.inv, m, rw[m]);
-  unlocked[id] = { claimed: true };
+  const prev = unlocked[id];
+  unlocked[id] = { claimed: true, t: (prev && typeof prev === 'object' && prev.t) || Date.now() };
   save(unlocked);
   return true;
+}
+
+// date de déblocage d'un succès (timestamp ou 0 si inconnu/legacy)
+export function achUnlockT(id) {
+  const u = unlocked[id];
+  return (u && typeof u === 'object' && u.t) || 0;
 }
 
 // stats effectives = cumulées (toutes parties) + compteurs de la partie en cours,
@@ -258,10 +360,10 @@ export function checkAchievements() {
   let changed = false;
   for (const a of ACHIEVEMENTS) {
     if (!unlocked[a.id] && a.t(G, s)) {
-      unlocked[a.id] = { claimed: false };
+      unlocked[a.id] = { claimed: false, t: Date.now() };
       changed = true;
       sfxAchievement();
-      G.achToast = { name: a.name, icon: a.icon, t: 3.5 };
+      G.achToast = { name: a.name, icon: a.icon, t: 3.5, rar: achInfo(a.id).key };
     }
   }
   if (changed) save(unlocked);

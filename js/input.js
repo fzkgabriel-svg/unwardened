@@ -49,6 +49,13 @@ export function initInput() {
       else if (e.key.length === 1 && (G.invQuery || '').length < 24 && !e.ctrlKey && !e.metaKey) G.invQuery = (G.invQuery || '') + e.key;
       return;
     }
+    // recherche dans le registre des succès (menu > succès, champ actif)
+    if (G.achQueryFocus && G.menuView === 'achievements') {
+      if (k === 'enter' || k === 'escape') { G.achQueryFocus = false; sfxClick(); }
+      else if (k === 'backspace') G.achQuery = (G.achQuery || '').slice(0, -1);
+      else if (e.key.length === 1 && (G.achQuery || '').length < 24 && !e.ctrlKey && !e.metaKey) G.achQuery = (G.achQuery || '') + e.key;
+      return;
+    }
     G.keys[k] = true;
     if (G.state === 'menu') {
       if (G.menuView === 'characters') return; // écran de sélection : clics uniquement

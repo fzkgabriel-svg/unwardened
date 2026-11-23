@@ -1,88 +1,156 @@
-import { G, ctx, W, H, TAU, saveStats, finalWave } from '../state.js';
-import { roundRect, drawMatIcon, drawItemIcon, itemTier } from '../utils.js';
-import { regenerateDecor } from '../graphics.js';
-import { ACHIEVEMENTS, unlocked, achievementCount, checkAchievements, achInfo, isClaimed, claimReward, achTabList, unclaimedInTab, adminUnlockAll } from '../achievements.js';
-import { ITEMS, MATS, canCraft, craft, toggleEquip, equipBonuses, getDur, canRepair, repairItem, repairCost, loadInv, addMaterial, modeInfo, addWmodeXp, modeMult, MODE_MAX_LVL, setInvNoSave } from '../inventory.js';
-import { spawnEnemy, spawnFinalBoss } from '../enemies.js';
-import { gainXp } from '../player.js';
-import { curWorld, syncCamera, regenerateWorld, reloadWorlds, campaignStart } from '../world.js';
-import { sfxCraft, sfxRepair, sfxEquip, sfxConfirm, sfxClick } from '../audio.js';
-import { MAX_SLOTS, activeSlot, allSlots, slotMeta, slotSummary, createChar, selectChar, deselectChar, resetChar, fmtPlaytime, fmtDate, checkAdminPass, adminOK as _adminOK, adminList, adminWipeAll, adminLock } from '../chars.js';
-import { inR, fitText, wrapLines, hexA, fmtTime, overline, panel, overlineCentered, drawMenuButton, drawAdminPwInput, menuButtons, menuButtonAt, adminUnlocked, campaignUnlocked, UI, SERIF, C_TEXT, C_MUTED, C_GOLD, MENU_X, MENU_W, MENU_ITEMS } from './common.js';
+import { G, ctx, W, H, TAU } from '../state.js';
+import { roundRect } from '../utils.js';
+import { ACHIEVEMENTS, unlocked, RARITY, achievementCount, achInfo, isClaimed, claimReward, achProgress, achUnlockT, achCat, CATS, achCatList } from '../achievements.js';
+import { MATS, loadInv } from '../inventory.js';
+import { sfxConfirm, sfxClick } from '../audio.js';
+import { fmtDate } from '../chars.js';
+import { inR, fitText, wrapLines, UI, SERIF, C_TEXT, C_MUTED, C_GOLD, drawMenuButton } from './common.js';
 
-// grille des succès (partagée dessin / clic) — avec scroll et fiche détail
+// ---------- état du registre ----------
 let achScroll = 0;
-let achDetail = null;
-let achTab = 0; // 0 = Terres Oubliées, 1 = Terre Gelée, 2 = Enfers, 3 = Égouts, 4 = Espace, 5 = Tempêtes // id du succès ouvert en grand format
-const ACH_COLS = 3, ACH_CELL_H = 44, ACH_GAP = 5;
-const ACH_TAB_NAMES = ['🗺️ TERRES', '❄️ GLACÉE', '🔥 ENFERS', '🗑️ ÉGOUTS', '🛸 ESPACE', '🌪️ TEMPÊTES'];
+let achDetail = null;          // id du succès ouvert en fiche
+let achCatF = 'all';           // catégorie active
+let achRarF = 'all';           // rareté active ('all' ou clé RARITY)
+let achSortF = 'order';        // 'order' | 'rarity' | 'recent'
+const WORLD_NAMES = ['Terres Oubliées', 'Terre Gelée', 'Les Enfers', 'Les Égouts', 'L\'Espace', 'Royaume des Tempêtes'];
+const WORLD_ICONS = ['', '❄️', '🔥', '🗑️', '🛸', '🌪️'];
+const RAR_ORDER = { all: 0, commun: 1, rare: 2, epique: 3, legendaire: 4 };
 
-function achTabBtns() {
-  const cw = 880, ch = 590, cx = W / 2 - cw / 2, cy = H / 2 - ch / 2;
-  const bw = 132, gap = 10, y = cy + 80;
-  const x0 = cx + (cw - (bw * 6 + gap * 5)) / 2;
-  return [0, 1, 2, 3, 4, 5].map(i => ({ i, x: x0 + i * (bw + gap), y, w: bw, h: 34 }));
+// ---------- géométrie ----------
+function panelRect() {
+  return { x: 44, y: 30, w: W - 88, h: H - 62 };
+}
+function headerRect() { const p = panelRect(); return { x: p.x + 26, y: p.y + 18, w: p.w - 52 }; }
+
+// rangée d'onglets catégories
+function catBtns() {
+  const p = panelRect();
+  const y = p.y + 176, h = 36, gap = 8;
+  const bw = (p.w - 52 - gap * (CATS.length - 1)) / CATS.length;
+  return CATS.map((c, i) => {
+    const list = achCatList(c.id);
+    const done = list.filter(a => unlocked[a.id]).length;
+    return { cat: c, x: p.x + 26 + i * (bw + gap), y, w: bw, h, done, total: list.length };
+  });
 }
 
-function achCells() {
-  const cw = 880, ch = 590, cx = W / 2 - cw / 2, cy = H / 2 - ch / 2;
-  const list = achTabList(achTab);
-  const cellW = (cw - 70) / ACH_COLS, gx = cx + 35, gy = cy + 128;
-  const cells = list.map((a, i) => {
-    const x = gx + (i % ACH_COLS) * cellW, y = gy + Math.floor(i / ACH_COLS) * (ACH_CELL_H + ACH_GAP) - achScroll;
-    return {
-      a, x, y, w: cellW - 8, h: ACH_CELL_H,
-      btn: { x: x + cellW - 8 - 76, y: y + 12, w: 68, h: 20 }
-    };
+// rangée filtres : rareté + tri + recherche + tout réclamer
+function filterRects() {
+  const p = panelRect();
+  const y = p.y + 222, h = 32;
+  const rarKeys = ['all', 'commun', 'rare', 'epique', 'legendaire'];
+  const rarLabels = { all: 'Toutes', commun: 'Commun', rare: 'Rare', epique: 'Épique', legendaire: 'Légendaire' };
+  const rarBtns = rarKeys.map((k, i) => ({ k, label: rarLabels[k], x: p.x + 26 + i * 86, y, w: 78, h }));
+  const sortDefs = [['order', 'Ordre'], ['rarity', 'Rareté'], ['recent', 'Récent']];
+  const sx = p.x + 26 + 5 * 86 + 14;
+  const sortBtns = sortDefs.map(([k, label], i) => ({ k, label, x: sx + i * 92, y, w: 84, h }));
+  const searchW = 190;
+  const search = { x: p.x + p.w - 26 - searchW - 108, y, w: searchW, h };
+  const claimAll = { x: search.x + searchW + 10, y, w: 98, h };
+  return { rarBtns, sortBtns, search, claimAll };
+}
+
+// liste filtrée + triée
+function achFiltered() {
+  const q = (G.achQuery || '').trim().toLowerCase();
+  let list = ACHIEVEMENTS.filter(a => {
+    if (achCatF !== 'all' && achCat(a) !== achCatF) return false;
+    if (achRarF !== 'all' && achInfo(a.id).key !== achRarF) return false;
+    if (q && !(a.name + ' ' + a.desc).toLowerCase().includes(q)) return false;
+    return true;
   });
-  const rows = Math.ceil(list.length / ACH_COLS);
-  const contentH = rows * ACH_CELL_H + (rows - 1) * ACH_GAP;
-  const viewH = ch - 156;
+  if (achSortF === 'rarity') {
+    list = [...list].sort((x, y) => RAR_ORDER[achInfo(x.id).key] - RAR_ORDER[achInfo(y.id).key] || ACHIEVEMENTS.indexOf(x) - ACHIEVEMENTS.indexOf(y));
+  } else if (achSortF === 'recent') {
+    list = [...list].sort((x, y) => achUnlockT(y.id) - achUnlockT(x.id) || ACHIEVEMENTS.indexOf(x) - ACHIEVEMENTS.indexOf(y));
+  }
+  return list;
+}
+
+// ---------- grille ----------
+const COLS = 4, CELL_W = 0, CELL_H = 108, GAP = 10;
+
+function achCells() {
+  const p = panelRect();
+  const gx = p.x + 26, gy = p.y + 268;
+  const viewW = p.w - 52;
+  const cw = (viewW - GAP * (COLS - 1)) / COLS;
+  const list = achFiltered();
+  const cells = list.map((a, i) => {
+    const x = gx + (i % COLS) * (cw + GAP);
+    const y = gy + Math.floor(i / COLS) * (CELL_H + GAP) - achScroll;
+    return { a, x, y, w: cw, h: CELL_H, ix: i };
+  });
+  const rows = Math.ceil(list.length / COLS);
+  const contentH = rows * CELL_H + (rows - 1) * GAP;
+  const viewB = p.y + p.h - 34;
+  const viewH = viewB - gy;
   return {
-    cx, cy, cw, ch, cells, viewH, list,
-    view: { x: gx - 8, y: gy - 6, w: cw - 54, h: viewH },
+    p, gx, gy, cw, cells, viewH, list,
+    view: { x: gx - 6, y: gy - 6, w: viewW + 12, h: viewH },
     scrollMax: Math.max(0, contentH - viewH)
   };
 }
 
 export function achWheel(delta) {
   const { scrollMax } = achCells();
-  achScroll = Math.max(0, Math.min(scrollMax, achScroll + delta * 0.45));
+  achScroll = Math.max(0, Math.min(scrollMax, achScroll + delta * 0.5));
 }
 
-// fiche détail (modale) — géométrie partagée dessin / clic
+// ---------- fiche détail ----------
 function achDetailLayout() {
-  const cw = 580, ch = 440, cx = W / 2 - cw / 2, cy = H / 2 - ch / 2;
+  const cw = 620, ch = 500, cx = W / 2 - cw / 2, cy = H / 2 - ch / 2;
   return {
     cx, cy, cw, ch,
-    close: { x: cx + cw - 48, y: cy + 12, w: 36, h: 32 },
-    claim: { x: cx + cw / 2 - 90, y: cy + ch - 78, w: 180, h: 42 }
+    close: { x: cx + cw - 52, y: cy + 14, w: 38, h: 34 },
+    claim: { x: cx + cw / 2 - 100, y: cy + ch - 76, w: 200, h: 46 }
   };
 }
 
+// ---------- clics ----------
 export function achClickAt(x, y) {
-  const b = menuButtons().back;
-  // modale détail ouverte : elle intercepte tous les clics
+  const p = panelRect();
+  // modale détail : intercepte tous les clics
   if (achDetail) {
     const L = achDetailLayout();
     if (inR(L.close, x, y)) { achDetail = null; return 'close'; }
     const a = ACHIEVEMENTS.find(v => v.id === achDetail);
     if (a && inR(L.claim, x, y)) {
-      if (unlocked[a.id] && !isClaimed(a.id) && claimReward(a.id)) return 'claimed';
+      if (unlocked[a.id] && !isClaimed(a.id) && claimReward(a.id)) { sfxConfirm(); return 'claimed'; }
       return 'noop';
     }
     return 'noop';
   }
-  if (inR(b, x, y)) { achDetail = null; return 'back'; }
-  for (const t of achTabBtns()) {
-    if (inR(t, x, y)) { achTab = t.i; achScroll = 0; achDetail = null; return 'tab'; }
+  // retour
+  const back = { x: p.x + p.w - 150, y: p.y + 20, w: 124, h: 36 };
+  if (inR(back, x, y)) { achDetail = null; achScroll = 0; G.achQueryFocus = false; return 'back'; }
+  // recherche : focus / clic dedans
+  const F = filterRects();
+  if (inR(F.search, x, y)) { G.achQueryFocus = true; achScroll = 0; return 'search'; }
+  G.achQueryFocus = false;
+  // tout réclamer
+  if (inR(F.claimAll, x, y)) {
+    let n = 0;
+    for (const a of achFiltered()) if (unlocked[a.id] && !isClaimed(a.id) && claimReward(a.id)) n++;
+    if (n) sfxConfirm();
+    return n ? 'claimedAll' : 'noop';
+  }
+  for (const c of catBtns()) {
+    if (inR(c, x, y)) { if (achCatF !== c.cat.id) { achCatF = c.cat.id; achScroll = 0; achDetail = null; } return 'tab'; }
+  }
+  for (const r of F.rarBtns) {
+    if (inR(r, x, y)) { if (achRarF !== r.k) { achRarF = r.k; achScroll = 0; } return 'rar'; }
+  }
+  for (const s of F.sortBtns) {
+    if (inR(s, x, y)) { if (achSortF !== s.k) { achSortF = s.k; achScroll = 0; } return 'sort'; }
   }
   for (const c of achCells().cells) {
-    const ok = !!unlocked[c.a.id], claimed = isClaimed(c.a.id);
     if (!inR({ x: c.x, y: c.y, w: c.w, h: c.h }, x, y)) continue;
-    // clic sur le bouton OBTENIR/RÉCOLTÉ → action directe, sinon fiche détail
-    if (ok && inR(c.btn, x, y)) {
-      if (!claimed && claimReward(c.a.id)) return 'claimed';
+    const ok = !!unlocked[c.a.id];
+    // mini-bouton réclamer en bas à droite de la carte
+    const cb = { x: c.x + c.w - 74, y: c.y + c.h - 26, w: 62, h: 18 };
+    if (ok && inR(cb, x, y)) {
+      if (!isClaimed(c.a.id) && claimReward(c.a.id)) { sfxConfirm(); return 'claimed'; }
       return 'noop';
     }
     achDetail = c.a.id;
@@ -91,179 +159,270 @@ export function achClickAt(x, y) {
   return null;
 }
 
-// grande fiche d'un succès : icône, nom, rareté, objectif détaillé, récompense
-function drawAchDetail() {
-  const a = ACHIEVEMENTS.find(v => v.id === achDetail);
-  if (!a) { achDetail = null; return; }
-  const ok = !!unlocked[a.id], claimed = isClaimed(a.id);
-  const { rarity, reward } = achInfo(a.id);
-  const L = achDetailLayout();
-  // voile + carte
-  ctx.fillStyle = 'rgba(0,0,0,0.62)'; ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = 'rgba(14,12,8,0.97)';
-  roundRect(L.cx, L.cy, L.cw, L.ch, 18); ctx.fill();
-  ctx.strokeStyle = rarity.color; ctx.lineWidth = 2.5;
-  roundRect(L.cx, L.cy, L.cw, L.ch, 18); ctx.stroke();
-  ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1;
-  roundRect(L.cx + 5, L.cy + 5, L.cw - 10, L.ch - 10, 14); ctx.stroke();
-
-  // icône géante + nom + rareté (succès caché non débloqué : tout masqué)
-  const hidD = a.hidden && !ok;
-  ctx.textAlign = 'center';
-  ctx.font = '54px serif';
-  ctx.fillText(hidD ? '❓' : a.icon, W / 2, L.cy + 88);
-  ctx.font = 'bold 26px Inter, sans-serif';
-  ctx.fillStyle = ok ? '#ffe9a3' : '#78909c';
-  ctx.fillText(fitText(hidD ? 'Succès mystère' : a.name, L.cw - 80), W / 2, L.cy + 132);
-  ctx.font = 'bold 13px Inter, sans-serif';
-  ctx.fillStyle = rarity.color;
-  ctx.fillText(hidD ? '???' : '★ ' + rarity.label.toUpperCase(), W / 2, L.cy + 158);
-  ctx.font = 'italic 14px Inter, sans-serif';
-  ctx.fillStyle = ok ? (claimed ? '#69f0ae' : '#ffd740') : '#90a4ae';
-  ctx.fillText(ok ? (claimed ? '✓ Récompense récoltée' : '✓ Débloqué — réclame ta récompense !') : '🔒 Pas encore débloqué', W / 2, L.cy + 184);
-
-  // OBJECTIF : comment l'obtenir (description complète en plusieurs lignes)
-  ctx.textAlign = 'left'; ctx.font = 'bold 13px Inter, sans-serif';
-  ctx.fillStyle = '#ffd740';
-  ctx.fillText('🎯 COMMENT L\'OBTENIR', L.cx + 42, L.cy + 224);
-  ctx.font = '15px Inter, sans-serif';
-  ctx.fillStyle = '#e8e0c8';
-  const lines = wrapLines(hidD ? 'Ce succès reste caché jusqu\'à son déblocage. Explore, bats-toi et reviens plus fort…' : a.desc, L.cw - 84);
-  const descTop = L.cy + 248;
-  lines.forEach((ln, i) => ctx.fillText(ln, L.cx + 42, descTop + i * 21));
-
-  // RÉCOMPENSE
-  const rw = Object.keys(reward).map(m => `${MATS[m].name} ×${reward[m]}`).join('  ·  ');
-  const rwY = Math.max(descTop + lines.length * 21 + 14, L.cy + L.ch - 132);
-  ctx.font = 'bold 13px Inter, sans-serif';
-  ctx.fillStyle = '#ffd740';
-  ctx.fillText('🎁 RÉCOMPENSE', L.cx + 42, rwY);
-  ctx.font = '14px Consolas, monospace';
-  ctx.fillStyle = ok ? '#ffe9a3' : '#78909c';
-  ctx.fillText(fitText(rw, L.cw - 84), L.cx + 42, rwY + 22);
-
-  // boutons : OBTENIR (si réclamable) + FERMER
-  const claimable = ok && !claimed;
-  if (claimable) {
-    const cb = L.claim;
-    ctx.fillStyle = 'rgba(76,175,80,0.6)';
-    roundRect(cb.x, cb.y, cb.w, cb.h, 10); ctx.fill();
-    ctx.strokeStyle = '#81c784'; ctx.lineWidth = 2;
-    roundRect(cb.x, cb.y, cb.w, cb.h, 10); ctx.stroke();
-    ctx.fillStyle = '#fff'; ctx.font = 'bold 15px Inter, sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText('★  OBTENIR  ★', cb.x + cb.w / 2, cb.y + 28);
-  } else {
-    ctx.font = 'italic 13px Inter, sans-serif'; ctx.textAlign = 'center';
-    ctx.fillStyle = claimed ? '#69f0ae' : '#546e7a';
-    ctx.fillText(claimed ? 'Récompense déjà récoltée ✓' : 'Verrouillé — continue à jouer !', W / 2, L.claim.y + 26);
-  }
-  const fb = L.close;
-  ctx.fillStyle = 'rgba(69,90,100,0.8)';
-  roundRect(fb.x, fb.y, fb.w, fb.h, 8); ctx.fill();
-  ctx.strokeStyle = '#90a4ae'; ctx.lineWidth = 1.5;
-  roundRect(fb.x, fb.y, fb.w, fb.h, 8); ctx.stroke();
-  ctx.fillStyle = '#fff'; ctx.font = 'bold 16px Inter, sans-serif'; ctx.textAlign = 'center';
-  ctx.fillText('✕', fb.x + fb.w / 2, fb.y + 22);
+// ---------- petits éléments ----------
+function chip(x, y, w, h, label, on, accent) {
+  ctx.save();
+  const g = ctx.createLinearGradient(0, y, 0, y + h);
+  if (on) { g.addColorStop(0, 'rgba(212,175,55,0.30)'); g.addColorStop(1, 'rgba(212,175,55,0.14)'); }
+  else { g.addColorStop(0, 'rgba(255,255,255,0.06)'); g.addColorStop(1, 'rgba(255,255,255,0.02)'); }
+  ctx.fillStyle = g;
+  ctx.strokeStyle = on ? (accent || C_GOLD) : 'rgba(255,255,255,0.14)';
+  ctx.lineWidth = on ? 1.6 : 1;
+  roundRect(x, y, w, h, h / 2); ctx.fill(); ctx.stroke();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = `600 ${h > 34 ? 12.5 : 11}px ${UI}`;
+  ctx.fillStyle = on ? '#ffe9a3' : '#b8b0a0';
+  ctx.fillText(label, x + w / 2, y + h / 2 + 1);
+  ctx.restore();
 }
 
+function drawBackBtn() {
+  const p = panelRect();
+  const b = { x: p.x + p.w - 150, y: p.y + 20, w: 124, h: 36 };
+  drawMenuButton(b, '← RETOUR', '#455a64', '#90a4ae', false);
+}
+
+// ---------- écran principal ----------
 export function drawAchievementsCard() {
-  const { cx, cy, cw, ch, cells, view, scrollMax } = achCells();
-  ctx.fillStyle = 'rgba(0,0,0,0.6)';
-  roundRect(cx, cy, cw, ch, 16); ctx.fill();
-  ctx.strokeStyle = 'rgba(255,215,64,0.6)'; ctx.lineWidth = 2;
-  roundRect(cx, cy, cw, ch, 16); ctx.stroke();
+  const p = panelRect();
+  // fond panneau
+  ctx.fillStyle = 'rgba(10,9,14,0.88)';
+  roundRect(p.x, p.y, p.w, p.h, 16); ctx.fill();
+  ctx.strokeStyle = 'rgba(212,175,55,0.4)'; ctx.lineWidth = 1.5;
+  roundRect(p.x, p.y, p.w, p.h, 16); ctx.stroke();
+  ctx.strokeStyle = 'rgba(212,175,55,0.15)'; ctx.lineWidth = 1;
+  roundRect(p.x + 4, p.y + 4, p.w - 8, p.h - 8, 13); ctx.stroke();
 
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#ffd740'; ctx.font = 'bold 30px Inter, sans-serif';
-  ctx.fillText('SUCCÈS', W / 2, cy + 46);
+  const h = headerRect();
+  // titre + ornement
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.font = `bold 30px ${SERIF}`;
+  ctx.fillStyle = '#ffd740';
+  ctx.shadowColor = 'rgba(255,215,64,0.35)'; ctx.shadowBlur = 12;
+  ctx.fillText('✦ REGISTRE DES EXPLOITS', h.x, h.y + 22);
+  ctx.shadowBlur = 0;
+  ctx.font = `500 12px ${UI}`; ctx.fillStyle = C_MUTED;
+  ctx.fillText('Chaque exploit gravé ici témoigne de ta légende.', h.x, h.y + 44);
+
+  drawBackBtn();
+
+  // ---------- statistiques globales ----------
+  const total = ACHIEVEMENTS.length;
   const done = achievementCount();
-  ctx.fillStyle = '#80cbc4'; ctx.font = 'italic 15px Inter, sans-serif';
-  ctx.fillText(`${done} / ${ACHIEVEMENTS.length} débloqués au total — molette pour défiler, clic pour les détails`, W / 2, cy + 68);
+  const left = total - done;
+  const claimableAll = ACHIEVEMENTS.filter(a => unlocked[a.id] && !isClaimed(a.id)).length;
+  const pct = total ? done / total : 0;
 
-  // onglets par monde
-  for (const t of achTabBtns()) {
-    const on = achTab === t.i;
-    const tabList = achTabList(t.i);
-    const tabDone = tabList.filter(a => unlocked[a.id]).length;
-    const pending = unclaimedInTab(t.i);
-    ctx.fillStyle = on ? 'rgba(255,215,64,0.28)' : 'rgba(255,255,255,0.05)';
-    roundRect(t.x, t.y, t.w, t.h, 10); ctx.fill();
-    ctx.strokeStyle = on ? '#ffd740' : 'rgba(255,255,255,0.15)';
-    ctx.lineWidth = on ? 2 : 1;
-    roundRect(t.x, t.y, t.w, t.h, 10); ctx.stroke();
-    ctx.textAlign = 'center';
-    ctx.font = 'bold 13px Inter, sans-serif';
-    ctx.fillStyle = on ? '#ffe9a3' : '#b0bec5';
-    ctx.fillText(`${ACH_TAB_NAMES[t.i]}  (${tabDone}/${tabList.length})`, t.x + t.w / 2, t.y + 22);
-    // pastille dorée si des récompenses sont réclamables dans cet onglet
-    if (pending) {
-      const px = t.x + t.w - 16, py = t.y + 10;
-      const pulse = 0.7 + Math.sin(G.time * 6) * 0.3;
-      ctx.fillStyle = `rgba(255,215,64,${pulse})`;
-      ctx.beginPath(); ctx.arc(px, py, 6, 0, TAU); ctx.fill();
-      ctx.strokeStyle = '#7a5c00'; ctx.lineWidth = 1.5; ctx.stroke();
-      ctx.fillStyle = '#3a2c00'; ctx.font = 'bold 9px Inter, sans-serif';
-      ctx.fillText('!', px, py + 3.5);
-    }
+  const sy = h.y + 62;
+  // grand compteur
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.font = `bold 34px ${SERIF}`; ctx.fillStyle = '#ffe9a3';
+  ctx.fillText(`${done}`, h.x, sy + 12);
+  ctx.font = `500 13px ${UI}`; ctx.fillStyle = C_MUTED;
+  ctx.fillText(`/ ${total} succès débloqués`, h.x + ctx.measureText(`${done}`).width + 8, sy + 14);
+
+  // barre de progression globale
+  const bw = 330, bx = h.x + 190, by = sy + 4;
+  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  roundRect(bx, by, bw, 10, 5); ctx.fill();
+  const pg = ctx.createLinearGradient(bx, 0, bx + bw, 0);
+  pg.addColorStop(0, 'rgba(212,175,55,0.5)'); pg.addColorStop(1, '#ffd740');
+  ctx.fillStyle = pg;
+  roundRect(bx, by, Math.max(10, bw * pct), 10, 5); ctx.fill();
+  ctx.font = `600 11px ${UI}`; ctx.fillStyle = '#ffe9a3';
+  ctx.textAlign = 'right';
+  ctx.fillText(`${Math.round(pct * 100)} %`, bx + bw, by - 9);
+
+  // chips stats
+  const chips = [
+    { label: `${left} restant${left > 1 ? 's' : ''}`, color: '#9fb3c8' },
+    { label: `${claimableAll} récompense${claimableAll > 1 ? 's' : ''} à réclamer`, color: claimableAll ? '#81c784' : C_MUTED },
+  ];
+  let cx = bx + bw + 22;
+  for (const c of chips) {
+    ctx.font = `600 12px ${UI}`;
+    const w = ctx.measureText(c.label).width + 22;
+    ctx.fillStyle = 'rgba(255,255,255,0.05)';
+    roundRect(cx, sy - 4, w, 30, 15); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1;
+    roundRect(cx, sy - 4, w, 30, 15); ctx.stroke();
+    ctx.fillStyle = c.color; ctx.textAlign = 'center';
+    ctx.fillText(c.label, cx + w / 2, sy + 11);
+    cx += w + 10;
   }
 
-  // grille 3 colonnes, rognée au viewport visible
+  // dernier + prochain succès
+  const ny = sy + 34;
+  // dernier succès débloqué
+  let lastA = null, lastT = 0;
+  for (const a of ACHIEVEMENTS) { const t = achUnlockT(a.id); if (t > lastT) { lastT = t; lastA = a; } }
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.font = `600 10.5px ${UI}`; ctx.fillStyle = C_GOLD;
+  ctx.fillText('✦ DERNIER EXPLOIT', h.x, ny);
+  ctx.font = `500 13px ${UI}`; ctx.fillStyle = lastA ? C_TEXT : C_MUTED;
+  ctx.fillText(lastA ? `${lastA.icon} ${lastA.name} — ${fmtDate(lastT)}` : 'Aucun pour le moment', h.x + 118, ny);
+
+  // prochain succès (premier verrouillé de la liste filtrée)
+  const filt = achFiltered();
+  const nextA = filt.find(a => !unlocked[a.id]);
+  ctx.fillStyle = C_GOLD;
+  ctx.fillText('➤ PROCHAIN', h.x + 560, ny);
+  if (nextA) {
+    const pr = achProgress(nextA);
+    ctx.font = `500 13px ${UI}`; ctx.fillStyle = C_TEXT;
+    ctx.fillText(`${nextA.icon} ${fitText(nextA.name, 300)}`, h.x + 660, ny);
+    if (pr) {
+      const nbw = 90;
+      ctx.fillStyle = 'rgba(255,255,255,0.1)';
+      roundRect(h.x + 660, ny + 12, nbw, 5, 2.5); ctx.fill();
+      ctx.fillStyle = '#ffd740';
+      roundRect(h.x + 660, ny + 12, nbw * pr.pct, 5, 2.5); ctx.fill();
+      ctx.font = `500 10px ${UI}`; ctx.fillStyle = C_MUTED;
+      ctx.textAlign = 'left';
+      ctx.fillText(`${Math.round(pr.pct * 100)} %`, h.x + 660 + nbw + 6, ny + 14);
+    }
+  } else {
+    ctx.font = `500 13px ${UI}`; ctx.fillStyle = '#81c784';
+    ctx.fillText('Tous les succès de ce filtre sont débloqués !', h.x + 660, ny);
+  }
+
+  // ---------- onglets catégories ----------
+  for (const c of catBtns()) {
+    chip(c.x, c.y, c.w, c.h, `${c.cat.icon} ${c.cat.label} · ${c.done}/${c.total}`, achCatF === c.cat.id);
+  }
+
+  // ---------- filtres ----------
+  const F = filterRects();
+  for (const r of F.rarBtns) {
+    const col = r.k === 'all' ? null : RARITY[r.k].color;
+    chip(r.x, r.y, r.w, r.h, r.label, achRarF === r.k, col);
+  }
+  const sortLbl = { order: 'Ordre', rarity: 'Rareté', recent: 'Récent' };
+  for (const s of F.sortBtns) chip(s.x, s.y, s.w, s.h, `⇅ ${sortLbl[s.k]}`, achSortF === s.k, '#7fb3d5');
+
+  // recherche
+  const focused = !!G.achQueryFocus;
+  ctx.fillStyle = focused ? 'rgba(212,175,55,0.12)' : 'rgba(255,255,255,0.05)';
+  roundRect(F.search.x, F.search.y, F.search.w, F.search.h, F.search.h / 2); ctx.fill();
+  ctx.strokeStyle = focused ? C_GOLD : 'rgba(255,255,255,0.15)'; ctx.lineWidth = focused ? 1.8 : 1;
+  roundRect(F.search.x, F.search.y, F.search.w, F.search.h, F.search.h / 2); ctx.stroke();
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.font = `500 12px ${UI}`;
+  const q = G.achQuery || '';
+  ctx.fillStyle = q ? C_TEXT : C_MUTED;
+  ctx.fillText(q ? q + (focused && Math.floor(G.time * 2) % 2 ? '▌' : '') : '🔍 Rechercher…', F.search.x + 14, F.search.y + F.search.h / 2 + 1);
+
+  // tout réclamer
+  const nClaim = achFiltered().filter(a => unlocked[a.id] && !isClaimed(a.id)).length;
+  chip(F.claimAll.x, F.claimAll.y, F.claimAll.w, F.claimAll.h, `🎁 Tout (${nClaim})`, false, nClaim ? '#81c784' : null);
+
+  // ---------- grille des cartes ----------
+  const { cells, view, scrollMax } = achCells();
   ctx.save();
   ctx.beginPath(); ctx.rect(view.x, view.y, view.w, view.h); ctx.clip();
   for (const c of cells) {
     const a = c.a, ok = !!unlocked[a.id], claimed = isClaimed(a.id);
     const claimable = ok && !claimed;
-    const { rarity, reward } = achInfo(a.id);
-    ctx.save();
-    if (!ok) ctx.globalAlpha = 0.35;
-    ctx.fillStyle = claimable ? 'rgba(105,240,174,0.10)' : claimed ? 'rgba(255,215,64,0.08)' : 'rgba(255,255,255,0.04)';
-    roundRect(c.x, c.y, c.w, c.h, 9); ctx.fill();
-    ctx.strokeStyle = claimable ? 'rgba(105,240,174,0.6)' : claimed ? 'rgba(255,215,64,0.45)' : 'rgba(255,255,255,0.12)';
-    ctx.lineWidth = claimable || claimed ? 1.5 : 1;
-    roundRect(c.x, c.y, c.w, c.h, 9); ctx.stroke();
-    // icône (succès caché non débloqué : point d'interrogation)
+    const { key, rarity, reward } = achInfo(a.id);
     const hid = a.hidden && !ok;
-    ctx.font = '18px serif'; ctx.textAlign = 'center';
-    ctx.fillText(hid ? '❓' : a.icon, c.x + 20, c.y + 29);
+    const pr = ok ? null : achProgress(a);
+    const legendary = key === 'legendaire';
+
+    ctx.save();
+    // carte
+    const bgA = hid ? 0.30 : ok ? (claimed ? 0.62 : 0.72) : 0.45;
+    ctx.globalAlpha = bgA;
+    const bg = ctx.createLinearGradient(0, c.y, 0, c.y + c.h);
+    if (claimable) { bg.addColorStop(0, 'rgba(46,80,52,0.9)'); bg.addColorStop(1, 'rgba(24,40,28,0.9)'); }
+    else if (claimed) { bg.addColorStop(0, 'rgba(60,52,26,0.9)'); bg.addColorStop(1, 'rgba(34,30,16,0.9)'); }
+    else { bg.addColorStop(0, 'rgba(30,32,44,0.9)'); bg.addColorStop(1, 'rgba(18,20,30,0.9)'); }
+    ctx.fillStyle = bg;
+    roundRect(c.x, c.y, c.w, c.h, 10); ctx.fill();
+    // bordure rareté (légendaire : lueur dorée)
+    ctx.strokeStyle = hid ? 'rgba(140,120,200,0.35)' : rarity.color + '88';
+    ctx.lineWidth = legendary && ok ? 2 : 1.2;
+    if (legendary && ok) { ctx.shadowColor = 'rgba(255,215,64,0.55)'; ctx.shadowBlur = 10; }
+    roundRect(c.x, c.y, c.w, c.h, 10); ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+
+    // filet supérieur coloré par rareté
+    ctx.fillStyle = hid ? 'rgba(140,120,200,0.4)' : rarity.color + '55';
+    roundRect(c.x + 10, c.y + 1, c.w - 20, 3, 1.5); ctx.fill();
+
+    // icône
+    ctx.font = '24px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(hid ? '❓' : a.icon, c.x + 24, c.y + 30);
+
     // nom + rareté
     ctx.textAlign = 'left';
-    ctx.font = 'bold 11px Inter, sans-serif';
-    ctx.fillStyle = claimable ? '#a5d6a7' : claimed ? '#ffe9a3' : '#78909c';
-    const name = fitText(hid ? 'Succès mystère' : a.name, c.w - 150);
-    ctx.fillText(name, c.x + 38, c.y + 16);
-    const nameW = ctx.measureText(name).width;
-    ctx.font = '9px Inter, sans-serif'; ctx.fillStyle = hid ? '#546e7a' : rarity.color;
-    ctx.fillText(hid ? '???' : rarity.label, c.x + 38 + nameW + 6, c.y + 16);
-    // description
-    ctx.font = '9px Inter, sans-serif';
-    ctx.fillStyle = ok ? '#bdbdbd' : '#546e7a';
-    ctx.fillText(fitText(hid ? 'Ce succès reste caché jusqu\'à son déblocage…' : a.desc, c.w - 120), c.x + 38, c.y + 28);
-    // récompense / statut de récolte
-    ctx.font = '9px Consolas, monospace';
+    ctx.font = `bold 12.5px ${UI}`;
+    ctx.fillStyle = hid ? '#9a8fb8' : ok ? (claimed ? '#e8d9a8' : '#ffe9a3') : '#8b93a8';
+    ctx.fillText(fitText(hid ? 'Succès mystère' : a.name, c.w - 108), c.x + 44, c.y + 18);
+    ctx.font = `600 9px ${UI}`;
+    ctx.fillStyle = hid ? '#6a5f8f' : rarity.color;
+    ctx.fillText(hid ? '???' : rarity.label.toUpperCase(), c.x + 44, c.y + 33);
+    // badge monde (à droite de la rareté)
+    if ((a.tab || 0) > 0 && !hid) {
+      ctx.textAlign = 'right';
+      ctx.font = `500 9px ${UI}`; ctx.fillStyle = '#7d86a0';
+      ctx.fillText(WORLD_ICONS[a.tab] || '', c.x + c.w - 8, c.y + 33);
+      ctx.textAlign = 'left';
+    }
+
+    // description (1 ligne)
+    ctx.font = `400 10.5px ${UI}`;
+    ctx.fillStyle = ok ? '#b9b2a2' : '#6d7488';
+    ctx.fillText(fitText(hid ? 'Ce succès reste caché jusqu\'à son déblocage…' : a.desc, c.w - 56), c.x + 44, c.y + 50);
+
+    // barre de progression (si disponible et non débloqué)
+    if (pr) {
+      const pbx = c.x + 44, pbw = c.w - 100;
+      ctx.fillStyle = 'rgba(255,255,255,0.1)';
+      roundRect(pbx, c.y + 62, pbw, 5, 2.5); ctx.fill();
+      ctx.fillStyle = '#7fb3d5';
+      roundRect(pbx, c.y + 62, pbw * pr.pct, 5, 2.5); ctx.fill();
+      ctx.font = `500 9px ${UI}`; ctx.fillStyle = '#9fb3c8';
+      ctx.fillText(`${Math.round(pr.pct * 100)} %`, pbx + pbw + 5, c.y + 65);
+    } else if (!ok) {
+      ctx.font = `500 9.5px ${UI}`; ctx.fillStyle = '#5d6478';
+      ctx.fillText('◇ Objectif à découvrir', c.x + 44, c.y + 65);
+    }
+
+    // récompense (bas de carte)
+    ctx.font = `500 9px Consolas, monospace`;
     if (claimed) {
       ctx.fillStyle = '#ffd740';
-      ctx.fillText('Récompense récoltée ✓', c.x + 38, c.y + 39);
+      ctx.fillText('✓ Récompense récoltée', c.x + 44, c.y + c.h - 14);
+    } else if (hid) {
+      ctx.fillStyle = '#6a5f8f';
+      ctx.fillText('🎁 ???', c.x + 44, c.y + c.h - 14);
     } else {
-      const rw = Object.keys(reward).map(m => `${MATS[m].name} ×${reward[m]}`).join(' · ');
-      ctx.fillStyle = claimable ? '#e0e0e0' : '#78909c';
-      ctx.fillText(fitText('Récompense : ' + rw, c.w - 92), c.x + 38, c.y + 39);
+      const rw = Object.keys(reward).map(m => `${MATS[m] ? MATS[m].name : m} ×${reward[m]}`).join(' · ');
+      ctx.fillStyle = ok ? '#d8cba0' : '#5d6478';
+      ctx.fillText(fitText('🎁 ' + rw, c.w - 130), c.x + 44, c.y + c.h - 14);
     }
-    // bouton OBTENIR / RÉCOLTÉ (succès débloqué uniquement)
+
+    // bouton réclamer / statut
+    const cb = { x: c.x + c.w - 74, y: c.y + c.h - 26, w: 62, h: 18 };
     if (ok) {
-      const b = c.btn;
-      ctx.fillStyle = claimable ? 'rgba(76,175,80,0.55)' : 'rgba(255,255,255,0.07)';
-      roundRect(b.x, b.y, b.w, b.h, 6); ctx.fill();
-      ctx.strokeStyle = claimable ? '#81c784' : 'rgba(255,255,255,0.2)';
-      ctx.lineWidth = 1.5; roundRect(b.x, b.y, b.w, b.h, 6); ctx.stroke();
+      ctx.fillStyle = claimable ? 'rgba(76,175,80,0.75)' : 'rgba(255,255,255,0.07)';
+      roundRect(cb.x, cb.y, cb.w, cb.h, 6); ctx.fill();
+      ctx.strokeStyle = claimable ? '#81c784' : 'rgba(255,215,64,0.4)';
+      ctx.lineWidth = 1.2; roundRect(cb.x, cb.y, cb.w, cb.h, 6); ctx.stroke();
       ctx.fillStyle = claimable ? '#fff' : '#ffd740';
-      ctx.font = 'bold 9px Inter, sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(claimable ? 'OBTENIR' : 'RÉCOLTÉ ✓', b.x + b.w / 2, b.y + 14);
+      ctx.font = `bold 9px ${UI}`; ctx.textAlign = 'center';
+      ctx.fillText(claimable ? 'OBTENIR' : '✓', cb.x + cb.w / 2, cb.y + 10);
+    } else {
+      ctx.font = `500 10px ${UI}`; ctx.textAlign = 'center';
+      ctx.fillStyle = '#4a5165';
+      ctx.fillText('🔒', cb.x + cb.w / 2, cb.y + 10);
     }
     ctx.restore();
   }
-  ctx.restore(); // fin du clip de la grille
+  ctx.restore(); // fin clip
 
-  // scrollbar verticale (à droite de la grille)
+  // scrollbar
   if (scrollMax > 0) {
     const sx = view.x + view.w + 8, sy = view.y, sh = view.h;
     ctx.fillStyle = 'rgba(255,255,255,0.08)';
@@ -274,10 +433,117 @@ export function drawAchievementsCard() {
     roundRect(sx, thumbY, 7, thumbH, 4); ctx.fill();
   }
 
-  const b = menuButtons().back;
-  drawMenuButton(b, '← RETOUR', '#455a64', '#90a4ae', false);
+  // indice bas
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = `400 10.5px ${UI}`; ctx.fillStyle = C_MUTED;
+  ctx.fillText('Molette pour défiler · clic sur un succès pour le détail · 🔍 pour rechercher', W / 2, p.y + p.h - 14);
 
-  // fiche détail d'un succès par-dessus tout
   if (achDetail) drawAchDetail();
 }
 
+// ---------- fiche détail d'un succès ----------
+function drawAchDetail() {
+  const a = ACHIEVEMENTS.find(v => v.id === achDetail);
+  if (!a) { achDetail = null; return; }
+  const ok = !!unlocked[a.id], claimed = isClaimed(a.id);
+  const { key, rarity, reward } = achInfo(a.id);
+  const hid = a.hidden && !ok;
+  const L = achDetailLayout();
+  const legendary = key === 'legendaire';
+
+  ctx.fillStyle = 'rgba(0,0,0,0.66)'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = 'rgba(12,11,17,0.97)';
+  roundRect(L.cx, L.cy, L.cw, L.ch, 16); ctx.fill();
+  ctx.strokeStyle = hid ? 'rgba(140,120,200,0.6)' : rarity.color; ctx.lineWidth = 2;
+  if (legendary && ok) { ctx.shadowColor = 'rgba(255,215,64,0.6)'; ctx.shadowBlur = 16; }
+  roundRect(L.cx, L.cy, L.cw, L.ch, 16); ctx.stroke();
+  ctx.shadowBlur = 0;
+  // filet rareté en haut
+  const rg = ctx.createLinearGradient(L.cx + 20, 0, L.cx + L.cw - 20, 0);
+  rg.addColorStop(0, 'transparent'); rg.addColorStop(0.5, hid ? 'rgba(140,120,200,0.8)' : rarity.color); rg.addColorStop(1, 'transparent');
+  ctx.fillStyle = rg;
+  roundRect(L.cx + 20, L.cy + 2, L.cw - 40, 3, 1.5); ctx.fill();
+
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  // icône + nom + rareté
+  ctx.font = '56px serif';
+  ctx.fillText(hid ? '❓' : a.icon, W / 2, L.cy + 78);
+  ctx.font = `bold 26px ${SERIF}`;
+  ctx.fillStyle = ok ? '#ffe9a3' : '#8b93a8';
+  ctx.fillText(fitText(hid ? 'Succès mystère' : a.name, L.cw - 90), W / 2, L.cy + 128);
+  ctx.font = `600 12px ${UI}`;
+  ctx.fillStyle = hid ? '#6a5f8f' : rarity.color;
+  ctx.fillText(hid ? '???' : `★ ${rarity.label.toUpperCase()}`, W / 2, L.cy + 152);
+  // monde + date + statut
+  ctx.font = `500 11px ${UI}`; ctx.fillStyle = C_MUTED;
+  const worldTxt = (a.tab || 0) > 0 ? ` · ${WORLD_NAMES[a.tab] || ''}` : '';
+  ctx.fillText(`${WORLD_NAMES[0]}${worldTxt}`, W / 2, L.cy + 170);
+  ctx.fillStyle = ok ? (claimed ? '#81c784' : '#ffd740') : '#6d7488';
+  ctx.font = `600 12px ${UI}`;
+  ctx.fillText(ok ? (claimed ? `✓ Débloqué le ${fmtDate(achUnlockT(a.id))} — récompense récoltée` : `✓ Débloqué le ${fmtDate(achUnlockT(a.id))} — récompense à réclamer !`) : '🔒 Pas encore débloqué', W / 2, L.cy + 192);
+
+  // objectif
+  ctx.textAlign = 'left';
+  ctx.font = `600 12px ${UI}`; ctx.fillStyle = C_GOLD;
+  ctx.fillText('🎯 COMMENT L\'OBTENIR', L.cx + 36, L.cy + 226);
+  ctx.font = `500 14px ${UI}`; ctx.fillStyle = '#e8e0c8';
+  const lines = wrapLines(hid ? 'Ce succès reste caché jusqu\'à son déblocage. Explore, bats-toi et reviens plus fort…' : a.desc, L.cw - 72);
+  lines.forEach((ln, i) => ctx.fillText(ln, L.cx + 36, L.cy + 250 + i * 20));
+
+  // progression
+  const pr = ok ? null : achProgress(a);
+  let ry = L.cy + 250 + lines.length * 20 + 16;
+  if (pr) {
+    ctx.font = `600 12px ${UI}`; ctx.fillStyle = C_GOLD;
+    ctx.fillText('📊 PROGRESSION', L.cx + 36, ry);
+    const pbx = L.cx + 36, pbw = L.cw - 72;
+    ctx.fillStyle = 'rgba(255,255,255,0.1)';
+    roundRect(pbx, ry + 12, pbw, 8, 4); ctx.fill();
+    ctx.fillStyle = '#7fb3d5';
+    roundRect(pbx, ry + 12, pbw * pr.pct, 8, 4); ctx.fill();
+    ctx.font = `500 11px ${UI}`; ctx.fillStyle = '#9fb3c8'; ctx.textAlign = 'right';
+    ctx.fillText(`${pr.cur} / ${pr.max}  (${Math.round(pr.pct * 100)} %)`, L.cx + L.cw - 36, ry + 16);
+    ctx.textAlign = 'left';
+    ry += 40;
+  }
+
+  // récompense
+  ctx.font = `600 12px ${UI}`; ctx.fillStyle = C_GOLD;
+  ctx.fillText('🎁 RÉCOMPENSE', L.cx + 36, ry);
+  const rwKeys = Object.keys(reward);
+  if (rwKeys.length) {
+    const rwTxt = rwKeys.map(m => `${MATS[m] ? MATS[m].name : m} ×${reward[m]}`).join('   ·   ');
+    ctx.font = `500 13px Consolas, monospace`;
+    ctx.fillStyle = hid ? '#6a5f8f' : ok ? '#ffe9a3' : '#8b93a8';
+    ctx.fillText(fitText(rwTxt, L.cw - 72), L.cx + 36, ry + 24);
+  } else {
+    ctx.font = `500 12px ${UI}`; ctx.fillStyle = C_MUTED;
+    ctx.fillText('Aucune récompense matérielle', L.cx + 36, ry + 24);
+  }
+
+  // boutons
+  const claimable = ok && !claimed;
+  if (claimable) {
+    const cb = L.claim;
+    const gg = ctx.createLinearGradient(0, cb.y, 0, cb.y + cb.h);
+    gg.addColorStop(0, 'rgba(76,175,80,0.85)'); gg.addColorStop(1, 'rgba(46,125,50,0.85)');
+    ctx.fillStyle = gg;
+    roundRect(cb.x, cb.y, cb.w, cb.h, 12); ctx.fill();
+    ctx.strokeStyle = '#a5d6a7'; ctx.lineWidth = 1.8;
+    roundRect(cb.x, cb.y, cb.w, cb.h, 12); ctx.stroke();
+    ctx.fillStyle = '#fff'; ctx.font = `bold 15px ${UI}`; ctx.textAlign = 'center';
+    ctx.fillText('★  RÉCLAMER LA RÉCOMPENSE  ★', cb.x + cb.w / 2, cb.y + cb.h / 2 + 1);
+  } else {
+    ctx.font = `500 12px ${UI}`; ctx.textAlign = 'center';
+    ctx.fillStyle = claimed ? '#81c784' : '#5d6478';
+    ctx.fillText(claimed ? 'Récompense déjà récoltée ✓' : 'Verrouillé — continue à jouer !', W / 2, L.claim.y + 24);
+  }
+  // fermer
+  const fb = L.close;
+  ctx.fillStyle = 'rgba(69,90,100,0.85)';
+  roundRect(fb.x, fb.y, fb.w, fb.h, 9); ctx.fill();
+  ctx.strokeStyle = '#90a4ae'; ctx.lineWidth = 1.4;
+  roundRect(fb.x, fb.y, fb.w, fb.h, 9); ctx.stroke();
+  ctx.fillStyle = '#fff'; ctx.font = `bold 16px ${UI}`; ctx.textAlign = 'center';
+  ctx.fillText('✕', fb.x + fb.w / 2, fb.y + fb.h / 2 + 1);
+}
