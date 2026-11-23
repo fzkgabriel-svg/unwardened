@@ -1,0 +1,108 @@
+<!DOCTYPE html><html><body><canvas id="game" width="1280" height="720"></canvas><pre id="out">RUN…</pre>
+<script type="module">
+const out = [];
+const ok = (n, c) => out.push((c ? 'PASS' : 'FAIL') + ' ' + n);
+try {
+  const { G, finalWave } = await import('./js/state.js');
+  const { DIFFS, diffProg, diffPlayable, diffUnlockedLevel, recordDiffWin, runScore, waveModFor, WAVE_MODS } = await import('./js/difficulty.js');
+  const { spawnEnemy } = await import('./js/enemies.js');
+
+  // ---------- sauvegarde / migration ----------
+  G.stats = {};
+  localStorage.removeItem('rpg2d_c0_stats'); // slot 0 par défaut ? on force stats directement
+  // migration : campagne 0 déjà terminée avant la mise à jour
+  G.stats.campaignDone = { 0: true, 1: true };
+  let p = diffProg(0);
+  ok('migration : Normal validé', p.n === true);
+  ok('migration : Difficile débloqué', p.hu === true);
+  ok('migration : Difficile pas terminé', p.h === false);
+  ok('migration : Expert verrouillé', diffPlayable(0, 2) === false);
+  ok('migration : Difficile lançable', diffPlayable(0, 1) === true);
+
+  // ---------- chaîne de déblocage ----------
+  G.stats = { campaignDone: {} };
+  diffProg(0); // crée l'entrée vide
+  ok('Normal lançable', diffPlayable(0, 0) === true);
+  ok('Difficile verrouillé au départ', diffPlayable(0, 1) === false);
+  ok('Expert verrouillé au départ', diffPlayable(0, 2) === false);
+  recordDiffWin(0, 0, 1000, 300);
+  ok('Normal terminé -> Difficile débloqué', diffPlayable(0, 1) === true);
+  ok('Expert toujours verrouillé', diffPlayable(0, 2) === false);
+  ok('campaignDone posé', !!G.stats.campaignDone[0]);
+  recordDiffWin(0, 1, 1500, 400);
+  ok('Difficile terminé -> Expert débloqué', diffPlayable(0, 2) === true);
+  recordDiffWin(0, 2, 2000, 500);
+  const p2 = diffProg(0);
+  ok('Expert terminé', p2.e === true);
+  ok('record score expert', p2.bs[2] === 2000);
+  ok('record temps expert', p2.bt[2] === 500);
+  ok('record score normal conservé', p2.bs[0] === 1000);
+  // indépendance par niveau : le niveau 1 n'est pas affecté par le niveau 0
+  G.stats.campaignDone = { 0: true };
+  const p1 = diffProg(1);
+  ok('niveau 1 : pas de migration (pas terminé)', p1.n === false && p1.h === false);
+  ok('niveau 1 : Difficile verrouillé', diffPlayable(1, 1) === false);
+
+  // ---------- finalWave : +2 / +5 ----------
+  G.campaign = 0; G.difficulty = 0;
+  ok('camp0 normal = 20', finalWave() === 20);
+  G.difficulty = 1;
+  ok('camp0 difficile = 22', finalWave() === 22);
+  G.difficulty = 2;
+  ok('camp0 expert = 25', finalWave() === 25);
+  G.campaign = 5; G.difficulty = 0;
+  ok('camp5 normal = 45', finalWave() === 45);
+  G.difficulty = 2;
+  ok('camp5 expert = 50', finalWave() === 50);
+  G.difficulty = 0;
+
+  // ---------- modificateurs de vague ----------
+  ok('waveMod null en Normal', waveModFor(3, 0) === null);
+  ok('waveMod null en Difficile', waveModFor(3, 1) === null);
+  const wm = waveModFor(4, 2);
+  ok('waveMod présent en Expert', !!wm && WAVE_MODS.includes(wm));
+  ok('waveMod absent à la vague finale', waveModFor(50, 2) === null);
+
+  // ---------- stats ennemis par difficulté ----------
+  G.campaign = 0; G.wave = 10; G.enemies = []; G.portals = []; G.mods = null;
+  G.player = { x: 0, y: 0 };
+  G.difficulty = 0;
+  spawnEnemy('slime', false, 100, 100, 0);
+  const eN = G.enemies.pop();
+  G.difficulty = 1;
+  spawnEnemy('slime', false, 100, 100, 0);
+  const eH = G.enemies.pop();
+  G.difficulty = 2;
+  // spawn jusqu'à obtenir un échantillon (élites aléatoires ~10 %)
+  let eE = null, elites = 0;
+  for (let i = 0; i < 120; i++) {
+    spawnEnemy('slime', false, 100 + i, 100, 0);
+    const e = G.enemies[G.enemies.length - 1];
+    if (e.elite) { elites++; if (!eE) eE = e; }
+  }
+  G.enemies.length = 0;
+  ok('Difficile : PV supérieurs au Normal', eH.hp > eN.hp);
+  ok('Difficile : dégâts supérieurs', eH.damage > eN.damage);
+  ok('Expert : élites générés', elites > 0);
+  if (eE) {
+    // élite = difficulté expert (×1,35 PV) × elite (×1,7) ≈ ×2,3 vs un normal de même vague
+    ok('Élite : PV très supérieur', eE.hp > eN.hp * 1.8 && eE.hp < eN.hp * 3.2);
+    ok('Élite : flag posé', eE.elite === true);
+  } else ok('Élite : flag posé', false);
+
+  // ---------- score ----------
+  G.wave = 20; G.kills = 100; G.bossesKilled = 2; G.dmgDealt = 4000;
+  G.player.level = 10;
+  ok('score calculé', runScore() > 0);
+
+  // ---------- double attribution ----------
+  G.stats = {};
+  G.runMats = { emeraude: 5 };
+  recordDiffWin(0, 0, 500, 100);
+  recordDiffWin(0, 0, 500, 100); // rejouer ne doit rien dupliquer
+  ok('re-victoire : pas de doublon mats', G.runMats.emeraude === 5);
+  ok('re-victoire : flags stables', diffProg(0).n === true);
+
+} catch (e) { out.push('FAIL ' + e.message + ' ' + (e.stack || '').split('\n')[1]); }
+document.getElementById('out').textContent = out.join('\n');
+</script></body></html>

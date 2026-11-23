@@ -7,6 +7,7 @@ import { spawnEnemy, spawnFinalBoss } from '../enemies.js';
 import { gainXp } from '../player.js';
 import { curWorld, syncCamera, regenerateWorld, reloadWorlds, campaignStart, campaignEnd } from '../world.js';
 import { buildMods, todayChallenge } from '../challenge.js';
+import { diffPlayable } from '../difficulty.js';
 import { sfxCraft, sfxRepair, sfxEquip, sfxConfirm, sfxClick } from '../audio.js';
 import { MAX_SLOTS, activeSlot, allSlots, slotMeta, slotSummary, createChar, selectChar, deselectChar, resetChar, fmtPlaytime, fmtDate, checkAdminPass, adminOK as _adminOK, adminList, adminWipeAll, adminLock } from '../chars.js';
 import { inR, fitText, wrapLines, hexA, fmtTime, overline, panel, overlineCentered, drawMenuButton, drawAdminPwInput, menuButtons, menuButtonAt, adminUnlocked, campaignUnlocked, UI, SERIF, C_TEXT, C_MUTED, C_GOLD, MENU_X, MENU_W, MENU_ITEMS } from './common.js';
@@ -55,6 +56,11 @@ export function startGame() {
   G._durBypass = false;
   // sécurité : une campagne exige la victoire dans la précédente (stats du personnage)
   if (G.campaign > 0 && !campaignUnlocked(G.campaign)) G.campaign = 0;
+  // difficulté : bornée par la progression du niveau (Normal -> Difficile -> Expert)
+  while ((G.difficulty || 0) > 0 && !diffPlayable(G.campaign, G.difficulty)) G.difficulty--;
+  G.diffJustUnlocked = null;
+  G.waveMod = null;
+  G.runXp = 0; G.lastScore = 0;
   G.state = 'intro'; // les nuages s'ouvrent pendant 3s, puis la partie commence
   G.menuView = 'main';
   G.tutorial = null; // une partie normale n'est jamais un tutoriel
@@ -79,9 +85,7 @@ export function startGame() {
   // NG+ + défi quotidien : multiplicateurs de la partie
   const mods = buildMods();
   const ch = todayChallenge();
-  G.warnToast = mods.ng > 0
-    ? { name: `♾ NG+${mods.ng} — ${ch.icon} ${ch.name} : ${ch.desc}`, t: 8 }
-    : { name: `${ch.icon} DÉFI DU JOUR — ${ch.name} : ${ch.desc}`, t: 8 };
+  G.warnToast = { name: `${ch.icon} DÉFI DU JOUR — ${ch.name} : ${ch.desc}`, t: 8 };
   // PV de départ selon la campagne : 100 / 200 / 300 / 400 / 500 / 600 (Tempêtes)
   G.player.maxHp = (G.campaign === 5 ? 600 : G.campaign === 4 ? 500 : G.campaign === 3 ? 400 : G.campaign === 2 ? 300 : G.campaign === 1 ? 200 : 100) + G.equip.hp + ((G.inv.buffs && G.inv.buffs.hp) || 0);
   G.player.hp = G.player.maxHp;
@@ -192,6 +196,7 @@ export function resetToMenu() {
   // et les vraies stats du personnage (le tutoriel jouait avec des copies)
   if (G._tutBackup) {
     G.campaign = G._tutBackup.campaign;
+    G.difficulty = G._tutBackup.difficulty || 0;
     G._tutBackup = null;
     setInvNoSave(false);
     reloadPersistence();
@@ -221,6 +226,7 @@ export function resetToMenu() {
   G.sentenceWaves.length = 0; G.knifeShots.length = 0;
   G.bowShots.length = 0; G.singZones.length = 0; G.bow = null; // arc cinétique : état propre
   G.spawnTimer = 0; G.wave = 1; G.waveKills = 0; G.waveTarget = 8; G.kills = 0;
+  G.waveMod = null; G.runXp = 0; G.lastScore = 0; G.diffJustUnlocked = null;
   G.gameOver = false; G.resumeTimer = 0; G.cloudT = 0; G.screenFlash = 0; G.screenShake = 0;
   G.pendingVictory = false;
   G.bomber = null; G.mushroom = null;

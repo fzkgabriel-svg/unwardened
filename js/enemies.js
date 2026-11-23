@@ -5,6 +5,7 @@ import { gainXp } from './player.js';
 import { MATS, MATERIAL_DROPS, addMaterial, modeKey, modeMult } from './inventory.js';
 import { sfxHit, sfxDie, sfxBoss, sfxBossRoar, sfxBossDie, sfxBossHit, sfxGem } from './audio.js';
 import { modDmgMult, modCritBonus, modLifesteal } from './modules.js';
+import { DIFFS } from './difficulty.js';
 
 export const enemyTypes = {
   slime:    { name: 'Slime',        hp: 30,  speed: 0.75, damage: 8,  xp: 10,  r: 13, aggro: Infinity, range: 17, color: '#4caf50', glow: '#69f0ae' },
@@ -136,6 +137,15 @@ export function spawnEnemy(forceType = null, bigPortal = false, px = null, py = 
 
   const t = enemyTypes[type];
   const scale = difficultyScale();
+  // difficulté de campagne (Normal/Difficile/Expert) + modificateur de vague expert
+  const df = DIFFS[G.difficulty] || DIFFS[0];
+  const wm = G.waveMod || {};
+  // ennemi ÉLITE (Expert uniquement) : version renforcée d'un monstre classique,
+  // jamais sur les boss ni les mini-boss — la difficulté vient de la situation,
+  // pas seulement des statistiques
+  const elite = G.difficulty === 2 && !t.isBoss && !t.isMini && type !== 'miniboss'
+    && Math.random() < 0.10 * (wm.elite || 1);
+  const eHp = elite ? 1.7 : 1, eDmg = elite ? 1.35 : 1, eSpd = elite ? 1.08 : 1, eR = elite ? 1.12 : 1;
 
   // spawn en anneau autour du joueur (coords monde), hors de l'écran puis rentré
   let x = 0, y = 0;
@@ -170,10 +180,13 @@ export function spawnEnemy(forceType = null, bigPortal = false, px = null, py = 
 
   G.enemies.push({
     ...t, type,
-    hp: t.hp * scale * extraScale * md, maxHp: t.hp * scale * extraScale * md,
-    speed: t.speed * (1 + (G.wave - 1) * 0.08) * 1.08 * ((G.mods && G.mods.speedMult) || 1),
-    damage: t.damage * (1 + (G.wave - 1) * 0.25) * extraScale * dmgMult * md,
-    xp: Math.round(t.xp * ((G.mods && G.mods.xpMult) || 1)),
+    hp: t.hp * scale * extraScale * md * df.hp * (wm.hp || 1) * eHp,
+    maxHp: t.hp * scale * extraScale * md * df.hp * (wm.hp || 1) * eHp,
+    speed: t.speed * (1 + (G.wave - 1) * 0.08) * 1.08 * ((G.mods && G.mods.speedMult) || 1) * df.spd * (wm.spd || 1) * eSpd,
+    damage: t.damage * (1 + (G.wave - 1) * 0.25) * extraScale * dmgMult * md * df.dmg * (wm.dmg || 1) * eDmg,
+    xp: Math.round(t.xp * ((G.mods && G.mods.xpMult) || 1) * df.xp),
+    r: t.r * eR,
+    elite: !!elite,
     x, y, attackCooldown: 0, wobble: Math.random() * TAU, slow: 0, spawnT: portalLife, spawnMax: portalLife,
     specialCd: 1.5 + Math.random() * 2.5, // timer des attaques spéciales de boss
     graceT: portalTime || 0, // invulnérable et immobile pendant le portail (événement)
@@ -270,7 +283,7 @@ export function damageEnemy(e, dmg, angle) {
       if (Math.random() < table[m] * matMult) {
         // l'émeraude est précieuse : les boss en lâchent une petite poignée
         const qty = m === 'emeraude'
-          ? Math.round(((e.type.startsWith('finalBoss') ? 8 : e.isBoss ? 5 : e.isMini ? 3 : 1)) * ((G.mods && G.mods.lootMult) || 1))
+          ? Math.round(((e.type.startsWith('finalBoss') ? 8 : e.isBoss ? 5 : e.isMini ? 3 : 1)) * ((G.mods && G.mods.lootMult) || 1) * df.loot)
           : 1;
         if (m === 'emeraude') gotEmerald = true;
         addMaterial(G.inv, m, qty);
@@ -278,6 +291,12 @@ export function damageEnemy(e, dmg, angle) {
         addDamageText(e.x + (mi % 3 - 1) * 14, e.y - e.r - 26 - mi * 10, `+${qty} ${MATS[m].name}`, MATS[m].color);
         mi++;
       }
+    }
+    // butin bonus des monstres ÉLITES (Expert) : une poignée d'émeraudes en prime
+    if (e.elite && Math.random() < 0.6) {
+      addMaterial(G.inv, 'emeraude', 2);
+      G.runMats.emeraude = (G.runMats.emeraude || 0) + 2;
+      addDamageText(e.x, e.y - e.r - 40, '+2 ÉMERAUDE', '#2ecc71');
     }
     if (gotEmerald) sfxGem(); // carillon cristallin : butin d'émeraudes
     G.enemies.splice(idx, 1);

@@ -17,6 +17,21 @@ export function drawEnemy(e) {
   const isFinal = e.type === 'finalBoss' || e.type === 'finalBossGlace' || e.type === 'finalBossEnfer'
     || e.type === 'finalBossEgout' || e.type === 'finalBossSpace' || e.type === 'finalBossTempete';
   drawShadow(e.x, e.y, e.r);
+  // monstre ÉLITE (mode Expert) : couronne d'ombre violette et liseré doré pulsant
+  if (e.elite) {
+    const pu = 0.65 + Math.sin(G.time * 6 + e.wobble) * 0.35;
+    const ag = ctx.createRadialGradient(e.x, e.y, e.r * 0.4, e.x, e.y, e.r * 1.8);
+    ag.addColorStop(0, `rgba(186,104,200,${0.30 * pu})`);
+    ag.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = ag;
+    ctx.beginPath(); ctx.arc(e.x, e.y, e.r * 1.8, 0, TAU); ctx.fill();
+    ctx.strokeStyle = `rgba(224,190,231,${0.55 * pu})`; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 5, 0, TAU); ctx.stroke();
+    // mini couronne au-dessus de la tête
+    ctx.fillStyle = `rgba(255,215,64,${0.85 * pu})`;
+    ctx.font = `${Math.max(10, e.r * 0.55)}px serif`; ctx.textAlign = 'center';
+    ctx.fillText('♛', e.x, e.y - e.r - 12);
+  }
   // aura pour les mini-boss et boss
   if (e.isBoss || e.isMini) {
     const ag = ctx.createRadialGradient(e.x, e.y, e.r * 0.5, e.x, e.y, e.r * 1.9);

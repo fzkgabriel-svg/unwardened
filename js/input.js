@@ -1,5 +1,5 @@
 import { G, canvas, W, H } from './state.js';
-import { startGame, menuButtonAt, gameOverButtonAt, victoryButtonAt, pauseButtonAt, playAgain, nextWorld, resetToMenu, toCampaign, requestResume, forgeClickAt, forgeWheel, achClickAt, achWheel, charClickAt, adminClickAt, switchCharacter, reloadPersistence, durWarnClickAt, durWarnAction, campaignClickAt, campaignPlayBtn } from './menu.js';
+import { startGame, menuButtonAt, gameOverButtonAt, victoryButtonAt, pauseButtonAt, playAgain, nextWorld, resetToMenu, toCampaign, requestResume, forgeClickAt, forgeWheel, achClickAt, achWheel, charClickAt, adminClickAt, switchCharacter, reloadPersistence, durWarnClickAt, durWarnAction, campaignClickAt, campaignDiffCards } from './menu.js';
 import { checkAdminPass, createChar } from './chars.js';
 import { adminMenuClickAt, adminButtonAt, adminUnlocked } from './menu.js';
 import { usePotion } from './player.js';
@@ -73,8 +73,9 @@ export function initInput() {
           sfxClick();
         }
         if (k === 'enter' || k === ' ') {
-          const pb = campaignPlayBtn();
-          campaignClickAt(pb.x + pb.w / 2, pb.y + pb.h / 2);
+          // Entrée lance la difficulté NORMAL (les autres se cliquent)
+          const cards = campaignDiffCards(G.campaignSel ?? 0);
+          if (cards[0]) campaignClickAt(cards[0].x + cards[0].w / 2, cards[0].y + cards[0].h / 2);
         }
         return;
       }

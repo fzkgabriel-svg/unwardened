@@ -6,6 +6,7 @@ import { gainXp } from './player.js';
 import { addMaterial } from './inventory.js';
 import { sfxPortal, sfxPickup } from './audio.js';
 import { CONFIG, WORLDS, CAMPAIGNS, campaignOf, campaignStart, campaignEnd, BUILDING_TYPES, LOOT_BONUS, LOOT_BONUS_FROZEN, LOOT_BONUS_HELL, LOOT_BONUS_DEEP, RARITY_COLOR } from './world_data.js';
+import { DIFFS } from './difficulty.js';
 export * from './world_data.js';
 
 
@@ -613,7 +614,9 @@ export function tryInteract() {
     }
     // émeraude : la pierre précieuse des profondeurs, utilisée pour améliorer les armes
     if (b.emerald > 0) {
-      const n = b.emerald;
+      // butin majoré par les défis de campagne (mods) et la difficulté choisie
+      const lootK = ((G.mods && G.mods.lootMult) || 1) * ((DIFFS[G.difficulty] || DIFFS[0]).loot);
+      const n = Math.max(1, Math.round(b.emerald * lootK));
       addMaterial(G.inv, 'emeraude', n);
       G.runMats = G.runMats || {};
       G.runMats.emeraude = (G.runMats.emeraude || 0) + n;

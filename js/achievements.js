@@ -2,6 +2,7 @@ import { G, saveStats } from './state.js';
 import { sfxAchievement } from './audio.js';
 import { addMaterial, loadInv, saveInv, ITEMS, MATS, DUR_MAX, durMaxOf } from './inventory.js';
 import { storeKey } from './chars.js';
+import { diffProg } from './difficulty.js';
 
 // Succès persistés par personnage (localStorage 'rpg2d_c{slot}_achievements')
 const KEY = () => storeKey('achievements');
@@ -390,6 +391,11 @@ export function adminUnlockAll() {
   // campagnes + ultimes + arc : sauvegardés même si une récompense échoue
   G.stats = G.stats || {};
   G.stats.campaignDone = { 0: true, 1: true, 2: true, 3: true, 4: true, 5: true };
+  // toutes les difficultés de chaque niveau sont aussi validées (admin)
+  for (let c = 0; c < 6; c++) {
+    const d = diffProg(c);
+    d.n = d.h = d.e = true; d.hu = d.eu = true;
+  }
   G.stats.iceUlt = true;
   G.stats.hellUlt = true;
   G.stats.bowUnlocked = true; // arc cinétique cosmique

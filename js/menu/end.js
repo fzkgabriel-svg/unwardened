@@ -9,6 +9,7 @@ import { curWorld, syncCamera, regenerateWorld, reloadWorlds, campaignStart } fr
 import { sfxCraft, sfxRepair, sfxEquip, sfxConfirm, sfxClick } from '../audio.js';
 import { MAX_SLOTS, activeSlot, allSlots, slotMeta, slotSummary, createChar, selectChar, deselectChar, resetChar, fmtPlaytime, fmtDate, checkAdminPass, adminOK as _adminOK, adminList, adminWipeAll, adminLock } from '../chars.js';
 import { inR, fitText, wrapLines, hexA, fmtTime, overline, panel, overlineCentered, drawMenuButton, drawAdminPwInput, menuButtons, menuButtonAt, adminUnlocked, campaignUnlocked, UI, SERIF, C_TEXT, C_MUTED, C_GOLD, MENU_X, MENU_W, MENU_ITEMS } from './common.js';
+import { DIFFS } from '../difficulty.js';
 
 // ---------- PAUSE ----------
 function pauseButtons() {
@@ -148,7 +149,7 @@ const VIC = [
     col: '#80d8ff', glow: 'rgba(128,216,255,',
     unlocks: [
       { icon: '✦', txt: '2ᵉ emplacement passif débloqué — menu Modules' },
-      { icon: '♾', txt: 'NG+ : la boucle recommence, plus forte que jamais' }] },
+      { icon: '👑', txt: 'Difficultés Difficile & Expert : chaque niveau est rejouable pour des récompenses ×2' }] },
 ];
 
 // boutons de l'écran de victoire : continuer / carte campagne / menu
@@ -187,6 +188,7 @@ function drawVicMotes(v, pal) {
 export function drawVictory() {
   const p = G.player;
   const v = VIC[Math.min(5, Math.max(0, G.campaign || 0))];
+  const df = DIFFS[G.difficulty || 0] || DIFFS[0];
   const vicT = G.vicT || 0;
   const eK = tt => 1 - Math.pow(1 - Math.min(1, Math.max(0, (vicT - tt) / 0.8)), 3); // easeOut par étape
 
@@ -271,10 +273,21 @@ export function drawVictory() {
     ctx.letterSpacing = '0px';
     ctx.restore();
   }
+  // difficulté terminée, dans sa couleur
+  const kd = eK(0.9);
+  if (kd > 0) {
+    ctx.save(); ctx.globalAlpha = kd;
+    ctx.font = `700 13px ${UI}`; ctx.letterSpacing = '2px';
+    ctx.fillStyle = df.color;
+    ctx.fillText(`${df.icon} DIFFICULTÉ : ${df.name}${df.waveBonus ? ` (+${df.waveBonus} VAGUES)` : ''}`, W / 2, 242);
+    ctx.letterSpacing = '0px';
+    ctx.restore();
+  }
 
   // ---- panneau chroniques (gauche) : statistiques réelles ----
   const loot = runLootRows();
-  const lx = W / 2 - 500, lw = 470, ly = 246, lh = 236;
+  const emeralds = (G.runMats && G.runMats.emeraude) || 0;
+  const lx = W / 2 - 500, lw = 470, ly = 252, lh = 312;
   const k3 = eK(1.1);
   if (k3 > 0) {
     ctx.save(); ctx.globalAlpha = k3; ctx.translate(0, (1 - k3) * 18);
@@ -289,28 +302,32 @@ export function drawVictory() {
     overline('CHRONIQUES DE L\'EXPÉDITION', lx + lw / 2, ly + 24, 'rgba(212,176,98,0.9)');
     const rows = [
       ['Monde terminé', v.world, v.col],
-      ['Vague atteinte', `FINALE (${G.wave})`, '#ff8a65'],
+      ['Difficulté', `${df.icon} ${df.name}`, df.color],
+      ['Vague finale', `FINALE (${G.wave})`, '#ff8a65'],
+      ['Score', (G.lastScore || 0).toLocaleString('fr-FR'), '#ffd740'],
       ['Niveau du héros', `Nv. ${p.level}`, '#40c4ff'],
       ['Ennemis vaincus', G.kills.toLocaleString('fr-FR'), '#69f0ae'],
       ['Dégâts infligés', Math.floor(G.dmgDealt).toLocaleString('fr-FR'), '#ffeb3b'],
       ['Temps de campagne', fmtTime(G.runTime), '#9575cd'],
+      ['XP gagnée', `+${(G.runXp || 0).toLocaleString('fr-FR')}`, '#4fc3f7'],
+      ['💎 Émeraudes gagnées', `+${emeralds}`, '#2ecc71'],
       ['📦 Matériaux gagnés', `+${loot.mats}`, '#ffd740'],
       [loot.wearLabel, loot.wear > 0 ? `−${loot.wear.toFixed(0)} %` : 'aucune', '#ff8a65']
     ];
-    ctx.font = '14px Inter, sans-serif';
+    ctx.font = '13px Inter, sans-serif';
     rows.forEach((r, i) => {
-      const ry = ly + 52 + i * 22;
+      const ry = ly + 46 + i * 21;
       ctx.textAlign = 'left'; ctx.fillStyle = '#b8ac93';
       ctx.fillText(r[0], lx + 26, ry);
-      ctx.textAlign = 'right'; ctx.fillStyle = r[2]; ctx.font = 'bold 14.5px Inter, sans-serif';
+      ctx.textAlign = 'right'; ctx.fillStyle = r[2]; ctx.font = 'bold 13.5px Inter, sans-serif';
       ctx.fillText(String(r[1]), lx + lw - 26, ry);
-      ctx.font = '14px Inter, sans-serif';
+      ctx.font = '13px Inter, sans-serif';
     });
     ctx.restore();
   }
 
   // ---- panneau récompenses (droite) : déblocages réels ----
-  const rx = W / 2 + 30, rw = 470, ry2 = 246, rh = 236;
+  const rx = W / 2 + 30, rw = 470, ry2 = 252, rh = 312;
   const k4 = eK(1.5);
   if (k4 > 0) {
     ctx.save(); ctx.globalAlpha = k4; ctx.translate(0, (1 - k4) * 18);
@@ -321,8 +338,18 @@ export function drawVictory() {
     ctx.strokeStyle = 'rgba(212,176,98,0.4)'; ctx.lineWidth = 1.4;
     roundRect(rx + 0.5, ry2 + 0.5, rw - 1, rh - 1, 12); ctx.stroke();
     overline('RÉCOMPENSES & DÉBLOQUÉS', rx + rw / 2, ry2 + 24, 'rgba(212,176,98,0.9)');
+    // déblocage de difficulté en tête, puis les récompenses du monde
+    const unlocks = [];
+    if (G.diffJustUnlocked) {
+      unlocks.push({
+        icon: G.diffJustUnlocked === 'EXPERT' ? '👑' : '🔥',
+        txt: `${G.diffJustUnlocked} DÉBLOQUÉ ! — relevez le défi pour des récompenses ×${G.diffJustUnlocked === 'EXPERT' ? '2' : '1,5'}`,
+        diff: true
+      });
+    }
+    v.unlocks.forEach(u => unlocks.push(u));
     // chaque récompense apparaît avec un léger décalage
-    v.unlocks.forEach((u, i) => {
+    unlocks.forEach((u, i) => {
       const uk = Math.min(1, Math.max(0, (vicT - 1.9 - i * 0.45) / 0.6));
       if (uk <= 0) return;
       const uy = ry2 + 58 + i * 74;

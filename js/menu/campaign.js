@@ -1,14 +1,14 @@
 // js/menu/campaign.js — CARTE DU MONDE DE CAMPAGNE (refonte totale)
-// Cinq territoiresbiomes reliés par des sentiers et des portails :
+// Six territoires reliés par des sentiers et des portails :
 // Terre, Glace, Enfer, Égouts, Espace. Survol lumineux, zoom de caméra
 // à la sélection, particules d'ambiance par biome, fiche détaillée
 // animée, emblèmes de victoire et animation de déblocage.
 import { G, ctx, W, H, TAU } from '../state.js';
 import { roundRect, hexA } from '../utils.js';
-import { WORLDS, campaignStart, campaignEnd } from '../world_data.js';
 import { campaignUnlocked, tutorialRequired, inR, UI, SERIF, C_TEXT, C_MUTED } from './common.js';
 import { sfxClick, sfxPortal } from '../audio.js';
 import { startGame } from './flow.js';
+import { DIFFS, diffProg, diffPlayable } from '../difficulty.js';
 
 // ---------- données ----------
 const INFO = [
@@ -120,19 +120,17 @@ function checkUnlockFx() {
 }
 
 // ---------- fiche + boutons (géométrie partagée dessin/clic) ----------
-export function campaignFiche() { return { x: W / 2 - 400, y: H - 196, w: 800, h: 168 }; }
-export function campaignPlayBtn() {
+export function campaignFiche() { return { x: W / 2 - 410, y: H - 258, w: 820, h: 252 }; }
+// vagues de base de chaque campagne (campagne -> vague finale en NORMAL)
+const BASE_WAVES = [20, 25, 30, 35, 40, 45];
+export function campaignWaves(c, d) { return BASE_WAVES[c] + (DIFFS[d] ? DIFFS[d].waveBonus : 0); }
+// les trois cartes de difficulté : Normal / Difficile / Expert
+export function campaignDiffCards(c) {
   const f = campaignFiche();
-  return { x: f.x + f.w - 268, y: f.y + 62, w: 236, h: 46 };
-}
-// niveau de la campagne : 1 seul monde par campagne — bouton unique large
-export function campaignWorldBtns(c) {
-  const f = campaignFiche();
-  const tx = f.x + 152, bw = 326, bh = 30, y = f.y + 62;
-  const w0 = WORLDS[campaignStart(c)];
-  return [
-    { idx: campaignStart(c), name: w0.name, sel: 0, x: tx, y, w: bw, h: bh },
-  ];
+  const cw = (f.w - 40 - 24) / 3, ch = 104, gap = 12;
+  const y = f.y + f.h - ch - 12;
+  const x0 = f.x + 20;
+  return DIFFS.map((d, i) => ({ d: d.id, x: x0 + i * (cw + gap), y, w: cw, h: ch }));
 }
 function backBtn() { return { x: 30, y: H - 60, w: 160, h: 40 }; }
 
@@ -140,25 +138,18 @@ export function campaignClickAt(x, y) {
   if (inR(backBtn(), x, y)) { G.menuView = 'main'; return 'back'; }
   const c = G.campaignSel;
   if (c !== null && c !== undefined && campaignUnlocked(c)) {
-    // clic sur un niveau : sélectionne le monde de départ
-    for (const wb of campaignWorldBtns(c)) {
-      if (inR(wb, x, y)) {
-        G.campaignSel = c;
-        G.campaignWorlds = G.campaignWorlds || {};
-        G.campaignWorlds[c] = wb.sel;
-        sfxClick();
-        return 'world';
+    G.campaignSel = c;
+    // clic sur une carte de difficulté : lance le niveau dans cette difficulté
+    for (const cd of campaignDiffCards(c)) {
+      if (inR(cd, x, y)) {
+        const d = cd.d;
+        if (!diffPlayable(c, d)) { sfxClick(); return 'locked'; }
+        G.campaign = c;
+        G.difficulty = d;
+        startGame();
+        return 'play';
       }
     }
-  }
-  const play = campaignPlayBtn();
-  if (inR(play, x, y)) {
-    if (c !== null && c !== undefined && campaignUnlocked(c)) {
-      G.campaign = c;
-      startGame();
-      return 'play';
-    }
-    return 'locked';
   }
   const t = terrAt(x, y);
   if (t >= 0) { G.campaignSel = t; sfxClick(); return 'select'; }
@@ -544,10 +535,62 @@ function drawMapBG(t) {
   ctx.restore();
 }
 
+// ---------- carte de difficulté (dessin + survol partagés) ----------
+function drawDiffCard(cd, c, t) {
+  const d = DIFFS[cd.d], unlocked = campaignUnlocked(c);
+  const playable = unlocked && diffPlayable(c, cd.d);
+  const prog = diffProg(c);
+  const done = cd.d === 0 ? !!prog.n : cd.d === 1 ? !!prog.h : !!prog.e;
+  const hov = playable && inR(cd, G.mouse.x, G.mouse.y);
+  // fond : sobre pour Normal, sombre rouille pour Difficile, mystique pour Expert
+  const bg = !playable ? 'rgba(30,32,38,0.72)'
+    : cd.d === 0 ? 'rgba(30,58,40,0.80)'
+    : cd.d === 1 ? 'rgba(66,26,16,0.82)'
+    : 'rgba(44,26,66,0.84)';
+  ctx.fillStyle = bg;
+  roundRect(cd.x, cd.y, cd.w, cd.h, 10); ctx.fill();
+  ctx.strokeStyle = !playable ? 'rgba(255,255,255,0.12)'
+    : hov ? d.color : hexA(d.color, done ? 0.8 : 0.4);
+  ctx.lineWidth = hov ? 2.2 : 1.3;
+  if (hov || done) { ctx.shadowColor = hexA(d.color, 0.5); ctx.shadowBlur = 12; }
+  roundRect(cd.x, cd.y, cd.w, cd.h, 10); ctx.stroke();
+  ctx.shadowBlur = 0;
+  ctx.textAlign = 'center';
+  // en-tête : icône + nom + nombre de vagues
+  ctx.font = `700 13px ${UI}`;
+  ctx.fillStyle = playable ? d.color : 'rgba(255,255,255,0.35)';
+  ctx.fillText(`${d.icon} ${d.name}`, cd.x + cd.w / 2, cd.y + 20);
+  ctx.font = `600 9px ${UI}`;
+  ctx.fillStyle = playable ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.25)';
+  ctx.fillText(`${campaignWaves(c, cd.d)} vagues`, cd.x + cd.w / 2, cd.y + 33);
+  // description courte + récompenses
+  ctx.font = `500 9.5px ${UI}`;
+  ctx.fillStyle = playable ? 'rgba(255,255,255,0.72)' : 'rgba(255,255,255,0.3)';
+  ctx.fillText(d.foes, cd.x + cd.w / 2, cd.y + 50, cd.w - 16);
+  ctx.fillStyle = playable ? hexA(d.color, 0.95) : 'rgba(255,255,255,0.3)';
+  ctx.font = `700 9.5px ${UI}`;
+  ctx.fillText(d.rew, cd.x + cd.w / 2, cd.y + 64, cd.w - 16);
+  // statut : verrouillé / terminé / jouable
+  const sy = cd.y + cd.h - 15;
+  if (!playable) {
+    ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = `600 9px ${UI}`;
+    ctx.fillText(`🔒 ${d.lock || 'Verrouillé'}`, cd.x + cd.w / 2, sy, cd.w - 14);
+  } else if (done) {
+    ctx.fillStyle = '#ffd740'; ctx.font = `700 10px ${UI}`;
+    ctx.fillText('✓ TERMINÉ — REJOUER', cd.x + cd.w / 2, sy);
+  } else {
+    ctx.fillStyle = hov ? '#fff' : d.color; ctx.font = `700 10.5px ${UI}`;
+    ctx.fillText(hov ? '▶ JOUER' : '▶ CLIQUER POUR JOUER', cd.x + cd.w / 2, sy);
+  }
+  // liseré supérieur coloré de la difficulté
+  ctx.fillStyle = playable ? hexA(d.color, 0.5) : 'rgba(255,255,255,0.08)';
+  roundRect(cd.x + 8, cd.y + 2, cd.w - 16, 2.5, 1.5); ctx.fill();
+}
+
 // ---------- fiche détaillée ----------
 function drawFiche(c, t) {
   const info = INFO[c], unlocked = campaignUnlocked(c);
-  const done = !!(G.stats.campaignDone && G.stats.campaignDone[c]);
+  const prog = diffProg(c);
   const f = campaignFiche();
   ctx.save();
   ctx.fillStyle = 'rgba(6,12,20,0.82)';
@@ -562,82 +605,47 @@ function drawFiche(c, t) {
       ctx.beginPath(); ctx.moveTo(cx + sx * cl, cy); ctx.lineTo(cx, cy); ctx.lineTo(cx, cy + sy * cl); ctx.stroke();
     });
   // aperçu animé
-  drawPreview(c, f.x + 74, f.y + f.h / 2, 116, t);
+  drawPreview(c, f.x + 74, f.y + f.h / 2 - 40, 110, t);
   // textes
-  const tx = f.x + 152;
+  const tx = f.x + 150;
   ctx.textAlign = 'left';
   ctx.font = `700 19px ${UI}`; ctx.fillStyle = unlocked ? C_TEXT : 'rgba(255,255,255,0.4)';
   // biome non découvert : nom masqué dans la fiche aussi
-  ctx.fillText(unlocked ? `${info.icon}  ${NAMES[c]}` : '❓  BIOME INCONNU', tx, f.y + 36);
+  ctx.fillText(unlocked ? `${info.icon}  ${NAMES[c]}` : '❓  BIOME INCONNU', tx, f.y + 34);
   ctx.font = `700 11px ${UI}`; ctx.fillStyle = info.diffCol;
-  ctx.fillText(info.diff, tx, f.y + 56);
-  if (done) { ctx.fillStyle = '#ffd740'; ctx.font = `700 11px ${UI}`; ctx.fillText('★ CAMPAGNE TERMINÉE', tx + 130, f.y + 56); }
-  // niveau : le seul monde de la campagne en bouton cliquable
-  const ws = (G.campaignWorlds && G.campaignWorlds[c]) || 0;
-  for (const wb of campaignWorldBtns(c)) {
-    const selW = ws === wb.sel;
-    const hovW = unlocked && inR(wb, G.mouse.x, G.mouse.y);
-    ctx.fillStyle = selW ? hexA(TERR[c].rim, 0.28) : hovW ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.045)';
-    roundRect(wb.x, wb.y, wb.w, wb.h, 8); ctx.fill();
-    ctx.strokeStyle = selW ? TERR[c].rim : hovW ? hexA(TERR[c].rim, 0.75) : 'rgba(255,255,255,0.16)';
-    ctx.lineWidth = selW ? 1.8 : 1.2;
-    roundRect(wb.x, wb.y, wb.w, wb.h, 8); ctx.stroke();
-    ctx.textAlign = 'left';
-    ctx.font = `700 9.5px ${UI}`;
-    ctx.fillStyle = selW ? TERR[c].rim : unlocked ? '#9fb4c8' : 'rgba(255,255,255,0.3)';
-    // biome non découvert : noms des mondes masqués
-    const label = unlocked ? `M${wb.sel + 1} · ${wb.name.toUpperCase()}` : `M${wb.sel + 1} · •••`;
-    ctx.fillText(label, wb.x + 10, wb.y + wb.h / 2 + 3.5, wb.w - 20);
-    if (selW) {
-      ctx.fillStyle = TERR[c].rim;
-      ctx.beginPath(); ctx.moveTo(wb.x + wb.w - 14, wb.y + wb.h / 2 - 4); ctx.lineTo(wb.x + wb.w - 8, wb.y + wb.h / 2); ctx.lineTo(wb.x + wb.w - 14, wb.y + wb.h / 2 + 4); ctx.closePath(); ctx.fill();
-    }
-  }
+  ctx.fillText(info.diff, tx, f.y + 54);
+  const doneN = !!prog.n;
+  if (doneN) { ctx.fillStyle = '#ffd740'; ctx.font = `700 11px ${UI}`; ctx.fillText('★ NIVEAU TERMINÉ', tx + 150, f.y + 54); }
   // boss + récompense + description — masqués tant que le biome n'est pas débloqué
   if (unlocked) {
     ctx.fillStyle = '#7d8fa3';
     ctx.font = `11px ${UI}`;
-    ctx.fillText(`Boss : ${info.boss}  ·  ${info.waves} vagues`, tx, f.y + 112);
+    ctx.fillText(`Boss : ${info.boss}  ·  ${BASE_WAVES[c]} vagues (Normal)`, tx, f.y + 96);
     ctx.fillStyle = hexA(TERR[c].part, 0.95);
     ctx.font = `600 11px ${UI}`;
-    ctx.fillText(`🎁 ${info.reward}`, tx, f.y + 128);
+    ctx.fillText(`🎁 ${info.reward}`, tx, f.y + 114);
     ctx.fillStyle = '#8fa3b8';
     ctx.font = `10.5px ${UI}`;
-    wrapFiche(info.desc, tx, f.y + 144, f.x + f.w - 300 - tx, 13);
+    wrapFiche(info.desc, tx, f.y + 108, f.x + f.w - 60 - tx, 12, 2);
   } else {
     ctx.fillStyle = 'rgba(255,255,255,0.3)';
     ctx.font = `600 11px ${UI}`;
     ctx.fillText('🔒  BIOME INEXPLORÉ — terminez la campagne précédente pour découvrir ses secrets', tx, f.y + 116);
   }
-  // bouton jouer
-  const pb = campaignPlayBtn();
-  const hov = inR(pb, G.mouse.x, G.mouse.y);
-  ctx.save();
-  if (!unlocked) ctx.globalAlpha = 0.6;
-  const pg = ctx.createLinearGradient(pb.x, pb.y, pb.x, pb.y + pb.h);
-  pg.addColorStop(0, unlocked ? (hov ? '#57d977' : '#43b95e') : '#3a4048');
-  pg.addColorStop(1, unlocked ? '#2f9e4c' : '#262b32');
-  ctx.fillStyle = pg;
-  roundRect(pb.x, pb.y, pb.w, pb.h, 11); ctx.fill();
-  ctx.strokeStyle = unlocked ? '#a5f0b5' : '#4a5158'; ctx.lineWidth = 1.6;
-  roundRect(pb.x, pb.y, pb.w, pb.h, 11); ctx.stroke();
-  ctx.fillStyle = '#fff'; ctx.font = `700 15px ${UI}`; ctx.textAlign = 'center';
-  ctx.fillText(unlocked ? `▶  LANCER — ${NAMES[c]}` : '🔒  CAMPAGNE VERROUILLÉE', pb.x + pb.w / 2, pb.y + pb.h / 2 + 5);
-  ctx.restore();
-  if (!unlocked) {
-    ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = `600 10.5px ${UI}`; ctx.textAlign = 'center';
-    ctx.fillText('Terminez la campagne précédente pour la débloquer', pb.x + pb.w / 2, pb.y + pb.h + 18);
-  }
+  // les trois cartes de difficulté
+  for (const cd of campaignDiffCards(c)) drawDiffCard(cd, c, t);
   ctx.restore();
 }
-function wrapFiche(text, x, y, maxW, lh) {
-  const words = text.split(' '); let line = '', yy = y;
+function wrapFiche(text, x, y, maxW, lh, maxLines) {
+  const words = text.split(' '); let line = '', yy = y, n = 0;
   for (const w of words) {
     const test = line ? line + ' ' + w : w;
-    if (ctx.measureText(test).width > maxW && line) { ctx.fillText(line, x, yy); line = w; yy += lh; }
-    else line = test;
+    if (ctx.measureText(test).width > maxW && line) {
+      ctx.fillText(line, x, yy); line = w; yy += lh;
+      if (maxLines && ++n >= maxLines) return;
+    } else line = test;
   }
-  if (line) ctx.fillText(line, x, yy);
+  if (line && (!maxLines || n < maxLines)) ctx.fillText(line, x, yy);
 }
 
 // ---------- vue principale ----------
@@ -723,7 +731,7 @@ export function drawCampaign() {
   ctx.fillStyle = '#e0e0e0'; ctx.font = `700 13px ${UI}`; ctx.textAlign = 'center';
   ctx.fillText('← MENU', back.x + back.w / 2, back.y + 26);
 
-  // aide clavier
+  // aide clavier (au-dessus de la fiche)
   ctx.fillStyle = 'rgba(255,255,255,0.28)'; ctx.font = `600 10.5px ${UI}`;
-  ctx.fillText('← → naviguer · ENTRÉE lancer', W / 2, H - 12);
+  ctx.fillText('← → naviguer · cliquez une difficulté pour jouer', W / 2, campaignFiche().y - 10);
 }

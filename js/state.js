@@ -12,11 +12,14 @@ export const ctx = canvas.getContext('2d');
 ctx.scale(SS, SS);
 export const W = 1200, H = 640;
 export const TAU = Math.PI * 2;
-export const VERSION = '4.18.1';
+export const VERSION = '5.0.0';
 export const FINAL_WAVE = 20; // vague du boss final (campagne 1) // incrémenter à chaque mise à jour du jeu
-// vagues finales : campagne 2 -> 25, 3 -> 30, 4 (Égouts) -> 35, 5 (Espace) -> 40
+// vagues finales : campagne 2 -> 25, 3 -> 30, 4 (Égouts) -> 35, 5 (Espace) -> 40, 6 (Tempêtes) -> 45
+// + bonus de difficulté : Difficile +2 vagues, Expert +5 vagues (voir js/difficulty.js)
 export function finalWave() {
-  return G.campaign === 5 ? 45 : G.campaign === 4 ? 40 : G.campaign === 3 ? 35 : G.campaign === 2 ? 30 : G.campaign === 1 ? 25 : FINAL_WAVE;
+  const base = G.campaign === 5 ? 45 : G.campaign === 4 ? 40 : G.campaign === 3 ? 35 : G.campaign === 2 ? 30 : G.campaign === 1 ? 25 : FINAL_WAVE;
+  const db = G.difficulty === 2 ? 5 : G.difficulty === 1 ? 2 : 0;
+  return base + db;
 }
 
 export const G = {
@@ -168,6 +171,11 @@ export const G = {
   resetConfirm: -1,  // slot en attente de confirmation de reset (-1 = aucune)
   durWarn: null,    // popup pré-partie : équipement <20% de durabilité [noms]
   campaignSel: 0,   // campagne sélectionnée sur la carte (0 à 4)
+  difficulty: 0,    // difficulté de la campagne en cours : 0 normal, 1 difficile, 2 expert
+  waveMod: null,    // modificateur de vague expert en cours ({label,quota,...} ou null)
+  runXp: 0,         // XP gagnée pendant la partie en cours (résumé de fin)
+  lastScore: 0,     // score de la dernière victoire (par difficulté)
+  diffJustUnlocked: null, // difficulté débloquée par la dernière victoire ('DIFFICILE'/'EXPERT')
 
   // statistiques (persistées en localStorage, par personnage)
   stats: (() => {

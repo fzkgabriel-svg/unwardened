@@ -19,6 +19,7 @@ import { draw } from './draw.js';
 import { initInput } from './input.js';
 import { updateModules, moduleAbsorb, modSpeedMult, grantPass2 } from './modules.js';
 import { maybeAutoSync } from './net.js';
+import { DIFFS, waveModFor, recordDiffWin, runScore } from './difficulty.js';
 
 // polices de l'interface (canvas) : chargement explicite au démarrage
 if (document.fonts) ['600 16px Inter', '600 38px Cinzel'].forEach(f => document.fonts.load(f));
@@ -281,7 +282,7 @@ function update(dt) {
 
   // Spawn : cadence en temps réel même pendant le ralenti (les monstres arrivent)
   G.spawnTimer -= rawDt;
-  const interval = Math.max(0.55, 2.0 - G.wave * 0.13); // spawn légèrement plus rapide
+  const interval = Math.max(0.4, (2.0 - G.wave * 0.13) * ((G.waveMod && G.waveMod.spawn) || 1)); // spawn légèrement plus rapide
   if (G.spawnTimer <= 0 && G.enemies.length < 20 && G.wave < finalWave() && !G.tutorial) {
     spawnEnemy();
     G.spawnTimer = interval;
@@ -290,7 +291,9 @@ function update(dt) {
   if (!G.tutorial && G.waveKills >= G.waveTarget) { // le tutoriel gère ses propres ennemis
     G.wave++;
     G.waveKills = 0;
-    G.waveTarget = 6 + G.wave * 2; // le quota grandit avec la vague
+    // modificateur de vague (EXPERT uniquement) : un seul à la fois, progressif
+    G.waveMod = waveModFor(G.wave, G.difficulty || 0);
+    G.waveTarget = Math.round((6 + G.wave * 2) * ((G.waveMod && G.waveMod.quota) || 1)); // le quota grandit avec la vague
     G.wavePause = 2.5; // pause entre les vagues
     p.maxHp += 15;
     p.hp = Math.min(p.maxHp, p.hp + 30);
@@ -298,6 +301,7 @@ function update(dt) {
     p.spinDamage += 3;
     p.speed = Math.min(3.5, p.speed + 0.04);
     addDamageText(p.x, p.y - 20, G.wave === finalWave() ? 'VAGUE FINALE !' : `VAGUE ${G.wave}!`, G.wave === finalWave() ? '#e040fb' : '#ffd740');
+    if (G.waveMod) addDamageText(p.x, p.y - 105, `MODIFICATEUR : ${G.waveMod.label} !`, '#e040fb');
     sfxWave();
     if (G.wave === finalWave()) {
       // VAGUE FINALE : tous les monstres disparaissent, plus aucun spawn,
@@ -784,15 +788,17 @@ function update(dt) {
     G.vicT = 0; // horloge de la révélation de l'écran de victoire
     sfxVictory(); // sting triomphal sombre : gong + accords ascendants
     recordRun(); // la victoire compte comme une partie réussie dans les stats
-    // campagne terminée : débloque la suite (campagne 1 -> Frozen Land)
-    G.stats.campaignDone = G.stats.campaignDone || {};
-    G.stats.campaignDone[G.campaign] = true;
+    // difficulté de campagne : enregistre la victoire par niveau (Normal/Difficile/Expert),
+    // débloque la difficulté suivante et mémorise les records — campaignDone reste
+    // la condition de déblocage du niveau suivant (le Normal l'implique toujours)
+    G.lastScore = runScore();
+    recordDiffWin(G.campaign, G.difficulty || 0, G.lastScore, G.runTime);
     if (G.campaign === 1) G.stats.iceUlt = true; // coffre : débloque la Pluie de Glace
     if (G.campaign === 2) G.stats.hellUlt = true; // trône : débloque la Colère Infernale
     if (G.campaign === 4) { G.stats.bowUnlocked = true; G.bowReveal = G.time; } // ARC CINÉTIQUE COSMIQUE
     // LE JUGEMENT DU GARDIEN : arme légendaire gagnée en finissant les Terres Oubliées
     if (G.campaign === 0) { G.stats.gardienUnlocked = true; G.gardienReveal = G.time; G._gardienSfxDone = false; }
-    if (G.campaign === 5) { grantPass2(); G.stats.ngPlus = (G.stats.ngPlus || 0) + 1; } // 2ᵉ slot passif + boucle NG+
+    if (G.campaign === 5) { grantPass2(); } // 2ᵉ slot passif (récompense du Royaume des Tempêtes)
     saveStats();
     G.enemies.length = 0; G.drops.length = 0; G.fireZones.length = 0;
     G.portals.length = 0; G.projectiles.length = 0; G.lightnings.length = 0;

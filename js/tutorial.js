@@ -228,8 +228,9 @@ export function startTutorial() {
   // le tutoriel se déroule comme un TOUT NOUVEAU personnage :
   // toujours le monde 1, sans équipement, sans niveaux d'armes,
   // et rien de tout ça n'est persisté (inventaire/stats jetables)
-  G._tutBackup = { campaign: G.campaign };
+  G._tutBackup = { campaign: G.campaign, difficulty: G.difficulty };
   G.campaign = 0;
+  G.difficulty = 0; // le tutoriel se joue toujours en Normal
   G.inv = { mats: {}, items: {}, equip: {}, dur: {}, wmode: {} };
   G.stats = {};
   setInvNoSave(true);
