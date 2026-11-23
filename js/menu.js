@@ -94,8 +94,13 @@ export function drawMenu() {
   ctx.save();
   ctx.font = `600 52px ${SERIF}`; ctx.letterSpacing = '2px';
   ctx.fillStyle = C_TEXT;
-  ctx.fillText('LES TERRES', MENU_X - 3, 174);
-  ctx.fillText('OUBLIÉES', MENU_X - 3, 228);
+  ctx.fillText('LES TERRES', MENU_X - 3, 168);
+  ctx.fillText('OUBLIÉES', MENU_X - 3, 222);
+  ctx.restore();
+  ctx.save();
+  ctx.font = `600 17px ${SERIF}`; ctx.letterSpacing = '7px';
+  ctx.fillStyle = C_GOLD;
+  ctx.fillText('U N W A R D E N E D', MENU_X - 3, 250);
   ctx.restore();
 
   const b = menuButtons();
