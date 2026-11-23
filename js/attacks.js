@@ -2,7 +2,7 @@ import { G, W, H, TAU } from './state.js';
 import { spawnParticles, addDamageText } from './effects.js';
 import { damageEnemy } from './enemies.js';
 import { worldW, worldH } from './world.js';
-import { sfxSlash, sfxThrust, sfxSpin, sfxShield, sfxNuke, sfxBossAtk, sfxFireLaser, sfxFireHand, sfxVolcano, sfxJudgment, sfxSentenceCharge, sfxSentenceRelease } from './audio.js';
+import { sfxSlash, sfxThrust, sfxSpin, sfxShield, sfxNuke, sfxBossAtk, sfxFireLaser, sfxFireHand, sfxVolcano, sfxJudgment, sfxSentenceCharge, sfxSentenceRelease, sfxSonicHit } from './audio.js';
 import { waveBonus, clampW, clampH, playerAngle, inMeleeArc } from './attacks_util.js';
 import { doIceUlt, doHellUlt } from './attacks_ult.js';
 import { wearWeaponUse } from './inventory.js';
@@ -111,35 +111,54 @@ export function doThrust() {
 }
 
 // ---------- JUGEMENT DU GARDIEN (arme légendaire, mode 7) ----------
-// Attaque principale : frappe lourde en large arc, cadence plus lente que
-// l'épée mais coup plus tranchant — avec un léger recul et des éclats de cristal.
+// Couteau de lancer magique : le héros projette la lame qui tournoie dans
+// son vol, transperce jusqu'à 3 ennemis puis disparaît dans un claquement.
 export function doJudgment() {
-  sfxJudgment();
   const p = G.player, angle = playerAngle();
-  const maxD = p.attackRange * 1.25; // ~75 px : un peu plus longue que l'épée
-  let hit = false;
-  for (let i = G.enemies.length - 1; i >= 0; i--) {
-    const e = G.enemies[i];
-    if (inMeleeArc(p, e, angle, 0.85, maxD)) { // secteur ~97°
-      const dist = Math.hypot(e.x - p.x, e.y - p.y);
-      // jugement : les dégâts montent doucement avec la distance (1,35x proche → 0,9x au bord)
-      const mult = 1.35 - 0.45 * Math.min(1, dist / maxD);
-      damageEnemy(e, p.attackDamage * mult * waveBonus(), angle);
-      e.x += Math.cos(angle) * 9; e.y += Math.sin(angle) * 9; // léger recul
-      spawnParticles(e.x, e.y, '#a7ffeb', 7, 5); // éclats de cristal
-      hit = true;
+  G.knifeShots = G.knifeShots || [];
+  G.knifeShots.push({
+    x: p.x + Math.cos(angle) * (p.r + 10), y: p.y + Math.sin(angle) * (p.r + 10),
+    vx: Math.cos(angle) * 13, vy: Math.sin(angle) * 13,
+    a: angle, spin: 0, t: 0,
+    r: 7, dmg: p.attackDamage * 0.9 * waveBonus(),
+    life: 1.05, hits: new Set(), maxHits: 3, sentence: false
+  });
+  p.attackCooldown = 0.4; // cadence proche de l'épée, compensée par la portée
+  weaponWear(0.22);
+  sfxJudgment();
+  spawnParticles(p.x + Math.cos(angle) * (p.r + 16), p.y + Math.sin(angle) * (p.r + 16), '#a7ffeb', 6, 4);
+}
+
+// projectiles du couteau : translation, rotation, collisions (une fois par
+// ennemi et par projectile), traînée runique pour Sentence, nettoyage
+export function updateKnifeShots(dt) {
+  for (let i = (G.knifeShots || []).length - 1; i >= 0; i--) {
+    const k = G.knifeShots[i];
+    k.t += dt; k.life -= dt; k.spin += dt * 26;
+    k.x += k.vx; k.y += k.vy;
+    if (k.sentence && Math.random() < dt * 45) { // onde runique laissée sur la trajectoire
+      spawnParticles(k.x + (Math.random() - 0.5) * 14, k.y + (Math.random() - 0.5) * 10,
+        Math.random() < 0.6 ? '#a7ffeb' : '#ffd740', 1, 1.4);
     }
-  }
-  p.attackCooldown = 0.5; // plus lent que l'épée (0,4 s), plus rapide que la lance n'est pas (0,32)
-  weaponWear(0.26); // arme lourde : usure un peu supérieure
-  if (hit) {
-    spawnParticles(p.x + Math.cos(angle) * maxD * 0.55, p.y + Math.sin(angle) * maxD * 0.55, '#ffd740', 10, 6);
-    spawnParticles(p.x + Math.cos(angle) * maxD * 0.55, p.y + Math.sin(angle) * maxD * 0.55, '#a7ffeb', 6, 4);
-    G.screenShake = Math.max(G.screenShake, 5);
-    G.rings.push({
-      x: p.x + Math.cos(angle) * maxD * 0.6, y: p.y + Math.sin(angle) * maxD * 0.6,
-      r: 8, maxR: 60, life: 16, maxLife: 16, color: '#a7ffeb'
-    });
+    let dead = k.life <= 0 || k.x < -40 || k.x > worldW() + 40 || k.y < -40 || k.y > worldH() + 40;
+    if (!dead && k.hits.size >= k.maxHits) dead = true; // la lame s'est plantée
+    if (!dead) {
+      for (const e of G.enemies) {
+        if (k.hits.has(e)) continue;
+        if (Math.hypot(e.x - k.x, e.y - k.y) < k.r + e.r) {
+          k.hits.add(e);
+          damageEnemy(e, k.dmg, k.a);
+          spawnParticles(e.x, e.y, k.sentence ? '#ffd740' : '#a7ffeb', k.sentence ? 10 : 6, k.sentence ? 6 : 4);
+          if (k.sentence) spawnParticles(e.x, e.y, '#a7ffeb', 6, 5);
+          sfxSonicHit(); // claquement cristallin de la lame
+          if (k.hits.size >= k.maxHits) { dead = true; break; }
+        }
+      }
+    }
+    if (dead) {
+      if (k.hits.size === 0) spawnParticles(k.x, k.y, '#8d99ae', 4, 3); // lame perdue dans le décor
+      G.knifeShots.splice(i, 1);
+    }
   }
 }
 
@@ -180,9 +199,16 @@ export function updateSentence(dt) {
 
 function releaseSentence() {
   const p = G.player, a = p.sentenceAng;
-  G.sentenceWaves.push({
-    x: p.x, y: p.y, angle: a, t: 0, dur: SENT_DUR,
-    speed: SENT_SPEED, halfW: 52, hit: new Set(), dmgDone: false
+  // Sentence ancestrale : le couteau est lancé en version chargée — il
+  // transperce tous les ennemis sur sa trajectoire (~1,8× les dégâts)
+  // en laissant une traînée d'ondes runiques
+  G.knifeShots = G.knifeShots || [];
+  G.knifeShots.push({
+    x: p.x + Math.cos(a) * (p.r + 12), y: p.y + Math.sin(a) * (p.r + 12),
+    vx: Math.cos(a) * 12, vy: Math.sin(a) * 12,
+    a, spin: 0, t: 0,
+    r: 10, dmg: p.attackDamage * 1.8 * waveBonus(),
+    life: 1.25, hits: new Set(), maxHits: 999, sentence: true
   });
   sfxSentenceRelease(); // onde runique : gong + balayage montant + impact
   G.screenShake = Math.max(G.screenShake, 9);

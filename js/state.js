@@ -12,7 +12,7 @@ export const ctx = canvas.getContext('2d');
 ctx.scale(SS, SS);
 export const W = 1200, H = 640;
 export const TAU = Math.PI * 2;
-export const VERSION = '4.14.4';
+export const VERSION = '4.15.0';
 export const FINAL_WAVE = 20; // vague du boss final (campagne 1) // incrémenter à chaque mise à jour du jeu
 // vagues finales : campagne 2 -> 25, 3 -> 30, 4 (Égouts) -> 35, 5 (Espace) -> 40
 export function finalWave() {
@@ -91,6 +91,7 @@ export const G = {
   iceWalls: [],    // murs de glace du Souverain {x, y, r, life} : obstacles temporaires
   shockwaves: [],  // ondes de choc au sol {x, y, r, maxR, speed, dmg, hit, color, slow}
   sentenceWaves: [], // ondes runiques du Jugement du Gardien {x,y,angle,t,dur,speed,r,hit}
+  knifeShots: [],    // couteaux de lancer du Jugement {x,y,vx,vy,a,spin,t,r,dmg,life,hits,maxHits,sentence}
 
   // progression / vague
   spawnTimer: 0,

@@ -55,41 +55,35 @@ export function drawSlashArc() {
     return;
   }
   if (p.attackMode === 7) {
-    // Jugement du Gardien : arc de lame sombre cerclé d'or et de cristaux
-    if (p.attackCooldown < 0.2) return;
-    const t = (0.5 - p.attackCooldown) / 0.3; // 0 -> 1 pendant le cooldown
+    // Jugement du Gardien : traînée de lancer — quelques filets cyan/or
+    // qui filent dans la direction du couteau au moment du départ
+    if (p.attackCooldown < 0.28) return;
+    const t = (0.4 - p.attackCooldown) / 0.12; // 0 -> 1 juste après le lancer
     const life = 1 - t;
-    const sweep = 1.7 * Math.min(1, t * 1.4); // secteur ~97° comme le hitbox
-    const a0 = angle - 0.85;
-    const rIn = p.r - 4, rOut = p.r + 80, R = p.r + 52;
+    const ca = Math.cos(angle), sa = Math.sin(angle);
     ctx.save();
-    // éventail rempli teal sombre
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, rOut, a0, a0 + sweep);
-    ctx.arc(p.x, p.y, rIn, a0 + sweep, a0, true);
-    ctx.closePath();
-    const fg = ctx.createRadialGradient(p.x, p.y, rIn, p.x, p.y, rOut);
-    fg.addColorStop(0, `rgba(167,255,235,${0.22 * life})`);
-    fg.addColorStop(0.6, `rgba(255,215,64,${0.10 * life})`);
-    fg.addColorStop(1, 'rgba(167,255,235,0)');
-    ctx.fillStyle = fg; ctx.fill();
-    ctx.restore();
-    // tranches cyan -> or -> blanc
-    const cols = ['rgba(167,255,235,', 'rgba(255,243,196,', 'rgba(255,255,255,'];
-    const widths = [4, 8, 12];
-    const radii = [p.r + 20, p.r + 46, p.r + 70];
     ctx.lineCap = 'round';
-    for (let i = 0; i < cols.length; i++) {
-      const back = sweep * i * 0.1;
-      const aS = a0 + back, aE = a0 + sweep - back * 0.5;
-      if (aE <= aS) continue;
-      ctx.strokeStyle = cols[i] + `${(0.8 - i * 0.2) * life})`;
-      ctx.lineWidth = widths[i] * (0.6 + 0.4 * life);
-      ctx.beginPath(); ctx.arc(p.x, p.y, radii[i], aS, aE); ctx.stroke();
+    for (let i = 0; i < 4; i++) {
+      const off = (i - 1.5) * 5;
+      const d0 = p.r + 6 + i * 9;
+      const d1 = d0 + 30 + i * 8;
+      const px = -sa * off, py = ca * off;
+      ctx.strokeStyle = i % 2 ? `rgba(255,215,64,${0.55 * life})` : `rgba(167,255,235,${0.7 * life})`;
+      ctx.lineWidth = (3.5 - i * 0.6) * (0.5 + 0.5 * life);
+      ctx.beginPath();
+      ctx.moveTo(p.x + px + ca * d0, p.y + py + sa * d0);
+      ctx.lineTo(p.x + px + ca * d1, p.y + py + sa * d1);
+      ctx.stroke();
     }
-    // liseré de runes sur le bord d'attaque
-    ctx.strokeStyle = `rgba(255,215,64,${0.85 * life})`; ctx.lineWidth = 1.6;
-    ctx.beginPath(); ctx.arc(p.x, p.y, rOut, a0 + sweep - 0.04, a0 + sweep); ctx.stroke();
+    // étincelle au point de départ
+    ctx.globalCompositeOperation = 'lighter';
+    const gg = ctx.createRadialGradient(p.x + ca * (p.r + 8), p.y + sa * (p.r + 8), 0,
+      p.x + ca * (p.r + 8), p.y + sa * (p.r + 8), 14);
+    gg.addColorStop(0, `rgba(255,243,196,${0.8 * life})`);
+    gg.addColorStop(1, 'rgba(167,255,235,0)');
+    ctx.fillStyle = gg;
+    ctx.beginPath(); ctx.arc(p.x + ca * (p.r + 8), p.y + sa * (p.r + 8), 14, 0, TAU); ctx.fill();
+    ctx.restore();
     return;
   }
   if (p.attackCooldown < 0.25) return;

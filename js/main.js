@@ -1,6 +1,6 @@
 import { G, ctx, W, H, TAU, VERSION, finalWave, saveStats } from './state.js';
 import { spawnEnemy, spawnMinibossWave, spawnBossWave, spawnFinalBoss, damageEnemy, enemyTypes } from './enemies.js';
-import { doSlash, doSpin, doThrust, doUlt, doShield, doFireLaser, doFireHand, doJudgment, doSentence, updateSentence, updateNuke, updateIceUlt, updateLasers, updateHands, updateVolcanoes, updateSewerUlt, updateSpaceUlt } from './attacks.js';
+import { doSlash, doSpin, doThrust, doUlt, doShield, doFireLaser, doFireHand, doJudgment, doSentence, updateSentence, updateKnifeShots, updateNuke, updateIceUlt, updateLasers, updateHands, updateVolcanoes, updateSewerUlt, updateSpaceUlt } from './attacks.js';
 import { updateEffects, addDamageText, spawnParticles } from './effects.js';
 import { drawBackground, drawEnemy, drawDrops, drawPlayer, drawSlashArc, drawUltFlash, drawMushroom, drawBomber, drawEffects, drawFireZones, drawCraters, drawPortals, drawProjectiles, drawLightnings, drawGrain, drawClouds, dayNight, drawTerrain, drawBuildings, drawWorldPortals, drawObstacle, drawIceStorm, drawLasers, drawHands, drawVolcanoes, drawAcidZones, drawBlackHoles, drawVoidHole } from './graphics.js';
 import { checkAchievements } from './achievements.js';
@@ -235,7 +235,8 @@ function update(dt) {
     G.judgQueued = false;
     if (p.attackMode === 7 && p.sentenceCd <= 0 && p.sentenceT <= 0 && p.switchLock <= 0 && p.ultActive <= 0) doSentence();
   }
-  updateSentence(dt); // concentration + ondes runiques du Jugement
+  updateSentence(dt); // concentration de Sentence ancestrale
+  updateKnifeShots(dt); // couteaux de lancer du Jugement (vol + collisions)
   updateBow(dt); // charge + projectiles + zones de distorsion de l'arc
   p.handCd = Math.max(0, p.handCd - dt);
   if (G.ultQueued) {
@@ -798,7 +799,7 @@ function update(dt) {
     G.acidZones.length = 0; G.blackHoles.length = 0;
     G.acidRain = 0; G.voidStorm = 0;
     G.stormGale = 0; G.stormTornado = null;
-    G.bowShots.length = 0; G.singZones.length = 0;
+    G.bowShots.length = 0; G.singZones.length = 0; G.knifeShots.length = 0;
     // salve de fête : or, violet, vert
     const cols = ['#ffd740', '#e040fb', '#69f0ae', '#40c4ff', '#ff8a65'];
     for (let i = 0; i < 6; i++) {

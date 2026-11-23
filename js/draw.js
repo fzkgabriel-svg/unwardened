@@ -2,7 +2,7 @@ import { G, ctx, W, H, TAU, VERSION, finalWave, saveStats } from './state.js';
 import { spawnEnemy, spawnMinibossWave, spawnBossWave, spawnFinalBoss, damageEnemy, enemyTypes } from './enemies.js';
 import { doSlash, doSpin, doThrust, doUlt, doShield, doFireLaser, doFireHand, updateNuke, updateIceUlt, updateLasers, updateHands, updateVolcanoes, updateSewerUlt, updateSpaceUlt } from './attacks.js';
 import { updateEffects, addDamageText, spawnParticles } from './effects.js';
-import { drawBackground, drawEnemy, drawDrops, drawPlayer, drawSlashArc, drawUltFlash, drawMushroom, drawBomber, drawEffects, drawFireZones, drawCraters, drawPortals, drawProjectiles, drawLightnings, drawGrain, drawClouds, dayNight, drawTerrain, drawBuildings, drawWorldPortals, drawObstacle, drawIceStorm, drawLasers, drawHands, drawVolcanoes, drawAcidZones, drawBlackHoles, drawVoidHole, drawWindZones, drawStormTornado, drawBowShots, drawSingZones, drawBowReveal, drawGardienAura, drawSentenceCharge, drawSentenceWaves, drawGardienReveal, drawAmbient, drawFalls, drawBiomeGrade, drawCloudShadows, drawSnowCover } from './graphics.js';
+import { drawBackground, drawEnemy, drawDrops, drawPlayer, drawSlashArc, drawUltFlash, drawMushroom, drawBomber, drawEffects, drawFireZones, drawCraters, drawPortals, drawProjectiles, drawLightnings, drawGrain, drawClouds, dayNight, drawTerrain, drawBuildings, drawWorldPortals, drawObstacle, drawIceStorm, drawLasers, drawHands, drawVolcanoes, drawAcidZones, drawBlackHoles, drawVoidHole, drawWindZones, drawStormTornado, drawBowShots, drawSingZones, drawBowReveal, drawGardienAura, drawSentenceCharge, drawKnifeShots, drawGardienReveal, drawAmbient, drawFalls, drawBiomeGrade, drawCloudShadows, drawSnowCover } from './graphics.js';
 import { checkAchievements } from './achievements.js';
 import { wearEquipment, addMaterial } from './inventory.js';
 import { drawHUD, drawAchToast, drawWarnToast } from './hud.js';
@@ -60,7 +60,7 @@ export function draw() {
     drawProjectiles();
     drawBowShots();  // flèches d'énergie de l'arc cinétique
     drawSingZones(); // zones de distorsion de la singularité
-    drawSentenceWaves(); // ondes runiques du Jugement du Gardien (sous les entités)
+    drawKnifeShots(); // couteaux de lancer du Jugement (projectiles au-dessus des entités)
     drawSlashArc();
     drawGardienAura(); // halo discret de l'arme équipée
     drawPlayer();

@@ -136,6 +136,60 @@ export function drawSentenceWaves() {
   ctx.restore();
 }
 
+// ---------- couteaux de lancer du Jugement ----------
+// lame fine qui tournoie dans son vol ; la version Sentence laisse une
+// traînée d'ondes runiques cyan/dorées
+export function drawKnifeShots() {
+  const shots = G.knifeShots || [];
+  if (!shots.length) return;
+  ctx.save();
+  for (const k of shots) {
+    ctx.save();
+    ctx.translate(k.x, k.y);
+    ctx.rotate(k.spin); // la lame tournoie sur elle-même
+    const L = k.sentence ? 26 : 20;
+    // traînée runique pour Sentence
+    if (k.sentence) {
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = 'rgba(167,255,235,0.35)'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(0, 0, L * 0.9, 0, TAU); ctx.stroke();
+      ctx.globalCompositeOperation = 'source-over';
+    }
+    // lame : losange effilé sombre + fil doré
+    const bg = ctx.createLinearGradient(-L, -3, L, 3);
+    bg.addColorStop(0, '#0f1419'); bg.addColorStop(0.5, k.sentence ? '#5d7a8c' : '#37474f'); bg.addColorStop(1, '#10151c');
+    ctx.fillStyle = bg;
+    ctx.beginPath();
+    ctx.moveTo(L, 0); ctx.lineTo(2, -3.4); ctx.lineTo(-L * 0.82, -2.2);
+    ctx.lineTo(-L, 0); ctx.lineTo(-L * 0.82, 2.2); ctx.lineTo(2, 3.4);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#0a0d12'; ctx.lineWidth = 1; ctx.stroke();
+    // fil doré sur le tranchant
+    ctx.strokeStyle = 'rgba(255,215,64,0.9)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(L - 1, -0.4); ctx.lineTo(-L * 0.7, -1.4); ctx.stroke();
+    // ricasso + garde + poignée + pommeau cristal
+    ctx.fillStyle = '#d4af37';
+    ctx.fillRect(-L * 0.82 - 2, -3, 3, 6); // garde
+    ctx.fillStyle = '#3e2723';
+    ctx.fillRect(-L - 5, -2, 5, 4); // poignée
+    ctx.save(); ctx.translate(-L - 6.5, 0); ctx.rotate(Math.PI / 4);
+    ctx.fillStyle = k.sentence ? '#fff3c4' : '#a7ffeb';
+    ctx.fillRect(-1.8, -1.8, 3.6, 3.6);
+    ctx.restore();
+    // lueur pour la version Sentence
+    if (k.sentence) {
+      ctx.globalCompositeOperation = 'lighter';
+      const gg = ctx.createRadialGradient(0, 0, 1, 0, 0, 14);
+      gg.addColorStop(0, 'rgba(255,243,196,0.5)'); gg.addColorStop(1, 'rgba(167,255,235,0)');
+      ctx.fillStyle = gg;
+      ctx.beginPath(); ctx.arc(0, 0, 14, 0, TAU); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+    }
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
 // ---------- révélation de l'arme (écran de victoire, monde 1) ----------
 // calquée sur drawBowReveal : fondu, particules dorées/cyan, carte de présentation
 export function drawGardienReveal() {
@@ -189,22 +243,31 @@ export function drawGardienReveal() {
   ctx.fillStyle = '#e8d9a8';
   ctx.fillText('LE JUGEMENT', 0, gy + 72);
   ctx.fillText('DU GARDIEN', 0, gy + 106);
-  // petite lame stylisée
+  // couteau de lancer stylisé : lame fine effilée, garde dorée, cristal
   ctx.save();
-  ctx.translate(-90, gy + 150);
-  ctx.rotate(-0.5);
-  const lg = ctx.createLinearGradient(0, -8, 0, 8);
-  lg.addColorStop(0, '#455a64'); lg.addColorStop(1, '#1a2332');
+  ctx.translate(-95, gy + 150);
+  ctx.rotate(-0.35);
+  const lg = ctx.createLinearGradient(0, -6, 0, 6);
+  lg.addColorStop(0, '#455a64'); lg.addColorStop(1, '#10151c');
   ctx.fillStyle = lg;
   ctx.beginPath();
-  ctx.moveTo(0, -5); ctx.lineTo(78, -3); ctx.lineTo(90, 0); ctx.lineTo(78, 3); ctx.lineTo(0, 5);
-  ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = '#ffd740'; ctx.lineWidth = 1.2; ctx.stroke();
+  ctx.moveTo(96, -0.5); ctx.lineTo(4, -3.2); ctx.lineTo(-16, -2);
+  ctx.lineTo(-16, 2); ctx.lineTo(4, 3.2); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#ffd740'; ctx.lineWidth = 1; ctx.stroke();
+  // fil doré sur le tranchant
+  ctx.strokeStyle = 'rgba(255,215,64,0.9)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(94, -0.8); ctx.lineTo(2, -2.6); ctx.stroke();
+  // garde fine + poignée + pommeau cristal
   ctx.fillStyle = '#d4af37';
-  ctx.fillRect(-8, -9, 5, 18);
+  ctx.beginPath();
+  ctx.moveTo(-16, -4.5); ctx.lineTo(-12, -4.5); ctx.lineTo(-12, -2);
+  ctx.lineTo(-20, -1.5); ctx.lineTo(-20, 1.5); ctx.lineTo(-12, 2);
+  ctx.lineTo(-12, 4.5); ctx.lineTo(-16, 4.5); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#4e342e'; ctx.fillRect(-30, -2.6, 10, 5.2);
   ctx.fillStyle = '#a7ffeb';
-  ctx.save(); ctx.translate(-14, -13); ctx.rotate(Math.PI / 4);
-  ctx.fillRect(-4, -4, 8, 8); ctx.restore();
+  ctx.save(); ctx.translate(-36, 0); ctx.rotate(Math.PI / 4);
+  ctx.fillRect(-3.5, -3.5, 7, 7); ctx.strokeStyle = '#ffd740'; ctx.lineWidth = 1;
+  ctx.strokeRect(-3.5, -3.5, 7, 7); ctx.restore();
   ctx.restore();
   // description courte
   ctx.font = 'italic 13px Georgia, serif';
@@ -214,7 +277,7 @@ export function drawGardienReveal() {
   // statistiques
   ctx.font = '600 12px Inter, sans-serif';
   ctx.fillStyle = CRY;
-  ctx.fillText('ATTAQUE LOURDE · ONDE RUNIQUE « SENTENCE ANCESTRALE »', 0, gy + ch - 30);
+  ctx.fillText('COUTEAU DE LANCER · ONDE RUNIQUE « SENTENCE ANCESTRALE »', 0, gy + ch - 30);
   ctx.font = '11px Inter, sans-serif';
   ctx.fillText('Menu FORGE → Personnage → JUGEMENT pour l\'équiper', 0, gy + ch - 14);
   ctx.restore();

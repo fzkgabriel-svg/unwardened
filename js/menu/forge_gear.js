@@ -186,9 +186,9 @@ const WEAPON_INFO = {
   },
   gardien: {
     name: 'Le Jugement du Gardien', rarity: 'Légendaire',
-    desc: 'Forgeron des Terres Oubliées pour un gardien oublié. Métal sombre, or et runes, cristal ancestral au garde.',
-    atk: 'Attaque : frappe du Jugement — large arc tranchant, un peu plus lente que l\'épée, léger recul.',
-    sec: 'Sentence ancestrale (clic droit) : 0,85 s de concentration puis une onde runique traverse le sol — ~1,8× les dégâts — recharge 10 s.'
+    desc: 'Couteau de lancer forgé pour un gardien oublié. Métal sombre, or gravé et runes, cristal ancestral au pommeau.',
+    atk: 'Attaque : lancer du couteau — la lame tournoie dans son vol et transperce jusqu\'à 3 ennemis, cadence proche de l\'épée.',
+    sec: 'Sentence ancestrale (clic droit) : 0,85 s de concentration puis le couteau est lancé en version chargée — il transperce tous les ennemis sur sa trajectoire en laissant une traînée runique, ~1,8× les dégâts — recharge 10 s.'
   },
   arc: {
     name: 'Arc Cinétique Cosmique', rarity: 'Légendaire',

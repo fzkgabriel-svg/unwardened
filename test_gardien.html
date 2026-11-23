@@ -6,7 +6,7 @@
 <script type="module">
 import { G } from './js/state.js';
 import { loadInv, loadoutOf, loadoutKeys, weaponAllowed, setLoadoutSlot, modeKey, WEAPON_MODES, modeInfo, modeMult } from './js/inventory.js';
-import { doJudgment, doSentence, updateSentence, SENT_CD } from './js/attacks.js';
+import { doJudgment, doSentence, updateSentence, updateKnifeShots, SENT_CD } from './js/attacks.js';
 
 const out = [];
 const ok = (name, cond) => out.push((cond ? 'PASS' : 'FAIL') + ' ' + name);
@@ -74,28 +74,35 @@ G.enemies.push({ x: 660, y: 320, r: 14, hp: 500, maxHp: 500, type: ' slime', hit
 G.enemies.push({ x: 540, y: 320, r: 14, hp: 500, maxHp: 500, type: 'slime', hitFlash: 0 });
 const hpBefore = G.enemies[0].hp;
 doJudgment();
-ok('doJudgment inflige des dégâts', G.enemies[0].hp < hpBefore);
-ok('doJudgment rate l\'ennemi derrière', G.enemies[1].hp === 500);
-ok('attackCooldown posé', p.attackCooldown > 0.4 && p.attackCooldown <= 0.55);
+ok('doJudgment lance un couteau', (G.knifeShots || []).length === 1);
+ok('couteau projectile actif', G.knifeShots[0].sentence === false && G.knifeShots[0].maxHits === 3);
+// simuler le vol jusqu\'à l\'impact
+let g2 = 0;
+while (G.knifeShots.length && g2++ < 120) updateKnifeShots(1 / 60);
+ok('couteau a touché l\'ennemi devant', G.enemies[0].hp < hpBefore);
+ok('couteau rate l\'ennemi derrière', G.enemies[1].hp === 500);
+ok('couteau nettoyé après vol', G.knifeShots.length === 0);
+ok('attackCooldown posé', p.attackCooldown > 0.35 && p.attackCooldown <= 0.45);
 
 // ---------- 6. Sentence ancestrale ----------
 p.attackCooldown = 0; p.sentenceCd = 0; p.sentenceT = 0;
 doSentence();
 ok('sentenceT démarré', p.sentenceT > 0);
 ok('sentenceCd posé', p.sentenceCd === SENT_CD);
-ok('onde pas encore créée', G.sentenceWaves.length === 0);
+ok('onde pas encore créée', (G.knifeShots || []).length === 0);
 // simuler la charge
 const e2 = { x: 800, y: 320, r: 14, hp: 500, maxHp: 500, type: 'slime', hitFlash: 0 };
 G.enemies.push(e2);
 let guard = 0;
 while (p.sentenceT > 0 && guard++ < 200) updateSentence(1 / 60);
-ok('charge terminée -> onde créée', G.sentenceWaves.length === 1);
+ok('charge terminée -> couteau Sentence créé', G.knifeShots.length === 1);
+ok('couteau Sentence marqué', G.knifeShots[0].sentence === true);
 const hp2 = e2.hp;
 guard = 0;
-while (G.sentenceWaves.length && guard++ < 200) updateSentence(1 / 60);
-ok('onde a touché l\'ennemi', e2.hp < hp2);
+while (G.knifeShots.length && guard++ < 300) updateKnifeShots(1 / 60);
+ok('couteau Sentence a touché l\'ennemi', e2.hp < hp2);
 ok('dégâts ~1.8x attaque', Math.abs((hp2 - e2.hp) - 30 * 1.8) < 30 * 1.8 * 0.6);
-ok('pas de double frappe', (() => { const hpNow = e2.hp; updateSentence(1 / 60); return e2.hp === hpNow; })());
+ok('pas de double frappe', (() => { const hpNow = e2.hp; updateKnifeShots(1 / 60); return e2.hp === hpNow || G.knifeShots.length === 0; })());
 
 // ---------- 7. persistance ----------
 // simuler reload : loadInv relit localStorage
@@ -112,8 +119,11 @@ try {
   ok('HUD skills+weaponPanel sans erreur', true);
 } catch (e) { ok('HUD skills+weaponPanel sans erreur: ' + e.message, false); }
 try {
-  const { drawSentenceCharge, drawSentenceWaves, drawGardienAura } = await import('./js/gfx/gardien_draw.js');
-  p.sentenceT = 0.5; drawSentenceCharge(); drawSentenceWaves(); drawGardienAura();
+  const { drawSentenceCharge, drawKnifeShots, drawGardienAura } = await import('./js/gfx/gardien_draw.js');
+  p.sentenceT = 0.5; drawSentenceCharge();
+  G.knifeShots.push({ x: 700, y: 300, spin: 1.2, sentence: true });
+  drawKnifeShots(); G.knifeShots.length = 0;
+  drawGardienAura();
   ok('effets Sentence sans erreur', true);
 } catch (e) { ok('effets Sentence sans erreur: ' + e.message, false); }
 try {
