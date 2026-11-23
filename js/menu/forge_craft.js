@@ -435,8 +435,10 @@ function drawUpgradeTab(L) {
     ctx.fillText(def.icon, card.x + 20, card.y + 48);
     ctx.fillStyle = def.color; ctx.font = `bold 18px Inter, sans-serif`;
     ctx.fillText(def.label, card.x + 58, card.y + 46);
-    ctx.fillStyle = '#ffe9a3'; ctx.font = `bold 20px Consolas, monospace`; ctx.textAlign = 'right';
-    ctx.fillText(locked ? '???' : `NIV ${info.lvl}`, card.x + card.w - 18, card.y + 48);
+    // niveau en coin supérieur droit : le libellé long (« ARC CINÉTIQUE »)
+    // débordait sinon sur « NIV X »
+    ctx.fillStyle = '#ffe9a3'; ctx.font = `bold 16px Consolas, monospace`; ctx.textAlign = 'right';
+    ctx.fillText(locked ? '???' : `NIV ${info.lvl}`, card.x + card.w - 16, card.y + 26);
     // barre XP
     const bx = card.x + 20, bw = card.w - 40, by = card.y + 84;
     ctx.fillStyle = 'rgba(255,255,255,0.12)'; roundRect(bx, by, bw, 12, 6); ctx.fill();
