@@ -5,7 +5,7 @@ import { G, ctx, W, H, TAU } from '../state.js';
 import { roundRect, hexA } from '../utils.js';
 import { MODULES, MOD_IDS, modState, modulesUnlocked, ensureModules, unlockPassSlot, PASS_SLOT_PRICE, modLevel, modUpgradeCost, upgradeModule, pass2Unlocked, drawModuleIcon } from '../modules.js';
 import { saveInv } from '../inventory.js';
-import { inR, UI, SERIF, C_TEXT, C_MUTED, C_GOLD, menuButtons, drawMenuButton } from './common.js';
+import { inR, fitText, UI, SERIF, C_TEXT, C_MUTED, C_GOLD, menuButtons, drawMenuButton } from './common.js';
 import { sfxClick, sfxEquip, sfxConfirm } from '../audio.js';
 
 // raretés à l'ancienne : bronze & cuir / argent bleuté / violet enchanté / or ancien
@@ -465,6 +465,7 @@ function drawDetail(L, id, t) {
     ctx.stroke();
   });
   const ix = d.x + d.w / 2;
+  ctx.textAlign = 'center'; // tout le panneau est centré — sans ça le texte déborde à droite
   // grande médaillon de relique : anneau double + points cardinaux
   const iy = d.y + 74;
   ctx.save();
@@ -511,7 +512,9 @@ function drawDetail(L, id, t) {
   if (m.type === 'actif' && m.cd) {
     ctx.fillStyle = 'rgba(255,215,64,0.85)'; ctx.font = `700 10px ${UI}`;
     const cdTxt = `[X] recharge ${m.cd} s`;
-    ctx.fillText(cdTxt, d.x + d.w - 22 - ctx.measureText(cdTxt).width, d.y + 185);
+    ctx.textAlign = 'right';
+    ctx.fillText(cdTxt, d.x + d.w - 22, d.y + 185);
+    ctx.textAlign = 'center';
   }
   // description : retour à la ligne, max 4 lignes, jamais de troncature
   ctx.font = `10.5px ${UI}`; ctx.fillStyle = owned ? '#b5af9f' : 'rgba(255,255,255,0.3)';
@@ -521,7 +524,12 @@ function drawDetail(L, id, t) {
     if (ctx.measureText(tx).width > d.w - 52 && cur) { lines.push(cur); cur = w; } else cur = tx;
   }
   if (cur) lines.push(cur);
-  lines.slice(0, 4).forEach((l, i) => ctx.fillText(l, ix, d.y + 206 + i * 14));
+  const shown = lines.slice(0, 4);
+  if (lines.length > 4) {
+    shown[3] = fitText(shown[3], d.w - 60);
+    if (!shown[3].endsWith('…')) shown[3] += '…';
+  }
+  shown.forEach((l, i) => ctx.fillText(l, ix, d.y + 206 + i * 14));
   // statistiques
   const sy = d.y + d.h - 118;
   ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1;
@@ -535,39 +543,59 @@ function drawDetail(L, id, t) {
   const hov = inR(b, G.mouse.x, G.mouse.y);
   const ub = L.upBtn;
   const ucost = owned && lvl < 3 ? modUpgradeCost(id) : null;
+  // étiquette ajustée à la largeur de sa case : la police rétrécit au lieu de déborder
+  const fitBtn = (txt, w, base, weight = '700') => {
+    let s = base;
+    ctx.font = `${weight} ${s}px ${UI}`;
+    while (s > 7.5 && ctx.measureText(txt).width > w - 14) { s -= 0.4; ctx.font = `${weight} ${s}px ${UI}`; }
+    return s;
+  };
   if (ucost) {
     const hovU = inR(ub, G.mouse.x, G.mouse.y);
     ctx.fillStyle = hovU ? 'rgba(105,240,174,0.95)' : 'rgba(105,240,174,0.55)';
     roundRect(ub.x, ub.y, ub.w, ub.h, 10); ctx.fill();
     ctx.fillStyle = '#06130c';
-    ctx.font = `700 10.5px ${UI}`;
+    const s1 = fitBtn(`⬆ AMÉLIORER → NIV ${lvl + 1}`, ub.w, 10.5);
     ctx.fillText(`⬆ AMÉLIORER → NIV ${lvl + 1}`, ub.x + ub.w / 2, ub.y + 16);
-    ctx.font = `600 9px ${UI}`;
+    const s2 = fitBtn(`${ucost.emeraude} ◆ + ${ucost.cristal} ✦`, ub.w, 9, '600');
+    ctx.font = `600 ${s2}px ${UI}`;
     ctx.fillText(`${ucost.emeraude} ◆ + ${ucost.cristal} ✦`, ub.x + ub.w / 2, ub.y + 31);
   } else if (owned && lvl >= 3) {
     ctx.fillStyle = 'rgba(255,255,255,0.05)';
     roundRect(ub.x, ub.y, ub.w, ub.h, 10); ctx.fill();
     ctx.strokeStyle = 'rgba(255,215,64,0.5)'; ctx.lineWidth = 1; roundRect(ub.x, ub.y, ub.w, ub.h, 10); ctx.stroke();
-    ctx.fillStyle = '#ffd740'; ctx.font = `700 10.5px ${UI}`;
+    ctx.fillStyle = '#ffd740';
+    const sm = fitBtn('★ NIVEAU MAX', ub.w, 10.5);
+    ctx.font = `700 ${sm}px ${UI}`;
     ctx.fillText('★ NIVEAU MAX', ub.x + ub.w / 2, ub.y + ub.h / 2 + 4);
   }
+  const eqLabel = equipped ? '❖ INSTALLÉ'
+    : !owned ? `🛒 ACHETER — ${m.price} ◆`
+    : (m.type === 'passif' && !ms.passUnlocked ? `🔒 SLOT PASSIF — ${PASS_SLOT_PRICE} ◆`
+      : m.type === 'actif' ? '✦ INSTALLER [X]' : '❖ INSTALLER PASSIF');
   if (equipped) {
     ctx.fillStyle = 'rgba(255,255,255,0.05)';
     roundRect(b.x, b.y, b.w, b.h, 10); ctx.fill();
     ctx.strokeStyle = m.col; ctx.lineWidth = 1.5; roundRect(b.x, b.y, b.w, b.h, 10); ctx.stroke();
-    ctx.fillStyle = m.col; ctx.font = `700 12.5px ${UI}`;
-    ctx.fillText('❖ INSTALLÉ', b.x + b.w / 2, b.y + b.h / 2 + 4);
+    ctx.fillStyle = m.col;
+    const se = fitBtn(eqLabel, b.w, 12.5);
+    ctx.font = `700 ${se}px ${UI}`;
+    ctx.fillText(eqLabel, b.x + b.w / 2, b.y + b.h / 2 + 4);
   } else if (!owned) {
     ctx.fillStyle = hov ? 'rgba(255,215,64,0.9)' : 'rgba(255,215,64,0.55)';
     roundRect(b.x, b.y, b.w, b.h, 10); ctx.fill();
-    ctx.fillStyle = '#16130c'; ctx.font = `700 12.5px ${UI}`;
-    ctx.fillText(`🛒 ACHETER — ${m.price} ◆`, b.x + b.w / 2, b.y + b.h / 2 + 4);
+    ctx.fillStyle = '#16130c';
+    const sa = fitBtn(eqLabel, b.w, 12.5);
+    ctx.font = `700 ${sa}px ${UI}`;
+    ctx.fillText(eqLabel, b.x + b.w / 2, b.y + b.h / 2 + 4);
   } else {
     const passLocked = m.type === 'passif' && !ms.passUnlocked;
     ctx.fillStyle = passLocked ? (hov ? 'rgba(255,215,64,0.9)' : 'rgba(255,215,64,0.55)') : hov ? hexA(m.col, 0.95) : hexA(m.col, 0.5);
     roundRect(b.x, b.y, b.w, b.h, 10); ctx.fill();
-    ctx.fillStyle = passLocked ? '#16130c' : '#06101e'; ctx.font = `700 12.5px ${UI}`;
-    ctx.fillText(passLocked ? `🔒 SLOT PASSIF — ${PASS_SLOT_PRICE} ◆` : (m.type === 'actif' ? '✦ INSTALLER [X]' : '❖ INSTALLER PASSIF'), b.x + b.w / 2, b.y + b.h / 2 + 4);
+    ctx.fillStyle = passLocked ? '#16130c' : '#06101e';
+    const si = fitBtn(eqLabel, b.w, 12.5);
+    ctx.font = `700 ${si}px ${UI}`;
+    ctx.fillText(eqLabel, b.x + b.w / 2, b.y + b.h / 2 + 4);
   }
   ctx.restore();
 }
