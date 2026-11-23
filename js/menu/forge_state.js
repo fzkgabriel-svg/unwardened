@@ -499,14 +499,22 @@ export function forgeClickAt(x, y) {
       const total = repairAllCost(G.inv);
       const anyOk = damagedItems(G.inv).some(id => canRepair(G.inv, id));
       if (inR(all, x, y) && anyOk) {
+        const firstId = damagedItems(G.inv).find(id => canRepair(G.inv, id));
         const r = repairAll(G.inv);
-        if (r.repaired) { sfxRepair(); forgeScroll = 0; }
+        if (r.repaired) {
+          G.forgeAnim = { start: G.time, id: firstId, repair: true };
+          sfxRepair(); forgeScroll = 0;
+        }
         return 'repairall';
       }
       for (const row of repairRows(L)) {
         const rb = repairRowBtn(row);
         if (inR(rb, x, y)) {
-          if (canRepair(G.inv, row.id)) { repairItem(G.inv, row.id); sfxRepair(); return 'repair'; }
+          if (canRepair(G.inv, row.id)) {
+            repairItem(G.inv, row.id);
+            G.forgeAnim = { start: G.time, id: row.id, repair: true };
+            sfxRepair(); return 'repair';
+          }
           return 'repairno';
         }
         // clic sur la ligne -> fiche détail de l'objet
