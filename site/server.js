@@ -317,6 +317,21 @@ const server = http.createServer(async (req, res) => {
       }
       return json(res, 404, { error: 'Route inconnue' });
     }
+    // robots.txt / sitemap.xml générés avec le vrai domaine de la requête
+    if (pathname === '/robots.txt') {
+      const host = req.headers.host || 'localhost';
+      return send(res, 200,
+        `User-agent: *\nAllow: /\nDisallow: /admin.html\nDisallow: /api/\nDisallow: /download/\nSitemap: https://${host}/sitemap.xml\n`,
+        'text/plain; charset=utf-8');
+    }
+    if (pathname === '/sitemap.xml') {
+      const host = req.headers.host || 'localhost';
+      const pages = ['/', '/game.html', '/news.html', '/community.html', '/account.html'];
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
+        pages.map((p, i) => `  <url><loc>https://${host}${p}</loc><priority>${(1 - i * 0.1).toFixed(1)}</priority></url>`).join('\n') +
+        `\n</urlset>\n`;
+      return send(res, 200, xml, 'application/xml; charset=utf-8');
+    }
     // fichiers statiques
     let fp = pathname === '/' ? '/index.html' : pathname;
     fp = normalize(fp).replace(/\\/g, '/');
