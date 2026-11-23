@@ -908,6 +908,50 @@ export function sfxWarn() { // alerte : deux notes graves descendantes
   nz(t, 0.3, 0.05, 'lowpass', 700, 1);
 }
 
+// ---------- ULTIME : PLUIE DE GLACE (sound design en 4 couches) ----------
+// activation : montée grave mystérieuse + cristaux qui tintent
+export function sfxIceCharge() {
+  if (!sfxReady()) return; const t = ST();
+  osc('sine', 70, 240, t, 1.15, 0.11);          // grondement montant
+  osc('triangle', 140, 480, t + 0.1, 1.0, 0.05);
+  nz(t, 1.0, 0.045, 'bandpass', 2200, 2.5);    // souffle cristallin naissant
+  [1568, 1976, 2637].forEach((f, i) => osc('sine', f, f * 1.02, t + 0.55 + i * 0.2, 0.32, 0.028));
+}
+// ouverture : déchirure lumineuse + accord de glace
+export function sfxIceOpen() {
+  if (!sfxReady()) return; const t = ST();
+  nz(t, 0.7, 0.13, 'bandpass', 1900, 0.8);     // whoosh montant
+  osc('sawtooth', 280, 980, t, 0.6, 0.045);
+  [1047, 1319, 1568].forEach((f, i) => osc('triangle', f, f, t + 0.12 + i * 0.09, 0.5, 0.04));
+  nz(t + 0.1, 0.5, 0.05, 'highpass', 5200);
+}
+// tempête : vent glacial soutenu + grondement d'altitude (~8 s)
+export function sfxIceStorm() {
+  if (!sfxReady()) return; const t = ST();
+  nz(t, 8.0, 0.085, 'bandpass', 850, 0.55);    // souffle de vent filtré
+  nz(t + 0.5, 7.0, 0.06, 'highpass', 3400);    // sifflement de givre
+  osc('sine', 55, 38, t, 8.0, 0.07);           // grondement lointain
+  nz(t + 1.2, 5.0, 0.04, 'bandpass', 500, 0.8); // seconde nappe plus grave
+}
+// impact : craquement cristallin — pitch aléatoire contrôlé (anti-boucle)
+export function sfxIceImpact(big = false) {
+  if (!sfxReady()) return; const t = ST();
+  const f = 1700 + Math.random() * 1500;
+  nz(t, 0.05, big ? 0.13 : 0.07, 'highpass', 4200);
+  osc('sine', f, f * 0.55, t, 0.13, big ? 0.075 : 0.04);
+  osc('sine', f * 1.5, f * 0.85, t + 0.025, 0.09, big ? 0.045 : 0.025);
+  if (big) { nz(t, 0.22, 0.09, 'lowpass', 480); osc('sine', 120, 45, t, 0.25, 0.08); }
+}
+// fin : expiration glacée descendante + dernier tintement de cristal
+export function sfxIceEnd() {
+  if (!sfxReady()) return; const t = ST();
+  nz(t, 1.5, 0.11, 'highpass', 2600);
+  osc('sine', 1500, 260, t, 1.25, 0.055);
+  osc('sine', 2093, 2093, t + 0.5, 0.6, 0.045);
+  osc('sine', 3136, 3136, t + 0.78, 0.5, 0.028);
+  nz(t + 0.3, 0.9, 0.04, 'bandpass', 700, 0.7);
+}
+
 // ---------- ARC CINÉTIQUE COSMIQUE ----------
 export function sfxBowFire(power = 0.5) { // tir : zap électronique montant, puissance = charge
   if (!sfxReady()) return; const t = ST();

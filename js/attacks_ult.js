@@ -2,7 +2,7 @@ import { G, W, H, TAU } from './state.js';
 import { spawnParticles, addDamageText } from './effects.js';
 import { damageEnemy } from './enemies.js';
 import { worldW, worldH } from './world.js';
-import { sfxSlash, sfxThrust, sfxSpin, sfxShield, sfxNuke, sfxBossAtk, sfxWave } from './audio.js';
+import { sfxSlash, sfxThrust, sfxSpin, sfxNuke, sfxBossAtk, sfxWave, sfxIceCharge, sfxIceOpen, sfxIceStorm, sfxIceImpact, sfxIceEnd } from './audio.js';
 import { waveBonus, clampW, clampH, playerAngle } from './attacks_util.js';
 
 export function updateNuke(dt) {
@@ -76,8 +76,11 @@ function stormCloudXY(s, i, t) {
 }
 
 // ---------- ULTIME : PLUIE DE GLACE (coffre du Souverain de Glace) ----------
-// Refonte spectaculaire : préparation (aura + cercle runique), tempête de
-// cristaux facettés, finale avec méga-cristaux et explosion glaciale.
+// Refonte spectaculaire en 4 phases :
+//   charge  (0–1,3 s)  : le héros canalise — aura cyan, cristaux orbitaux, givre
+//   open    (1,3–2,2 s): la tempête s'ouvre — cercle runique, pilier de lumière
+//   storm   (2,2–10,6s): déchaînement — pluie de cristaux, rafales, aura de givre
+//   finale  (10,6–12,5): méga-cristaux, onde glaciale finale, dissolution
 // Pendant la tempête, les ennemis de la zone sont ralentis et frappent
 // 50 % moins fort. Dégâts globalement identiques à l'ancienne version.
 export function doIceUlt() {
@@ -86,39 +89,84 @@ export function doIceUlt() {
   G.ultsUsed++;
   G.iceUlts = (G.iceUlts || 0) + 1;
   const stormR = p.ultRadius * (G.equip ? G.equip.ultR : 1) + 190;
-  G.iceStorm = { t: 12.5, x: p.x, y: p.y, r: stormR, spawnT: 0, friendly: true, tick: 0, iceT: 0, age: 0, megaT: 0, boomed: false };
+  G.iceStorm = { t: 12.5, x: p.x, y: p.y, r: stormR, spawnT: 0, friendly: true, tick: 0, iceT: 0, age: 0, megaT: 0, boomed: false, phase: 'charge', gustT: 0 };
   G.iceSpikes = [];
   G.iceShards = [];
   // le sol se couvre de neige : une nappe blanche persiste ~25 s après la tempête
   G.snowPatches.push({ x: p.x, y: p.y, r: stormR * 0.95, life: 25, maxLife: 25 });
   G.screenShake = Math.max(G.screenShake, 10);
-  sfxShield(); // envolée du bouclier d'aura glacée
+  sfxIceCharge(); // canalisation : montée grave + cristaux qui tintent
   spawnParticles(p.x, p.y - 60, '#b3e5fc', 30, 8);
   addDamageText(p.x, p.y - 90, '❄ PLUIE DE GLACE ❄', '#80d8ff');
 }
 
 export function updateIceUlt(dt) {
   const s = G.iceStorm;
-  // décroissance visuelle de la carapace de glace sur les ennemis
-  for (const e of G.enemies) if (e.frozen > 0) e.frozen -= dt;
-  // assombrissement progressif de l'écran pendant l'ultime
+  // décroissance visuelle de la carapace de glace sur les ennemis (+ gerbes de givre)
+  for (const e of G.enemies) {
+    if (e.frozen > 0) {
+      e.frozen -= dt;
+      if (Math.random() < dt * 4) {
+        G.particles.push({
+          x: e.x + (Math.random() - 0.5) * e.r * 1.6, y: e.y - e.r * 0.3 - Math.random() * e.r * 0.6,
+          vx: (Math.random() - 0.5) * 0.4, vy: -0.9 - Math.random() * 0.9,
+          life: 28, maxLife: 28, color: 'rgba(186,222,255,0.4)', r: 1.4 + Math.random() * 1.8
+        });
+      }
+    }
+  }
+  if (s) s.age = (s.age || 0) + dt;
+  // phases : charge (aura) -> open (formation) -> storm -> finale
+  // la tempête du boss n'a pas de préparation : elle va droit au storm
+  const phase = !s ? null : (!s.friendly ? 'storm'
+    : s.age < 1.3 ? 'charge'
+    : s.age < 2.2 ? 'open'
+    : s.age < 10.6 ? 'storm'
+    : 'finale');
+  const active = phase === 'storm' || phase === 'finale';
+  const finale = phase === 'finale';
   if (s) {
-    s.age += dt;
-    const dimT = s.age < 1.4 ? 0.10 : s.age < 9.8 ? 0.16 : 0.26;
+    const dimT = phase === 'charge' ? 0.08 : phase === 'open' ? 0.14 : finale ? 0.26 : 0.16;
     G.iceDim += (dimT - G.iceDim) * Math.min(1, dt * 2.4);
+    // impulsions sonores aux changements de phase
+    if (s.phase !== phase) {
+      if (phase === 'open') { sfxIceOpen(); G.screenFlash = Math.max(G.screenFlash || 0, 0.15); }
+      else if (phase === 'storm') sfxIceStorm();
+      s.phase = phase;
+    }
   } else {
     G.iceDim = Math.max(0, (G.iceDim || 0) - dt * 0.9);
   }
-  // phases : prep (aura) -> storm -> finale (le boss n'a pas de prep)
-  const phase = !s ? null : (!s.friendly ? 'storm' : s.age < 1.4 ? 'prep' : s.age < 9.8 ? 'storm' : 'finale');
-  const active = phase === 'storm' || phase === 'finale';
-  const finale = phase === 'finale';
 
   // impact de glace partagé : dégâts + ralenti + gel visuel + débris au sol
   const iceImpact = (x, ty, rad, dmg, big, fromBoss) => {
     spawnParticles(x, ty - 6, '#e1f5fe', big ? 22 : 9, big ? 9 : 5);
     spawnParticles(x, ty - 6, '#4fc3f7', big ? 14 : 6, big ? 8 : 4);
     G.rings.push({ x, y: ty, r: 4, maxR: rad * (big ? 4.2 : 2.4), life: big ? 26 : 14, maxLife: big ? 26 : 14, color: '#b3e5fc' });
+    // trace de givre au sol : ellipse bleutée qui fond en quelques secondes
+    G.iceFrost.push({ x, y: ty, r: rad * (big ? 2.3 : 1.5), life: big ? 5.5 : 3.6, maxLife: big ? 5.5 : 3.6 });
+    if (G.iceFrost.length > 70) G.iceFrost.splice(0, G.iceFrost.length - 70);
+    // brume froide qui s'élève de l'impact
+    const nm = big ? 8 : 3;
+    for (let i = 0; i < nm; i++) {
+      G.particles.push({
+        x: x + (Math.random() - 0.5) * rad * 1.8, y: ty - 4 - Math.random() * 10,
+        vx: (Math.random() - 0.5) * 0.8, vy: -0.4 - Math.random() * 0.8,
+        life: 30 + Math.random() * 26, maxLife: 56,
+        color: 'rgba(186,222,255,0.14)', r: 9 + Math.random() * (big ? 14 : 8)
+      });
+    }
+    // scintillements de givre qui montent
+    for (let i = 0; i < (big ? 6 : 3); i++) {
+      G.particles.push({
+        x: x + (Math.random() - 0.5) * rad * 1.5, y: ty - Math.random() * 22,
+        vx: (Math.random() - 0.5) * 0.5, vy: -1.2 - Math.random() * 1.4,
+        life: 26 + Math.random() * 16, maxLife: 42,
+        color: '#e1f5fe', r: 1 + Math.random() * 1.3
+      });
+    }
+    // craquement cristallin — probabiliste pour éviter la saturation sonore
+    if (Math.random() < (big ? 0.9 : 0.22)) sfxIceImpact(big);
     // éclats de glace persistants sur le sol
     const nd = big ? 5 : 2 + (Math.random() * 2 | 0);
     for (let i = 0; i < nd; i++) {
@@ -137,6 +185,8 @@ export function updateIceUlt(dt) {
         damageEnemy(e, dmg * red, Math.atan2(e.y - ty, e.x - x));
         e.slow = Math.max(e.slow || 0, big ? 7 : 6);   // les cristaux figent les ennemis
         e.frozen = Math.max(e.frozen || 0, big ? 3 : 2.2); // carapace de glace visuelle
+        // gerbe de givre sur l'ennemi touché
+        spawnParticles(e.x, e.y - e.r * 0.5, '#b3e5fc', big ? 9 : 4, big ? 5 : 3);
       }
     }
   };
@@ -165,7 +215,7 @@ export function updateIceUlt(dt) {
       const cy = Math.max(60, Math.min(worldH() - 60, s.y + Math.sin(a) * d));
       G.skyIcicles.push({
         x: cx, y: cy - 720 - Math.random() * 320, ty: cy,
-        v: (26 + Math.random() * 10) * (finale ? 1.2 : 1), r: (15 + Math.random() * 9) * (finale ? 1.5 : 1),
+        v: (130 + Math.random() * 60) * (finale ? 1.15 : 1), r: (15 + Math.random() * 9) * (finale ? 1.5 : 1),
         rot: (Math.random() - 0.5) * 0.4
       });
     }
@@ -174,6 +224,11 @@ export function updateIceUlt(dt) {
   for (let i = G.snowPatches.length - 1; i >= 0; i--) {
     G.snowPatches[i].life -= dt;
     if (G.snowPatches[i].life <= 0) G.snowPatches.splice(i, 1);
+  }
+  // les traces de givre des impacts fondent en ~4-6 s
+  for (let i = G.iceFrost.length - 1; i >= 0; i--) {
+    G.iceFrost[i].life -= dt;
+    if (G.iceFrost[i].life <= 0) G.iceFrost.splice(i, 1);
   }
   // les éclats de glace au sol fondent en ~7 s
   for (let i = G.iceShards.length - 1; i >= 0; i--) {
@@ -191,8 +246,8 @@ export function updateIceUlt(dt) {
   }
   if (!s) return;
   s.t -= dt;
-  // PRÉPARATION : aura montante + rafales de neige autour du centre (0 dégât)
-  if (phase === 'prep') {
+  // CHARGE : le héros canalise — aura ascendante + gerbes de givre (0 dégât)
+  if (phase === 'charge') {
     if (Math.random() < dt * 60) {
       const a = Math.random() * TAU, d = Math.sqrt(Math.random()) * s.r * 0.5;
       G.particles.push({
@@ -201,22 +256,64 @@ export function updateIceUlt(dt) {
         life: 40, maxLife: 40, color: Math.random() < 0.6 ? '#e1f5fe' : '#ffffff', r: 1.5 + Math.random() * 2
       });
     }
+    // mini-cristaux aspirés vers le héros pendant la canalisation
+    if (Math.random() < dt * 22) {
+      const a = Math.random() * TAU;
+      G.particles.push({
+        x: s.x + Math.cos(a) * (60 + Math.random() * 70), y: s.y - 24 + Math.sin(a) * 34,
+        vx: -Math.cos(a) * 0.9, vy: -1.6 - Math.random() * 1.4,
+        life: 38, maxLife: 38, color: Math.random() < 0.55 ? '#e1f5fe' : '#b3e5fc',
+        r: 1.2 + Math.random() * 1.6
+      });
+    }
+  }
+  // OUVERTURE : les fragments de givre convergent vers le centre de la tempête
+  if (phase === 'open') {
+    if (Math.random() < dt * 110) {
+      const a = Math.random() * TAU, d = s.r * (0.5 + Math.random() * 0.35);
+      const px = s.x + Math.cos(a) * d, py = s.y + Math.sin(a) * d * 0.55;
+      const dx = s.x - px, dy = s.y - py, dd = Math.hypot(dx, dy) || 1;
+      const v = 3 + Math.random() * 3;
+      G.particles.push({
+        x: px, y: py, vx: dx / dd * v, vy: dy / dd * v,
+        life: 34, maxLife: 34, color: Math.random() < 0.6 ? '#e1f5fe' : '#ffffff',
+        r: 1.4 + Math.random() * 1.8
+      });
+    }
   }
   // cristaux : tempête ~16/s, finale ~22/s + méga-cristaux périodiques
+  // la cadence ralentit progressivement en toute fin de tempête
   if (active) {
     s.spawnT -= dt;
     while (s.spawnT <= 0 && G.iceStorm === s) {
-      s.spawnT += finale ? 0.045 : 0.062;
+      s.spawnT += finale ? (s.t < 1.5 ? 0.11 : 0.048) : 0.062;
       const a = Math.random() * TAU, d = Math.sqrt(Math.random()) * s.r;
       const x = Math.max(20, Math.min(worldW() - 20, s.x + Math.cos(a) * d));
       const y = Math.max(20, Math.min(worldH() - 20, s.y + Math.sin(a) * d));
       G.iceSpikes.push({
         x, ty: y, y: y - 480 - Math.random() * 260,
-        v: 13 + Math.random() * 7, r: (7 + Math.random() * 5) * (finale ? 1.25 : 1),
+        v: 60 + Math.random() * 35, r: (7 + Math.random() * 5) * (finale ? 1.25 : 1),
         fromBoss: !s.friendly,
-        kind: Math.random() * 3 | 0, rot: Math.random() * TAU,
+        kind: Math.random() < 0.16 ? 3 : Math.random() * 3 | 0, rot: Math.random() * TAU,
         drift: (Math.random() - 0.5) * 26, mega: false
       });
+    }
+    // rafales : toutes les ~2,6 s, une vague groupée de cristaux surgit
+    s.gustT = (s.gustT || 0) - dt;
+    if (s.gustT <= 0) {
+      s.gustT = finale ? 1.6 : 2.6;
+      const ga = Math.random() * TAU, gd = Math.sqrt(Math.random()) * s.r * 0.85;
+      const gx = clampW(s.x + Math.cos(ga) * gd), gy = clampH(s.y + Math.sin(ga) * gd);
+      const gn = finale ? 6 : 4;
+      for (let i = 0; i < gn; i++) {
+        G.iceSpikes.push({
+          x: gx + (Math.random() - 0.5) * 70, ty: gy + (Math.random() - 0.5) * 45,
+          y: gy - 540 - Math.random() * 320, v: 65 + Math.random() * 40,
+          r: (6 + Math.random() * 5) * (finale ? 1.25 : 1),
+          fromBoss: !s.friendly, kind: Math.random() < 0.16 ? 3 : Math.random() * 3 | 0,
+          rot: Math.random() * TAU, drift: (Math.random() - 0.5) * 30, mega: false
+        });
+      }
     }
     // méga-cristaux de la finale : un toutes les ~0,9 s
     if (finale) {
@@ -228,7 +325,7 @@ export function updateIceUlt(dt) {
         const y = Math.max(20, Math.min(worldH() - 20, s.y + Math.sin(a) * d));
         G.iceSpikes.push({
           x, ty: y, y: y - 620 - Math.random() * 200,
-          v: 17 + Math.random() * 5, r: 15 + Math.random() * 5,
+          v: 80 + Math.random() * 30, r: 15 + Math.random() * 5,
           fromBoss: !s.friendly, kind: 1, rot: Math.random() * TAU,
           drift: (Math.random() - 0.5) * 14, mega: true
         });
@@ -289,7 +386,9 @@ export function updateIceUlt(dt) {
     spawnParticles(s.x, s.y - 40, '#e1f5fe', 60, 12);
     spawnParticles(s.x, s.y - 40, '#4fc3f7', 40, 10);
     spawnParticles(s.x, s.y - 40, '#ffffff', 30, 8);
-    sfxWave(); sfxBossAtk('ice');
+    // immense nappe de givre laissée par l'onde finale
+    G.iceFrost.push({ x: s.x, y: s.y, r: s.r * 0.95, life: 9, maxLife: 9 });
+    sfxIceEnd(); sfxWave(); // expiration glacée + gong de la dernière onde
     for (const e of [...G.enemies]) {
       if (Math.hypot(e.x - s.x, e.y - s.y) < s.r + e.r) {
         const red = e.type === 'finalBossGlace' ? 0.25 : 1;
@@ -304,7 +403,7 @@ export function updateIceUlt(dt) {
       G.skyIcicles.push({
         x: clampW(s.x + Math.cos(a) * d), y: clampH(s.y + Math.sin(a) * d) - 720 - Math.random() * 200,
         ty: clampH(s.y + Math.sin(a) * d),
-        v: 30 + Math.random() * 8, r: 18 + Math.random() * 8,
+        v: 150 + Math.random() * 50, r: 18 + Math.random() * 8,
         rot: (Math.random() - 0.5) * 0.4
       });
     }

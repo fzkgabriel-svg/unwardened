@@ -368,7 +368,7 @@ function stormCloudXY(s, i, t) {
 // zone glacée qui pulse + pics de glace en chute + sol enneigé + nuages
 export function drawIceStorm() {
   const s = G.iceStorm;
-  if (!s && !G.iceSpikes.length && !G.iceWalls.length && !G.shockwaves.length && !G.skyIcicles.length && !G.snowPatches.length && !G.iceShards.length) return;
+  if (!s && !G.iceSpikes.length && !G.iceWalls.length && !G.shockwaves.length && !G.skyIcicles.length && !G.snowPatches.length && !G.iceShards.length && !G.iceFrost.length) return;
   // SOL EN NEIGE : nappes blanches laissées par la Pluie de Glace (~25 s)
   for (const sp of G.snowPatches) {
     if (sp.life <= 0) continue;
@@ -400,6 +400,30 @@ export function drawIceStorm() {
       ctx.beginPath();
       ctx.arc(sp.x + Math.cos(ang) * dd, sp.y + Math.sin(ang) * dd * 0.6, 1.6, 0, TAU);
       ctx.fill();
+    }
+    ctx.restore();
+  }
+  // GIVRE AU SOL : traces de cristallisation laissées par les impacts (~4-6 s)
+  for (const f of G.iceFrost) {
+    if (f.life <= 0) continue;
+    const a = Math.min(1, f.life / 1.6) * 0.5;
+    ctx.save();
+    ctx.globalAlpha = a;
+    const fg = ctx.createRadialGradient(f.x, f.y, f.r * 0.2, f.x, f.y, f.r);
+    fg.addColorStop(0, 'rgba(224,242,254,0.9)');
+    fg.addColorStop(0.7, 'rgba(144,205,250,0.5)');
+    fg.addColorStop(1, 'rgba(144,205,250,0)');
+    ctx.fillStyle = fg;
+    ctx.beginPath(); ctx.ellipse(f.x, f.y, f.r, f.r * 0.55, 0, 0, TAU); ctx.fill();
+    // dendrites de givre : petites branches brillantes rayonnant du centre
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 1;
+    for (let i = 0; i < 6; i++) {
+      const ang = i * TAU / 6 + f.x * 0.05;
+      const len = f.r * (0.35 + (i % 3) * 0.15);
+      ctx.beginPath();
+      ctx.moveTo(f.x + Math.cos(ang) * f.r * 0.25, f.y + Math.sin(ang) * f.r * 0.14);
+      ctx.lineTo(f.x + Math.cos(ang) * len, f.y + Math.sin(ang) * len * 0.55);
+      ctx.stroke();
     }
     ctx.restore();
   }
@@ -459,10 +483,67 @@ export function drawIceStorm() {
     ctx.fillStyle = '#e1f5fe'; ctx.font = 'bold 15px Inter, sans-serif'; ctx.textAlign = 'center';
     ctx.fillText(`❄ ${Math.ceil(s.t)}s`, s.x, s.y - s.r - 14);
   }
+  // AURA DE CANALISATION + OUVERTURE : halo cyan, cristaux orbitaux, pilier de lumière
+  if (s && s.friendly && s.age !== undefined && s.age < 2.2) {
+    const charge = Math.min(1, s.age / 1.3);                    // 0→1 pendant la charge
+    const openK = s.age >= 1.3 ? Math.min(1, (s.age - 1.3) / 0.9) : 0; // 0→1 à l'ouverture
+    // halo radial autour du héros
+    const cg = ctx.createRadialGradient(s.x, s.y - 30, 10, s.x, s.y - 30, 150 * charge + 40);
+    cg.addColorStop(0, `rgba(224,242,254,${0.34 * charge})`);
+    cg.addColorStop(0.6, `rgba(79,195,247,${0.18 * charge})`);
+    cg.addColorStop(1, 'rgba(79,195,247,0)');
+    ctx.fillStyle = cg;
+    ctx.beginPath(); ctx.arc(s.x, s.y - 30, 150 * charge + 40, 0, TAU); ctx.fill();
+    // cristaux orbitaux : 8 mini-facettes qui tournent et se rapprochent du héros
+    const orbR = 95 - openK * 55 + Math.sin(G.time * 2.2) * 6;
+    for (let i = 0; i < 8; i++) {
+      const a = G.time * (1.6 + i * 0.05) + i * TAU / 8;
+      const ox = s.x + Math.cos(a) * orbR, oy = s.y - 26 + Math.sin(a) * orbR * 0.45;
+      const sc = (0.6 + 0.4 * Math.sin(G.time * 3 + i)) * (1 - openK * 0.5);
+      ctx.save();
+      ctx.translate(ox, oy); ctx.rotate(a + Math.PI / 2);
+      ctx.globalAlpha = 0.85 * charge;
+      ctx.fillStyle = i % 2 ? '#b3e5fc' : '#e1f5fe';
+      ctx.beginPath();
+      ctx.moveTo(0, -7 * sc); ctx.lineTo(3.4 * sc, 0); ctx.lineTo(0, 2.4 * sc); ctx.lineTo(-3.4 * sc, 0);
+      ctx.closePath(); ctx.fill();
+      ctx.restore();
+    }
+    // anneau de givre au sol qui grandit pendant la canalisation
+    ctx.strokeStyle = `rgba(224,242,254,${0.5 * charge * (1 - openK * 0.6)})`;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.ellipse(s.x, s.y, 40 + charge * 120, (40 + charge * 120) * 0.55, 0, 0, TAU); ctx.stroke();
+    // OUVERTURE : pilier de lumière + vortex qui se contracte + flash central
+    if (openK > 0) {
+      const py = s.y - s.r * 1.05;
+      const pg = ctx.createLinearGradient(s.x, py - 260, s.x, s.y);
+      pg.addColorStop(0, 'rgba(224,242,254,0)');
+      pg.addColorStop(0.7, `rgba(179,229,252,${0.30 * openK})`);
+      pg.addColorStop(1, `rgba(255,255,255,${0.5 * openK})`);
+      ctx.fillStyle = pg;
+      ctx.beginPath();
+      ctx.moveTo(s.x - 60 * openK, py);
+      ctx.lineTo(s.x - 18 * openK, s.y);
+      ctx.lineTo(s.x + 18 * openK, s.y);
+      ctx.lineTo(s.x + 60 * openK, py);
+      ctx.closePath(); ctx.fill();
+      const vk = 1 - openK;
+      ctx.strokeStyle = `rgba(224,242,254,${0.65 * openK})`;
+      ctx.lineWidth = 3;
+      ctx.setLineDash([10, 8]);
+      ctx.beginPath(); ctx.ellipse(s.x, s.y, 60 + vk * s.r * 0.8, (60 + vk * s.r * 0.8) * 0.5, 0, 0, TAU); ctx.stroke();
+      ctx.setLineDash([]);
+      const fg2 = ctx.createRadialGradient(s.x, s.y, 5, s.x, s.y, 200 * openK + 20);
+      fg2.addColorStop(0, `rgba(255,255,255,${0.4 * openK * (1 - openK * 0.4)})`);
+      fg2.addColorStop(1, 'rgba(224,242,254,0)');
+      ctx.fillStyle = fg2;
+      ctx.beginPath(); ctx.arc(s.x, s.y, 200 * openK + 20, 0, TAU); ctx.fill();
+    }
+  }
   // CERCLE MAGIQUE : runes de glace en rotation + ondulation radiale
   if (s && s.age !== undefined) {
-    const prep = s.friendly && s.age < 1.4;
-    const finale = s.friendly && s.age >= 9.8;
+    const prep = s.friendly && s.age < 2.2;
+    const finale = s.friendly && s.age >= 10.6;
     ctx.save();
     // cercle runique intérieur (rayon ~110, tourne lentement)
     const rr = Math.min(s.r * 0.45, 130);
@@ -489,7 +570,7 @@ export function drawIceStorm() {
     ctx.setLineDash([]);
     // onde de préparation : anneau qui monte du centre pendant la phase prep
     if (prep) {
-      const k = Math.min(1, s.age / 1.4);
+      const k = Math.min(1, s.age / 2.2);
       ctx.strokeStyle = `rgba(224,242,254,${(1 - k) * 0.8})`;
       ctx.lineWidth = 3;
       ctx.beginPath(); ctx.arc(s.x, s.y, 30 + k * s.r * 0.9, 0, TAU); ctx.stroke();
@@ -500,15 +581,16 @@ export function drawIceStorm() {
       ctx.fillStyle = ag;
       ctx.beginPath(); ctx.arc(s.x, s.y, 120, 0, TAU); ctx.fill();
     }
-    // scintillements de givre le long du cercle en finale
-    if (finale) {
-      for (let i = 0; i < 14; i++) {
-        const a = G.time * 1.5 + i * TAU / 14;
+    // scintillements de givre le long du cercle (tempête + finale, plus denses en finale)
+    if (!prep) {
+      const nsp = finale ? 14 : 8;
+      for (let i = 0; i < nsp; i++) {
+        const a = G.time * (finale ? 1.5 : 0.9) + i * TAU / nsp;
         const tw = 0.5 + 0.5 * Math.sin(G.time * 8 + i * 2.3);
-        if (tw < 0.6) continue;
+        if (tw < (finale ? 0.6 : 0.72)) continue;
         ctx.fillStyle = 'rgba(255,255,255,0.95)';
         ctx.beginPath();
-        ctx.arc(s.x + Math.cos(a) * s.r * 0.92, s.y + Math.sin(a) * s.r * 0.58, 2, 0, TAU);
+        ctx.arc(s.x + Math.cos(a) * s.r * 0.92, s.y + Math.sin(a) * s.r * 0.58, finale ? 2 : 1.4, 0, TAU);
         ctx.fill();
       }
     }
@@ -554,8 +636,11 @@ export function drawIceStorm() {
     const kind = sp.kind || 0;
     ctx.save();
     ctx.translate(sp.x, sp.y);
+    // balancement organique de la chute (le cristal ondule légèrement)
+    ctx.rotate(Math.sin(G.time * 3 + (sp.rot || 0)) * 0.14 * (sp.mega ? 0.5 : 1));
+    if (kind === 3) ctx.globalAlpha = 0.7; // éclat : fragment de fond plus discret
     // traînée lumineuse bleue/blanche (s'étire avec la vitesse)
-    const tl = Math.min(90, sp.v * 2.6);
+    const tl = Math.min(140, sp.v * 2.0);
     const tg = ctx.createLinearGradient(0, -tl, 0, 4);
     tg.addColorStop(0, 'rgba(224,242,254,0)');
     tg.addColorStop(0.6, sp.mega ? 'rgba(179,229,252,0.4)' : 'rgba(179,229,252,0.25)');
@@ -577,8 +662,14 @@ export function drawIceStorm() {
       ctx.moveTo(0, -h);
       ctx.lineTo(sp.r * 0.62, -h * 0.35); ctx.lineTo(sp.r * 0.45, h * 0.15);
       ctx.lineTo(-sp.r * 0.45, h * 0.15); ctx.lineTo(-sp.r * 0.62, -h * 0.35);
-    } else { // aiguille fine
+    } else if (kind === 2) { // aiguille fine
       ctx.moveTo(0, -h * 1.15); ctx.lineTo(sp.r * 0.34, 0); ctx.lineTo(-sp.r * 0.34, 0);
+    } else { // éclat : fragment irrégulier petite taille
+      ctx.moveTo(0, -h * 0.7);
+      ctx.lineTo(sp.r * 0.5, -h * 0.15);
+      ctx.lineTo(sp.r * 0.3, h * 0.3);
+      ctx.lineTo(-sp.r * 0.4, h * 0.15);
+      ctx.lineTo(-sp.r * 0.55, -h * 0.3);
     }
     ctx.closePath(); ctx.fill(); ctx.stroke();
     // facettes internes + reflet animé

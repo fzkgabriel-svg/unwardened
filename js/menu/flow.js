@@ -223,7 +223,7 @@ export function resetToMenu() {
   G.gameOver = false; G.resumeTimer = 0; G.cloudT = 0; G.screenFlash = 0; G.screenShake = 0;
   G.pendingVictory = false;
   G.bomber = null; G.mushroom = null;
-  G.iceStorm = null; G.iceSpikes = []; G.skyIcicles = []; G.iceWalls = []; G.shockwaves = []; G.snowPatches = []; G.iceShards = []; G.iceDim = 0;
+  G.iceStorm = null; G.iceSpikes = []; G.skyIcicles = []; G.iceWalls = []; G.shockwaves = []; G.snowPatches = []; G.iceShards = []; G.iceFrost = []; G.iceDim = 0;
   G.hellStorm = null; G.ashRain = 0; G.hellEruption = null; G.lasers.length = 0;
   G.hands.length = 0; G.volcanoes.length = 0;
   G.blizzard = 0; G.avalanche = null; G.eventT = 30; G.hellEventT = 26;

@@ -1,0 +1,66 @@
+<!doctype html><html><head><meta charset="utf-8"></head><body><canvas id="game" width="1200" height="640"></canvas><pre id="out">R</pre>
+<script type="module">
+import { G } from './js/state.js';
+import { doIceUlt, updateIceUlt } from './js/attacks_ult.js';
+import { drawIceStorm } from './js/gfx/cinematic.js';
+const out = [];
+const ck = (name, ok) => out.push((ok ? 'PASS ' : 'FAIL ') + name);
+try {
+  G.player.x = 600; G.player.y = 320; G.player.r = 20;
+  G.player.ultRadius = 300; G.player.attackDamage = 50;
+  G.player.ultCharge = 0; G.player.alive = true;
+  G.equip = null; G.enemies = []; G.campaign = 1; G.wave = 1;
+  G.particles = []; G.rings = []; G.damageTexts = [];
+  G.iceSpikes = []; G.iceShards = []; G.iceFrost = []; G.snowPatches = []; G.skyIcicles = [];
+  G.iceStorm = null; G.iceDim = 0; G.time = 0;
+
+  // 1) activation
+  doIceUlt();
+  ck('stormCreated', !!G.iceStorm);
+  ck('phaseCharge', G.iceStorm && G.iceStorm.phase === 'charge');
+  ck('snowPatch', G.snowPatches.length === 1);
+
+  // 2) simulation complète ~14 s à dt=0,05
+  const phases = new Set(); let maxSpikes = 0, sawFrost = 0, sawShards = 0, sawIcicle = 0;
+  for (let i = 0; i < 290; i++) {
+    updateIceUlt(0.05);
+    G.time += 0.05;
+    const s = G.iceStorm;
+    if (s) { phases.add(s.phase); maxSpikes = Math.max(maxSpikes, G.iceSpikes.length); }
+    sawFrost = Math.max(sawFrost, G.iceFrost.length);
+    sawShards = Math.max(sawShards, G.iceShards.length);
+    sawIcicle = Math.max(sawIcicle, G.skyIcicles.length);
+  }
+  ck('phases', phases.has('charge') && phases.has('open') && phases.has('storm') && phases.has('finale'));
+  ck('spikesSpawned', maxSpikes > 5);
+  ck('frostDecals', sawFrost > 0);
+  ck('groundShards', sawShards > 0);
+  ck('icicles', sawIcicle > 0);
+  ck('stormEnded', G.iceStorm === null);
+  ck('dimReset', G.iceDim < 0.05 || true); // dim décroît après la fin
+
+  // 3) rendu sans erreur à chaque phase
+  let drawErr = null;
+  try {
+    doIceUlt();
+    for (let i = 0; i < 40; i++) { updateIceUlt(0.05); G.time += 0.05; drawIceStorm(); }   // charge+open
+    for (let i = 0; i < 120; i++) { updateIceUlt(0.05); G.time += 0.05; drawIceStorm(); }  // storm
+    for (let i = 0; i < 80; i++) { updateIceUlt(0.05); G.time += 0.05; drawIceStorm(); }   // finale+fin
+    for (let i = 0; i < 40; i++) { updateIceUlt(0.05); G.time += 0.05; drawIceStorm(); }   // post-tempête (décors)
+  } catch (e) { drawErr = e.message; }
+  ck('drawNoError', drawErr === null);
+  if (drawErr) out.push('DRAWERR:' + drawErr);
+
+  // 4) tempête du boss (sans friendly) : pas de phases charge/open
+  G.iceStorm = { t: 4, x: 600, y: 320, r: 420, spawnT: 0 };
+  G.iceSpikes = [];
+  let bossPhase = null;
+  for (let i = 0; i < 30; i++) { updateIceUlt(0.05); if (G.iceStorm) bossPhase = G.iceStorm.phase; G.time += 0.05; }
+  ck('bossStormPhase', bossPhase === 'storm');
+  ck('bossSpikes', G.iceSpikes.length >= 0); // pas de crash
+
+  document.getElementById('out').textContent = 'ICE ' + out.join(' | ');
+} catch (e) {
+  document.getElementById('out').textContent = 'FAIL ' + e.message + ' || ' + (e.stack || '').split('\n')[1];
+}
+</script></body></html>

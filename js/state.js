@@ -12,7 +12,7 @@ export const ctx = canvas.getContext('2d');
 ctx.scale(SS, SS);
 export const W = 1200, H = 640;
 export const TAU = Math.PI * 2;
-export const VERSION = '4.6.3';
+export const VERSION = '4.7.0';
 export const FINAL_WAVE = 20; // vague du boss final (campagne 1) // incrémenter à chaque mise à jour du jeu
 // vagues finales : campagne 2 -> 25, 3 -> 30, 4 (Égouts) -> 35, 5 (Espace) -> 40
 export function finalWave() {
@@ -77,6 +77,7 @@ export const G = {
   iceSpikes: [],   // cristaux de glace en chute {x, ty, y, v, r, kind, rot, drift, mega}
   skyIcicles: [],  // stalactites géantes de la Pluie de Glace {x, y, ty, v, r, rot}
   iceShards: [],   // éclats de glace laissés au sol par les impacts {x, y, rot, s, life, maxLife}
+  iceFrost: [],    // traces de givre au sol des impacts de Pluie de Glace {x, y, r, life, maxLife}
   snowPatches: [], // sols enneigés laissés par la Pluie de Glace {x, y, r, life, maxLife}
   lasers: [],      // faisceaux de feu du Titan de Feu {x, y, angle, len, w, life, tick}
   hands: [],       // mains de feu en vol vers leur cible {x, y, tx, ty, t, dur}

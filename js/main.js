@@ -71,7 +71,7 @@ export function damagePlayer(dmg, slow = 1.0, killer = null) {
   if (p.hp <= 0) {
     p.hp = 0; p.alive = false; G.gameOver = true;
     G.bomber = null; // la cinématique de l'ultime s'arrête avec le héros
-    G.iceStorm = null; G.iceSpikes = [];
+    G.iceStorm = null; G.iceSpikes = []; G.iceFrost = [];
     // snapshot des infos de mort pour l'écran game over
     const k = G.lastKiller;
     G.deathInfo = {
@@ -698,7 +698,7 @@ function update(dt) {
     saveStats();
     G.enemies.length = 0; G.drops.length = 0; G.fireZones.length = 0;
     G.portals.length = 0; G.projectiles.length = 0; G.lightnings.length = 0;
-    G.iceWalls.length = 0; G.shockwaves.length = 0; G.iceSpikes.length = 0; G.skyIcicles.length = 0; G.snowPatches.length = 0; G.iceShards.length = 0; G.iceStorm = null; G.iceDim = 0;
+    G.iceWalls.length = 0; G.shockwaves.length = 0; G.iceSpikes.length = 0; G.skyIcicles.length = 0; G.snowPatches.length = 0; G.iceShards.length = 0; G.iceFrost.length = 0; G.iceStorm = null; G.iceDim = 0;
     G.lasers.length = 0; G.hands.length = 0; G.volcanoes.length = 0; G.hellStorm = null;
     G.acidZones.length = 0; G.blackHoles.length = 0;
     G.acidRain = 0; G.voidStorm = 0;

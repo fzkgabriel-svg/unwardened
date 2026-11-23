@@ -168,7 +168,7 @@ function bossSuperAttack(e, phase) {
     for (let i = 0; i < 18 + phase * 6; i++) {
       const a = Math.random() * TAU, d = Math.sqrt(Math.random()) * 340;
       const x = clampW(p.x + Math.cos(a) * d), y = clampH(p.y + Math.sin(a) * d);
-      G.iceSpikes.push({ x, ty: y, y: y - 520 - Math.random() * 260, v: 15 + Math.random() * 8, r: 8 + Math.random() * 6, fromBoss: true });
+      G.iceSpikes.push({ x, ty: y, y: y - 520 - Math.random() * 260, v: 60 + Math.random() * 35, r: 8 + Math.random() * 6, fromBoss: true });
     }
     // mur de glace encerclant + éventail de shards
     for (let i = 0; i < 6; i++) {
@@ -435,7 +435,7 @@ function execBossMove(e, m, p) {
         for (let i = 0; i < 14; i++) {
           const a = Math.random() * TAU, d = Math.sqrt(Math.random()) * 280;
           const x = clampW(m.tx + Math.cos(a) * d), y = clampH(m.ty + Math.sin(a) * d);
-          G.iceSpikes.push({ x, ty: y, y: y - 480 - Math.random() * 240, v: 13 + Math.random() * 7, r: 7 + Math.random() * 5, fromBoss: true });
+          G.iceSpikes.push({ x, ty: y, y: y - 480 - Math.random() * 240, v: 60 + Math.random() * 35, r: 7 + Math.random() * 5, fromBoss: true });
         }
         spawnParticles(e.x, e.y - e.r * 0.4, '#e1f5fe', 16, 7);
         G.screenShake = Math.max(G.screenShake, 6);
