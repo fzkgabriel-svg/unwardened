@@ -615,7 +615,7 @@ export function sfxGem() {
 // ---------- bouton RÉGLAGES + panneau (coin haut-droit) ----------
 // une seule pastille ⚙ : les interrupteurs ON/OFF vivent dans le panneau
 export const AUDIO_BTNS = {
-  opt: { x: W - 206, y: 8, w: 104, h: 34 }
+  opt: { x: W - 158, y: 8, w: 150, h: 42 }
 };
 export function audioButtonAt(x, y) {
   for (const k in AUDIO_BTNS) {
@@ -625,25 +625,45 @@ export function audioButtonAt(x, y) {
   return null;
 }
 
-function drawAudioBtn(r, label, active, color) {
+// bouton ⚙ RÉGLAGES : pastille violet lumineuse, engrenage tournant,
+// halo qui pulse doucement — bien visible dans le feu de l'action
+export function drawMusicButton() {
+  const r = AUDIO_BTNS.opt;
   const hov = G.mouse.x >= r.x && G.mouse.x <= r.x + r.w &&
               G.mouse.y >= r.y && G.mouse.y <= r.y + r.h;
+  const open = !!G.audioOpen;
+  const pulse = 0.5 + 0.5 * Math.sin(G.time * 3.2); // respiration du halo
   ctx.save();
-  ctx.fillStyle = hov ? 'rgba(30,32,36,0.9)' : 'rgba(12,14,16,0.75)';
-  roundRect(r.x, r.y, r.w, r.h, 8); ctx.fill();
-  ctx.strokeStyle = hov ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)'; ctx.lineWidth = 1;
-  roundRect(r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1, 8); ctx.stroke();
-  ctx.fillStyle = active ? color : '#4a4e54';
-  ctx.beginPath(); ctx.arc(r.x + 15, r.y + r.h / 2, 3.5, 0, Math.PI * 2); ctx.fill();
-  ctx.textAlign = 'left';
-  ctx.font = '600 10px Inter, sans-serif'; ctx.letterSpacing = '0.8px';
-  ctx.fillStyle = active ? '#e8e2d2' : '#6f7378';
-  ctx.fillText(label, r.x + 26, r.y + r.h / 2 + 3.5);
+  // halo extérieur
+  ctx.shadowColor = `rgba(180,138,224,${open ? 0.85 : 0.4 + pulse * 0.35})`;
+  ctx.shadowBlur = open ? 26 : 12 + pulse * 12;
+  const g = ctx.createLinearGradient(r.x, r.y, r.x, r.y + r.h);
+  g.addColorStop(0, hov || open ? '#553d85' : '#3d2d63');
+  g.addColorStop(1, '#221740');
+  ctx.fillStyle = g;
+  roundRect(r.x, r.y, r.w, r.h, 11); ctx.fill();
+  ctx.shadowBlur = 0;
+  // liseré animé
+  ctx.strokeStyle = hov || open ? '#e2c4ff' : `rgba(196,150,255,${0.5 + pulse * 0.35})`;
+  ctx.lineWidth = 1.5;
+  roundRect(r.x + 0.75, r.y + 0.75, r.w - 1.5, r.h - 1.5, 10); ctx.stroke();
+  // reflet supérieur
+  ctx.fillStyle = 'rgba(255,255,255,0.10)';
+  roundRect(r.x + 3, r.y + 2.5, r.w - 6, r.h * 0.36, 8); ctx.fill();
+  // engrenage qui tourne doucement
+  ctx.save();
+  ctx.translate(r.x + 22, r.y + r.h / 2 + 1);
+  ctx.rotate(G.time * 0.7);
+  ctx.font = '16px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = open ? '#ffd740' : '#d9c2ff';
+  ctx.fillText('⚙', 0, 0);
   ctx.restore();
-}
-
-export function drawMusicButton() {
-  drawAudioBtn(AUDIO_BTNS.opt, '⚙ RÉGLAGES', !!G.audioOpen, '#b48ae0');
+  ctx.textBaseline = 'alphabetic';
+  ctx.textAlign = 'left';
+  ctx.font = '700 11.5px Inter, sans-serif'; ctx.letterSpacing = '1.6px';
+  ctx.fillStyle = open ? '#ffd740' : '#efe4ff';
+  ctx.fillText('RÉGLAGES', r.x + 38, r.y + r.h / 2 + 4);
+  ctx.restore();
 }
 
 // ---------- panneau de réglages audio ----------
