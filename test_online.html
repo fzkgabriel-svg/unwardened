@@ -1,0 +1,39 @@
+<!DOCTYPE html><html><body><canvas id="game" width="1280" height="720"></canvas><pre id="out">RUN…</pre>
+<script type="module">
+const out = [];
+const ok = (n, c) => out.push((c ? 'PASS' : 'FAIL') + ' ' + n);
+try {
+  const { G } = await import('./js/state.js');
+  const net = await import('./js/net.js');
+  const online = await import('./js/menu/online.js');
+  ok('modules chargés', !!G && !!net.net && !!online.drawLeaderboardCard);
+
+  // leaderboard public (site de test déjà lancé sur :8080)
+  await net.fetchLeaderboard(0, '');
+  ok('leaderboard fetch', Array.isArray(net.net.lb));
+  ok('score serveur présent', net.net.lb.length === 0 || typeof net.net.lb[0].score === 'number');
+
+  // rendu des deux écrans
+  G.menuView = 'leaderboard'; online.openLeaderboard();
+  await new Promise(r => setTimeout(r, 300));
+  G.menuView = 'account'; G.acctInput = { pseudo: 'TestHero', pass: 'motdepasse123', focus: 0 };
+  online.drawAccountCard();
+  G.menuView = 'leaderboard'; online.drawLeaderboardCard();
+  ok('rendu écrans sans crash', true);
+
+  // login réel contre le site de test
+  const logged = await net.login('TestHero', 'motdepasse123');
+  ok('login jeu', logged === true);
+  if (logged) {
+    ok('token conservé', typeof net.net.token === 'string' && net.net.token.length === 64);
+    await net.syncCloud(true);
+    ok('sync cloud', net.net.lastSync > 0);
+    const sv = await fetch('http://localhost:8080/api/game/save', { headers: { Authorization: 'Bearer ' + net.net.token } });
+    const sd = await sv.json();
+    ok('save cloud relue', sv.status === 200 && sd.version >= 1);
+    net.logoutAccount();
+    ok('logout', net.net.token === null);
+  }
+} catch (e) { out.push('FAIL exception ' + e.message + ' ' + (e.stack || '').split('\n')[1]); }
+document.getElementById('out').textContent = out.join('\n');
+</script></body></html>

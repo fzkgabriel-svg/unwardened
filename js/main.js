@@ -18,6 +18,7 @@ import { updateFinalBoss, updateBurrow, collideIceWalls } from './bosses.js';
 import { draw } from './draw.js';
 import { initInput } from './input.js';
 import { updateModules, moduleAbsorb, modSpeedMult, grantPass2 } from './modules.js';
+import { maybeAutoSync } from './net.js';
 
 // polices de l'interface (canvas) : chargement explicite au démarrage
 if (document.fonts) ['600 16px Inter', '600 38px Cinzel'].forEach(f => document.fonts.load(f));
@@ -834,6 +835,7 @@ function loop(now) {
   const dt = Math.min(0.05, (now - lastTime) / 1000);
   lastTime = now;
   update(dt);
+  maybeAutoSync(); // synchronisation cloud périodique (compte connecté)
   draw();
   requestAnimationFrame(loop);
 }

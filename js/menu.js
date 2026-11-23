@@ -16,6 +16,7 @@ import { drawAdmin } from './menu/admin.js';
 import { drawCampaign } from './menu/campaign.js';
 import { drawModulesView } from './menu/modules.js';
 import { modulesUnlocked } from './modules.js';
+import { drawAccountCard, drawLeaderboardCard, openLeaderboard, acctClick, acctKey, lbClickAt, lbKey } from './menu/online.js';
 
 // ré-exporte toute l'API publique des sous-modules (contrat inchangé pour input.js / main.js / tutorial.js)
 export * from './menu/common.js';
@@ -27,6 +28,7 @@ export * from './menu/end.js';
 export * from './menu/admin.js';
 export * from './menu/campaign.js';
 export * from './menu/modules.js';
+export * from './menu/online.js';
 
 // fond commun des écrans de menu : voile sombre + poussières discrètes
 function drawMenuBackdrop() {
@@ -75,6 +77,14 @@ export function drawMenu() {
   }
   if (G.menuView === 'modules') {
     drawModulesView();
+    return;
+  }
+  if (G.menuView === 'account') {
+    drawAccountCard();
+    return;
+  }
+  if (G.menuView === 'leaderboard') {
+    drawLeaderboardCard();
     return;
   }
 
@@ -191,9 +201,18 @@ function drawNavItem(r, label, primary, badge) {
   ctx.restore();
 }
 
+// boutons de la carte stats (partagés dessin/clic)
+export function statsButtons() {
+  const cw = 540, cx = W / 2 - cw / 2, cy = H / 2 - 255 - 20; // ch = 510
+  return {
+    lb: { x: cx + 40, y: cy + 442, w: 220, h: 38 },
+    acct: { x: cx + 280, y: cy + 442, w: 220, h: 38 },
+    back: menuButtons().back,
+  };
+}
 function drawStatsCard() {
   const s = G.stats;
-  const cw = 540, ch = 470, cx = W / 2 - cw / 2, cy = H / 2 - ch / 2 - 20;
+  const cw = 540, ch = 510, cx = W / 2 - cw / 2, cy = H / 2 - ch / 2 - 20;
   ctx.fillStyle = 'rgba(15,17,19,0.94)';
   roundRect(cx, cy, cw, ch, 14); ctx.fill();
   ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1;
@@ -230,6 +249,11 @@ function drawStatsCard() {
     ctx.textAlign = 'right'; ctx.fillStyle = C_TEXT; ctx.font = `600 15px ${UI}`;
     ctx.fillText(String(r[1]), cx + cw - 40, ry);
   });
+
+  // boutons : classement général + compte en ligne
+  const sb = statsButtons();
+  drawMenuButton(sb.lb, '🏆 CLASSEMENT GÉNÉRAL', '#8a6d1d', '#f0d98c', true);
+  drawMenuButton(sb.acct, '☁ COMPTE / SYNCHRO', '#2e4a6b', '#9fc3e8', false);
 
   // bouton retour
   const b = menuButtons().back;

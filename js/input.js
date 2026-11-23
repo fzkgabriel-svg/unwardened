@@ -11,6 +11,7 @@ import { bowUnlocked } from './bow.js';
 import { weaponAllowed, loadoutOf, WEAPON_MODES } from './inventory.js';
 import { activateModule, modulesUnlocked } from './modules.js';
 import { modClickAt, modWheel } from './menu/modules.js';
+import { statsButtons, acctClick, acctKey, lbClickAt, lbKey, openLeaderboard, inR } from './menu.js';
 
 export function initInput() {
   window.addEventListener('keydown', e => {
@@ -56,6 +57,9 @@ export function initInput() {
       else if (e.key.length === 1 && (G.achQuery || '').length < 24 && !e.ctrlKey && !e.metaKey) G.achQuery = (G.achQuery || '') + e.key;
       return;
     }
+    // saisie du compte en ligne / recherche du classement
+    if (G.menuView === 'account') { acctKey(k, e); return; }
+    if (G.menuView === 'leaderboard') { lbKey(k, e); return; }
     G.keys[k] = true;
     if (G.state === 'menu') {
       if (G.menuView === 'characters') return; // écran de sélection : clics uniquement
@@ -195,7 +199,29 @@ export function initInput() {
         else if (act) sfxClick();
         return;
       }
-      if (G.menuView === 'stats') { G.menuView = 'main'; sfxClick(); return; }
+      if (G.menuView === 'stats') {
+        const sb = statsButtons();
+        if (inR(sb.lb, G.mouse.x, G.mouse.y)) { openLeaderboard(); sfxConfirm(); return; }
+        if (inR(sb.acct, G.mouse.x, G.mouse.y)) {
+          G.menuView = 'account';
+          if (!G.acctInput) G.acctInput = { pseudo: '', pass: '', focus: 0 };
+          sfxClick(); return;
+        }
+        if (inR(sb.back, G.mouse.x, G.mouse.y)) { G.menuView = 'main'; }
+        sfxClick(); return;
+      }
+      if (G.menuView === 'account') {
+        const act = acctClick(G.mouse.x, G.mouse.y);
+        if (act === 'back') { G.menuView = 'main'; }
+        else if (act) sfxClick();
+        return;
+      }
+      if (G.menuView === 'leaderboard') {
+        const act = lbClickAt(G.mouse.x, G.mouse.y);
+        if (act === 'back') { G.menuView = 'main'; sfxClick(); }
+        else if (act === 'search') sfxClick();
+        return;
+      }
       if (G.menuView === 'modules') {
         const act = modClickAt(G.mouse.x, G.mouse.y);
         if (act) sfxClick();
