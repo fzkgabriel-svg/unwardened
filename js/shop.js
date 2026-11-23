@@ -493,7 +493,8 @@ export function drawShop() {
     }
     // filet séparateur au-dessus des boutons
     ctx.strokeStyle = 'rgba(255,215,64,0.18)'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(P.x + 24, P.y + P.h - 56); ctx.lineTo(P.x + P.w - 24, P.y + P.h - 56); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(P.x + 24, P.y + P.h - 68); ctx.lineTo(P.x + P.w - 24, P.y + P.h - 68); ctx.stroke();
+    ctx.textAlign = 'center';
     for (const [r, label, col] of [[L.confirmBtn, '✔ ACHETER', '#2ecc71'], [L.confirmNo, '✕ ANNULER', '#a55']]) {
       const h = inR(r, G.mouse.x, G.mouse.y);
       ctx.fillStyle = h ? hexA(col, 0.9) : hexA(col, 0.55);
