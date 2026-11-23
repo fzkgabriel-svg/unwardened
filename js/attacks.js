@@ -111,54 +111,123 @@ export function doThrust() {
 }
 
 // ---------- JUGEMENT DU GARDIEN (arme légendaire, mode 7) ----------
-// Couteau de lancer magique : le héros projette la lame qui tournoie dans
-// son vol, transperce jusqu'à 3 ennemis puis disparaît dans un claquement.
+// Couteau de lancer à aller-retour : lancé devant le héros, il parcourt une
+// courte distance en tournoyant, touche les ennemis sur sa trajectoire puis
+// revient vers le joueur. Les dégâts chutent fortement avec la distance
+// joueur<->cible ; les impacts enchaînés montent un combo (rythme + puissance).
+const KNIFE_RANGE = 300;              // portée max à l'aller (~5 corps)
+const KNIFE_OUT = 16, KNIFE_BACK = 22; // px/frame
+
 export function doJudgment() {
   const p = G.player, angle = playerAngle();
+  const combo = p.gardienCombo || 0;
+  const empowered = combo >= 5; // lancer renforcé après une bonne série d'impacts
   G.knifeShots = G.knifeShots || [];
   G.knifeShots.push({
     x: p.x + Math.cos(angle) * (p.r + 10), y: p.y + Math.sin(angle) * (p.r + 10),
-    vx: Math.cos(angle) * 13, vy: Math.sin(angle) * 13,
-    a: angle, spin: 0, t: 0,
-    r: 7, dmg: p.attackDamage * 0.9 * waveBonus(),
-    life: 1.05, hits: new Set(), maxHits: 3, sentence: false
+    vx: Math.cos(angle) * KNIFE_OUT, vy: Math.sin(angle) * KNIFE_OUT,
+    a: angle, spin: 0, t: 0, phase: 'out', traveled: 0,
+    range: KNIFE_RANGE * (empowered ? 1.15 : 1),
+    r: empowered ? 8 : 7,
+    dmg: p.attackDamage * (empowered ? 1.5 : 1.0) * waveBonus(),
+    hits: new Set(), maxHits: 3, sentence: false, delay: 0,
+    spectral: false, big: false, waveDone: false
   });
-  p.attackCooldown = 0.4; // cadence proche de l'épée, compensée par la portée
+  p.attackCooldown = 0.42 - Math.min(combo, 6) * 0.015; // enchaînements plus vifs
   weaponWear(0.22);
   sfxJudgment();
-  spawnParticles(p.x + Math.cos(angle) * (p.r + 16), p.y + Math.sin(angle) * (p.r + 16), '#a7ffeb', 6, 4);
+  spawnParticles(p.x + Math.cos(angle) * (p.r + 16), p.y + Math.sin(angle) * (p.r + 16),
+    empowered ? '#ffd740' : '#a7ffeb', empowered ? 10 : 6, 4);
 }
 
 // projectiles du couteau : translation, rotation, collisions (une fois par
-// ennemi et par projectile), traînée runique pour Sentence, nettoyage
+// ennemi et par projectile), retour vers le joueur, combo, nettoyage
 export function updateKnifeShots(dt) {
+  const p = G.player;
+  // combo : retombe à zéro après 2,5 s sans impact
+  if (p.gardienComboT != null) {
+    p.gardienComboT += dt;
+    if (p.gardienComboT > 2.5) { p.gardienCombo = 0; p.gardienComboT = null; }
+  }
+  const step = dt * 60;
   for (let i = (G.knifeShots || []).length - 1; i >= 0; i--) {
     const k = G.knifeShots[i];
-    k.t += dt; k.life -= dt; k.spin += dt * 26;
-    k.x += k.vx; k.y += k.vy;
-    if (k.sentence && Math.random() < dt * 45) { // onde runique laissée sur la trajectoire
-      spawnParticles(k.x + (Math.random() - 0.5) * 14, k.y + (Math.random() - 0.5) * 10,
-        Math.random() < 0.6 ? '#a7ffeb' : '#ffd740', 1, 1.4);
+    k.t += dt; k.spin += dt * 26;
+    // délai de sortie (lames spectrales de Sentence) :orbite près du héros
+    if (k.delay > 0) {
+      k.delay -= dt;
+      const oa = G.time * 3 + i * 1.3;
+      k.x = p.x + Math.cos(oa) * 30; k.y = p.y + Math.sin(oa) * 30;
+      k.a = oa + Math.PI / 2;
+      continue;
     }
-    let dead = k.life <= 0 || k.x < -40 || k.x > worldW() + 40 || k.y < -40 || k.y > worldH() + 40;
-    if (!dead && k.hits.size >= k.maxHits) dead = true; // la lame s'est plantée
-    if (!dead) {
-      for (const e of G.enemies) {
-        if (k.hits.has(e)) continue;
-        if (Math.hypot(e.x - k.x, e.y - k.y) < k.r + e.r) {
-          k.hits.add(e);
-          damageEnemy(e, k.dmg, k.a);
-          spawnParticles(e.x, e.y, k.sentence ? '#ffd740' : '#a7ffeb', k.sentence ? 10 : 6, k.sentence ? 6 : 4);
-          if (k.sentence) spawnParticles(e.x, e.y, '#a7ffeb', 6, 5);
-          sfxSonicHit(); // claquement cristallin de la lame
-          if (k.hits.size >= k.maxHits) { dead = true; break; }
+    if (k.phase === 'out') {
+      k.x += k.vx * step; k.y += k.vy * step;
+      k.traveled += Math.hypot(k.vx, k.vy) * step;
+      if (k.traveled >= k.range) {
+        if (k.sentence) { // les lames spectrales s'évanouissent à leur limite
+          if (k.big && !k.waveDone) sentenceImpactWave(k);
+          spawnParticles(k.x, k.y, '#a7ffeb', 5, 3);
+          G.knifeShots.splice(i, 1); continue;
+        }
+        k.phase = 'return'; // le couteau fait demi-tour vers le héros
+      }
+    } else { // retour : la lame rentre droit au joueur
+      const dx = p.x - k.x, dy = p.y - k.y, d = Math.hypot(dx, dy) || 1;
+      if (d <= KNIFE_BACK * step + p.r * 0.4) { // réabsorbé
+        spawnParticles(p.x, p.y, '#a7ffeb', 3, 2);
+        G.knifeShots.splice(i, 1); continue;
+      }
+      k.vx = dx / d * KNIFE_BACK; k.vy = dy / d * KNIFE_BACK;
+      k.x += k.vx * step; k.y += k.vy * step;
+      k.a = Math.atan2(k.vy, k.vx);
+    }
+    // collisions : une fois par ennemi et par projectile, à l'aller comme au retour
+    let done = false;
+    for (const e of G.enemies) {
+      if (k.hits.has(e)) continue;
+      if (Math.hypot(e.x - k.x, e.y - k.y) < k.r + e.r) {
+        k.hits.add(e);
+        let mult = 1;
+        if (!k.sentence) {
+          // dégâts décroissants avec la distance joueur<->cible à l'impact :
+          // ~1,15x au contact -> ~0,35x à la limite de portée
+          const t = Math.min(1, Math.hypot(e.x - p.x, e.y - p.y) / KNIFE_RANGE);
+          mult = 1.15 - 0.8 * Math.pow(t, 1.4);
+        }
+        damageEnemy(e, k.dmg * mult, k.a);
+        spawnParticles(e.x, e.y, k.sentence ? '#ffd740' : '#a7ffeb', k.sentence ? 10 : 6, k.sentence ? 6 : 4);
+        if (k.sentence) spawnParticles(e.x, e.y, '#a7ffeb', 6, 5);
+        if (k.big && !k.waveDone) { k.waveDone = true; sentenceImpactWave(k); }
+        sfxSonicHit(); // claquement cristallin de la lame
+        if (!k.sentence) { // combo du Jugement : chaque impact renforce la série
+          p.gardienCombo = Math.min(8, (p.gardienCombo || 0) + 1);
+          p.gardienComboT = 0;
+        }
+        if (k.hits.size >= k.maxHits) { // lame saturée : elle fait demi-tour
+          done = true; break;
         }
       }
     }
-    if (dead) {
-      if (k.hits.size === 0) spawnParticles(k.x, k.y, '#8d99ae', 4, 3); // lame perdue dans le décor
-      G.knifeShots.splice(i, 1);
+    if (done) {
+      if (k.sentence) { G.knifeShots.splice(i, 1); }
+      else { k.phase = 'return'; }
     }
+  }
+}
+
+// onde runique circulaire déclenchée par la lame finale de Sentence ancestrale
+function sentenceImpactWave(k) {
+  G.rings.push({ x: k.x, y: k.y, r: 8, maxR: 110, life: 24, maxLife: 24, color: '#a7ffeb' });
+  G.rings.push({ x: k.x, y: k.y, r: 4, maxR: 70, life: 18, maxLife: 18, color: '#ffd740' });
+  for (let i = 0; i < 22; i++) {
+    const a = (i / 22) * TAU;
+    G.particles.push({
+      x: k.x, y: k.y,
+      vx: Math.cos(a) * 4.5, vy: Math.sin(a) * 4.5,
+      life: 26, maxLife: 26,
+      color: i % 2 ? '#ffd740' : '#a7ffeb', r: 1.8
+    });
   }
 }
 
@@ -199,17 +268,21 @@ export function updateSentence(dt) {
 
 function releaseSentence() {
   const p = G.player, a = p.sentenceAng;
-  // Sentence ancestrale : le couteau est lancé en version chargée — il
-  // transperce tous les ennemis sur sa trajectoire (~1,8× les dégâts)
-  // en laissant une traînée d'ondes runiques
+  // Sentence ancestrale : le cristal libère ses lames spectrales —
+  // 4 couteaux en éventail puis une lame finale imposante. Dégâts FIXES,
+  // identiques à toute distance (pas de chute de portée sur ce sort).
   G.knifeShots = G.knifeShots || [];
-  G.knifeShots.push({
-    x: p.x + Math.cos(a) * (p.r + 12), y: p.y + Math.sin(a) * (p.r + 12),
-    vx: Math.cos(a) * 12, vy: Math.sin(a) * 12,
-    a, spin: 0, t: 0,
-    r: 10, dmg: p.attackDamage * 1.8 * waveBonus(),
-    life: 1.25, hits: new Set(), maxHits: 999, sentence: true
-  });
+  const spawn = (ang, delay, r, dmg, big) => {
+    G.knifeShots.push({
+      x: p.x + Math.cos(ang) * (p.r + 8), y: p.y + Math.sin(ang) * (p.r + 8),
+      vx: Math.cos(ang) * 11.5, vy: Math.sin(ang) * 11.5,
+      a: ang, spin: 0, t: 0, phase: 'out', traveled: 0, range: 430,
+      r, dmg, hits: new Set(), maxHits: 999,
+      sentence: true, delay, spectral: true, big: !!big, waveDone: false
+    });
+  };
+  for (let i = 0; i < 4; i++) spawn(a + (i - 1.5) * 0.16, i * 0.085, 8, p.attackDamage * 1.0 * waveBonus(), false);
+  spawn(a + 0.04, 4 * 0.085 + 0.06, 13, p.attackDamage * 2.2 * waveBonus(), true);
   sfxSentenceRelease(); // onde runique : gong + balayage montant + impact
   G.screenShake = Math.max(G.screenShake, 9);
   G.screenFlash = Math.max(G.screenFlash, 0.12);

@@ -186,9 +186,9 @@ const WEAPON_INFO = {
   },
   gardien: {
     name: 'Le Jugement du Gardien', rarity: 'Légendaire',
-    desc: 'Couteau de lancer forgé pour un gardien oublié. Métal sombre, or gravé et runes, cristal ancestral au pommeau.',
-    atk: 'Attaque : lancer du couteau — la lame tournoie dans son vol et transperce jusqu\'à 3 ennemis, cadence proche de l\'épée.',
-    sec: 'Sentence ancestrale (clic droit) : 0,85 s de concentration puis le couteau est lancé en version chargée — il transperce tous les ennemis sur sa trajectoire en laissant une traînée runique, ~1,8× les dégâts — recharge 10 s.'
+    desc: 'Couteau de lancer forgé pour un gardien oublié. Métal sombre, or gravé et runes, cristal ancestral au pommeau. Arme de proximité : dévastatrice à bout portant, faible à distance.',
+    atk: 'Attaque : lancer du couteau — il tournoie, transperce jusqu\'à 3 ennemis puis revient. Dégâts élevés à courte distance, fortement réduits à longue portée. Les impacts enchaînés montent un combo (rythme et puissance).',
+    sec: 'Sentence ancestrale (clic droit) : 0,85 s de concentration, le cristal libère 4 lames spectrales en éventail puis une lame finale — dégâts fixes identiques à toute distance — recharge 10 s.'
   },
   arc: {
     name: 'Arc Cinétique Cosmique', rarity: 'Légendaire',

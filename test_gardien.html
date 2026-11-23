@@ -62,47 +62,102 @@ ok('WEAPON_MODES gardien=7', WEAPON_MODES.gardien === 7);
 ok('modeInfo gardien', typeof modeInfo(G.inv, 'gardien').lvl === 'number');
 ok('modeMult gardien', modeMult(G.inv, 'gardien') >= 1);
 
-// ---------- 5. attaque principale ----------
+// ---------- 5. attaque principale : lancer + retour + dégâts par distance ----------
+const _rnd = Math.random; Math.random = () => 0.99; // pas de critique : dégâts déterministes
 G.state = 'playing'; G.campaign = 0; G.wave = 3;
 G.enemies.length = 0;
 const p = G.player;
 p.x = 600; p.y = 320; p.attackMode = 7; p.attackDamage = 30; p.attackRange = 60;
 p.attackCooldown = 0; p.spinDuration = 0; p.switchLock = 0; p.ultActive = 0; p.sentenceT = 0;
+p.gardienCombo = 0; p.gardienComboT = null;
 G.mouse.x = 700; G.mouse.y = 320; G.camX = 0; G.camY = 0;
-// ennemis : un dans l'arc devant, un derrière
-G.enemies.push({ x: 660, y: 320, r: 14, hp: 500, maxHp: 500, type: ' slime', hitFlash: 0 });
-G.enemies.push({ x: 540, y: 320, r: 14, hp: 500, maxHp: 500, type: 'slime', hitFlash: 0 });
-const hpBefore = G.enemies[0].hp;
+// ennemis : un proche devant, un lointain, un derrière
+G.enemies.push({ x: 640, y: 320, r: 14, hp: 900, maxHp: 900, type: 'slime', hitFlash: 0 });
+G.enemies.push({ x: 880, y: 320, r: 14, hp: 900, maxHp: 900, type: 'slime', hitFlash: 0 });
+G.enemies.push({ x: 540, y: 320, r: 14, hp: 900, maxHp: 900, type: 'slime', hitFlash: 0 });
+const eClose = G.enemies[0], eFar = G.enemies[1], eBack = G.enemies[2];
 doJudgment();
 ok('doJudgment lance un couteau', (G.knifeShots || []).length === 1);
-ok('couteau projectile actif', G.knifeShots[0].sentence === false && G.knifeShots[0].maxHits === 3);
-// simuler le vol jusqu\'à l\'impact
+ok('couteau en phase aller', G.knifeShots[0].phase === 'out' && G.knifeShots[0].sentence === false);
+// vol complet : l'ennemi proche est touché, combo monte, le lointain subit
+// des dégâts fortement réduits, le dos est épargné
 let g2 = 0;
-while (G.knifeShots.length && g2++ < 120) updateKnifeShots(1 / 60);
-ok('couteau a touché l\'ennemi devant', G.enemies[0].hp < hpBefore);
-ok('couteau rate l\'ennemi derrière', G.enemies[1].hp === 500);
-ok('couteau nettoyé après vol', G.knifeShots.length === 0);
+while (G.knifeShots.length && g2++ < 200) updateKnifeShots(1 / 60);
+ok('couteau a touché l\'ennemi proche', eClose.hp < 900);
+ok('combo incrémenté par l\'impact', (p.gardienCombo || 0) >= 1);
+ok('couteau rate l\'ennemi derrière', eBack.hp === 900);
+ok('ennemi lointain touché mais dégâts réduits', eFar.hp < 900 && (900 - eFar.hp) < (900 - eClose.hp) * 0.75);
+ok('couteau revenu puis nettoyé', G.knifeShots.length === 0);
 ok('attackCooldown posé', p.attackCooldown > 0.35 && p.attackCooldown <= 0.45);
+// le couteau fait bien demi-tour : nouvelle lame sur ennemi proche seulement
+p.attackCooldown = 0; p.gardienCombo = 0; p.gardienComboT = null;
+eClose.hp = 900; eFar.hp = 900;
+doJudgment();
+g2 = 0;
+while (G.knifeShots.length && g2++ < 200) updateKnifeShots(1 / 60);
+ok('retour : dégâts proches > dégâts lointains', (900 - eClose.hp) > (900 - eFar.hp) * 1.8);
 
-// ---------- 6. Sentence ancestrale ----------
+// ---------- 6. Sentence ancestrale : lames spectrales, dégâts fixes ----------
+G.enemies.length = 0; // retirer les enemies de la section 5
 p.attackCooldown = 0; p.sentenceCd = 0; p.sentenceT = 0;
 doSentence();
 ok('sentenceT démarré', p.sentenceT > 0);
 ok('sentenceCd posé', p.sentenceCd === SENT_CD);
-ok('onde pas encore créée', (G.knifeShots || []).length === 0);
-// simuler la charge
-const e2 = { x: 800, y: 320, r: 14, hp: 500, maxHp: 500, type: 'slime', hitFlash: 0 };
-G.enemies.push(e2);
+ok('aucune lame avant la libération', (G.knifeShots || []).length === 0);
+// ennemis proche ET lointain sur la trajectoire : Sentence doit infliger
+// les mêmes dégâts à l'un et à l'autre (pas de chute de portée)
+const eNear = { x: 660, y: 320, r: 14, hp: 900, maxHp: 900, type: 'slime', hitFlash: 0 };
+const eFar2 = { x: 880, y: 322, r: 14, hp: 900, maxHp: 900, type: 'slime', hitFlash: 0 };
+G.enemies.push(eNear, eFar2);
 let guard = 0;
 while (p.sentenceT > 0 && guard++ < 200) updateSentence(1 / 60);
-ok('charge terminée -> couteau Sentence créé', G.knifeShots.length === 1);
-ok('couteau Sentence marqué', G.knifeShots[0].sentence === true);
-const hp2 = e2.hp;
+ok('libération -> 5 lames spectrales', G.knifeShots.length === 5);
+ok('toutes marquées Sentence', G.knifeShots.every(k => k.sentence && k.spectral));
+ok('une lame finale plus imposante', G.knifeShots.some(k => k.big && k.r > 10));
+ok('dégâts fixes identiques par lame', (() => {
+  const ds = new Set(G.knifeShots.filter(k => !k.big).map(k => k.dmg));
+  return ds.size === 1;
+})());
+// simuler vols + délais + retours jusqu'à épuisement
 guard = 0;
-while (G.knifeShots.length && guard++ < 300) updateKnifeShots(1 / 60);
-ok('couteau Sentence a touché l\'ennemi', e2.hp < hp2);
-ok('dégâts ~1.8x attaque', Math.abs((hp2 - e2.hp) - 30 * 1.8) < 30 * 1.8 * 0.6);
-ok('pas de double frappe', (() => { const hpNow = e2.hp; updateKnifeShots(1 / 60); return e2.hp === hpNow || G.knifeShots.length === 0; })());
+while (G.knifeShots.length && guard++ < 600) updateKnifeShots(1 / 60);
+ok('les deux ennemis ont été touchés', eNear.hp < 900 && eFar2.hp < 900);
+// DÉGATS FIXES : une lame spectrale contrôlée inflige le même dégât à un
+// ennemi proche et à un ennemi à ~250 px (aucune chute de portée)
+G.enemies.length = 0;
+const mkSpectral = () => ({
+  x: 650, y: 320, vx: 11.5, vy: 0, a: 0, spin: 0, t: 0, phase: 'out',
+  traveled: 0, range: 430, r: 8, dmg: 40, hits: new Set(), maxHits: 999,
+  sentence: true, delay: 0, spectral: true, big: false, waveDone: false
+});
+const eSN = { x: 665, y: 320, r: 14, hp: 900, maxHp: 900, type: 'slime', hitFlash: 0 };
+const eSF = { x: 890, y: 320, r: 14, hp: 900, maxHp: 900, type: 'slime', hitFlash: 0 };
+G.enemies.push(eSN); G.knifeShots.push(mkSpectral());
+guard = 0; while (G.knifeShots.length && guard++ < 200) updateKnifeShots(1 / 60);
+const lossNear = 900 - eSN.hp;
+G.enemies.length = 0; G.knifeShots.length = 0;
+G.enemies.push(eSF); G.knifeShots.push(mkSpectral());
+guard = 0; while (G.knifeShots.length && guard++ < 200) updateKnifeShots(1 / 60);
+const lossFar = 900 - eSF.hp;
+ok('Sentence : dégâts identiques proche/lointain', lossNear > 0 && Math.abs(lossNear - lossFar) < 0.01);
+// comparaison : une lame principale au même dmg subit la chute de portée
+G.enemies.length = 0; G.knifeShots.length = 0;
+const mkPrimary = () => ({
+  x: 650, y: 320, vx: 16, vy: 0, a: 0, spin: 0, t: 0, phase: 'out',
+  traveled: 0, range: 300, r: 7, dmg: 40, hits: new Set(), maxHits: 3,
+  sentence: false, delay: 0, spectral: false, big: false, waveDone: false
+});
+const ePN = { x: 665, y: 320, r: 14, hp: 900, maxHp: 900, type: 'slime', hitFlash: 0 };
+const ePF = { x: 890, y: 320, r: 14, hp: 900, maxHp: 900, type: 'slime', hitFlash: 0 };
+G.enemies.push(ePN); G.knifeShots.push(mkPrimary());
+guard = 0; while (G.knifeShots.length && guard++ < 200) updateKnifeShots(1 / 60);
+const pNear = 900 - ePN.hp;
+G.enemies.length = 0; G.knifeShots.length = 0;
+G.enemies.push(ePF); G.knifeShots.push(mkPrimary());
+guard = 0; while (G.knifeShots.length && guard++ < 200) updateKnifeShots(1 / 60);
+const pFar = 900 - ePF.hp;
+ok('principale : dégâts lointains fortement réduits', pFar > 0 && pFar < pNear * 0.6);
+Math.random = _rnd;
 
 // ---------- 7. persistance ----------
 // simuler reload : loadInv relit localStorage

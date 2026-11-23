@@ -62,7 +62,33 @@ export function drawSentenceCharge() {
     ctx.closePath(); ctx.stroke();
     ctx.restore();
   }
-  // liseré d'impact : le secteur de la vague à venir, de plus en plus net
+  // lames spectrales : 5 couteaux fantômes orbitent le héros et s reliant
+  // au cristal — appearance progressive avec la charge
+  const blades = 5;
+  for (let i = 0; i < blades; i++) {
+    const appear = Math.min(1, Math.max(0, (chg - 0.15 - i * 0.12) / 0.3));
+    if (appear <= 0) continue;
+    const ba = G.time * (0.9 + chg * 0.7) + (i / blades) * TAU;
+    const br = 34 + chg * 14 + (i % 2) * 8;
+    const bx = Math.cos(ba) * br, by = Math.sin(ba) * br * 0.8;
+    // lien runique lame -> centre
+    ctx.strokeStyle = `rgba(167,255,235,${0.28 * appear})`;
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(bx * 0.55, by * 0.55); ctx.lineTo(bx, by); ctx.stroke();
+    // silhouette du couteau spectral
+    ctx.save();
+    ctx.translate(bx, by);
+    ctx.rotate(ba + Math.PI / 2 + Math.sin(G.time * 3 + i) * 0.2);
+    ctx.globalAlpha = appear * (0.55 + chg * 0.4);
+    const bl = i === blades - 1 ? 13 : 9; // la 5e lame (finale) est plus grande
+    ctx.fillStyle = i === blades - 1 ? '#fff3c4' : '#a7ffeb';
+    ctx.beginPath();
+    ctx.moveTo(bl, 0); ctx.lineTo(-bl * 0.6, -2.4); ctx.lineTo(-bl * 0.85, 0);
+    ctx.lineTo(-bl * 0.6, 2.4); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,215,64,0.8)'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.restore();
+  }
+  // liseré d'impact : le secteur des lames à venir, de plus en plus net
   const reach = 330;
   ctx.save();
   ctx.rotate(a);
@@ -147,17 +173,24 @@ export function drawKnifeShots() {
     ctx.save();
     ctx.translate(k.x, k.y);
     ctx.rotate(k.spin); // la lame tournoie sur elle-même
-    const L = k.sentence ? 26 : 20;
-    // traînée runique pour Sentence
+    const L = k.big ? 30 : k.sentence ? 24 : 20;
+    // halo spectral pour les lames de Sentence (et la lame finale dorée)
     if (k.sentence) {
       ctx.globalCompositeOperation = 'lighter';
-      ctx.strokeStyle = 'rgba(167,255,235,0.35)'; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.arc(0, 0, L * 0.9, 0, TAU); ctx.stroke();
+      const hg = ctx.createRadialGradient(0, 0, 1, 0, 0, L * (k.big ? 1.6 : 1.1));
+      hg.addColorStop(0, k.big ? 'rgba(255,243,196,0.55)' : 'rgba(167,255,235,0.4)');
+      hg.addColorStop(1, 'rgba(167,255,235,0)');
+      ctx.fillStyle = hg;
+      ctx.beginPath(); ctx.arc(0, 0, L * (k.big ? 1.6 : 1.1), 0, TAU); ctx.fill();
       ctx.globalCompositeOperation = 'source-over';
     }
-    // lame : losange effilé sombre + fil doré
+    // lame : losange effilé sombre + fil doré (spectrale : métal bleuté)
     const bg = ctx.createLinearGradient(-L, -3, L, 3);
-    bg.addColorStop(0, '#0f1419'); bg.addColorStop(0.5, k.sentence ? '#5d7a8c' : '#37474f'); bg.addColorStop(1, '#10151c');
+    if (k.sentence) {
+      bg.addColorStop(0, '#0d1620'); bg.addColorStop(0.5, k.big ? '#6b5a2e' : '#3d5a6c'); bg.addColorStop(1, '#0a1018');
+    } else {
+      bg.addColorStop(0, '#0f1419'); bg.addColorStop(0.5, '#37474f'); bg.addColorStop(1, '#10151c');
+    }
     ctx.fillStyle = bg;
     ctx.beginPath();
     ctx.moveTo(L, 0); ctx.lineTo(2, -3.4); ctx.lineTo(-L * 0.82, -2.2);
@@ -176,15 +209,6 @@ export function drawKnifeShots() {
     ctx.fillStyle = k.sentence ? '#fff3c4' : '#a7ffeb';
     ctx.fillRect(-1.8, -1.8, 3.6, 3.6);
     ctx.restore();
-    // lueur pour la version Sentence
-    if (k.sentence) {
-      ctx.globalCompositeOperation = 'lighter';
-      const gg = ctx.createRadialGradient(0, 0, 1, 0, 0, 14);
-      gg.addColorStop(0, 'rgba(255,243,196,0.5)'); gg.addColorStop(1, 'rgba(167,255,235,0)');
-      ctx.fillStyle = gg;
-      ctx.beginPath(); ctx.arc(0, 0, 14, 0, TAU); ctx.fill();
-      ctx.globalCompositeOperation = 'source-over';
-    }
     ctx.restore();
   }
   ctx.restore();

@@ -12,7 +12,7 @@ export const ctx = canvas.getContext('2d');
 ctx.scale(SS, SS);
 export const W = 1200, H = 640;
 export const TAU = Math.PI * 2;
-export const VERSION = '4.15.3';
+export const VERSION = '4.16.0';
 export const FINAL_WAVE = 20; // vague du boss final (campagne 1) // incrémenter à chaque mise à jour du jeu
 // vagues finales : campagne 2 -> 25, 3 -> 30, 4 (Égouts) -> 35, 5 (Espace) -> 40
 export function finalWave() {
@@ -52,6 +52,8 @@ export const G = {
     sentenceCd: 0,          // Jugement du Gardien : recharge de « Sentence ancestrale » (10 s)
     sentenceT: 0,           // >0 = concentration de Sentence ancestrale en cours (s)
     sentenceAng: 0,         // direction figée au lancement de la concentration
+    gardienCombo: 0,        // enchaînement de impacts du couteau (0-8)
+    gardienComboT: null,    // secondes depuis le dernier impact (reset > 2,5 s)
     handCd: 0,               // main de feu du titan : recharge 2,6 s
     handUsed: false,         // la main de feu n'est utilisable qu'UNE fois par transformation
     switchLock: 0, // 2s sans attaque après un changement d'arme
