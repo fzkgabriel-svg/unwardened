@@ -156,13 +156,17 @@ export function drawMenu() {
   });
   ctx.font = `12px ${UI}`; ctx.fillStyle = C_MUTED;
   ctx.fillText('Mini-boss toutes les 3 vagues  ·  Boss toutes les 5 vagues', rx + 2, cy + ch + 28);
-  // bouton vers le site officiel
+  // boutons vers le site officiel et le Discord
   drawMenuButton(siteWebButton(), 'SITE WEB ↗', '#2e4a6b', '#9fc3e8', false);
+  drawMenuButton(discordButton(), 'DISCORD ↗', '#3b4a8c', '#a8b8ff', false);
   ctx.textAlign = 'center';
 }
 // zone cliquable du bouton site web (partagée dessin/clic)
 export function siteWebButton() {
-  return { x: 690, y: 566, w: 414, h: 38 };
+  return { x: 690, y: 556, w: 414, h: 36 };
+}
+export function discordButton() {
+  return { x: 690, y: 598, w: 414, h: 36 };
 }
 
 // entrée de navigation du menu principal (liste verticale)

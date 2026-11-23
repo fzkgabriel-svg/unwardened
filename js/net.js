@@ -11,7 +11,9 @@ const IS_LOCAL = typeof location !== 'undefined' &&
   (location.hostname === 'localhost' || location.hostname === '127.0.0.1');
 const PROD_API = 'https://kaeloryn-studio.onrender.com';
 const API = location.port === '8080' ? '' : (IS_LOCAL ? 'http://localhost:8080' : PROD_API);
-export const SITE_URL = API || (typeof location !== 'undefined' ? location.origin : 'http://localhost:8080');
+// le bouton « SITE WEB » du menu ouvre toujours le vrai site en ligne
+export const SITE_URL = 'https://kaeloryn-studio.onrender.com';
+export const DISCORD_URL = 'https://discord.gg/hjjX3mXjCf';
 const ACC_KEY = 'rpg2d_account';
 
 export const net = {

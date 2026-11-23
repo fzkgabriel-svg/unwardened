@@ -11,8 +11,8 @@ import { bowUnlocked } from './bow.js';
 import { weaponAllowed, loadoutOf, WEAPON_MODES } from './inventory.js';
 import { activateModule, modulesUnlocked } from './modules.js';
 import { modClickAt, modWheel } from './menu/modules.js';
-import { statsButtons, acctClick, acctKey, lbClickAt, lbKey, openLeaderboard, inR, siteWebButton, forgeUnlocked } from './menu.js';
-import { SITE_URL } from './net.js';
+import { statsButtons, acctClick, acctKey, lbClickAt, lbKey, openLeaderboard, inR, siteWebButton, discordButton, forgeUnlocked } from './menu.js';
+import { SITE_URL, DISCORD_URL } from './net.js';
 
 export function initInput() {
   window.addEventListener('keydown', e => {
@@ -251,6 +251,9 @@ export function initInput() {
       const btn = menuButtonAt(G.mouse.x, G.mouse.y);
       if (inR(siteWebButton(), G.mouse.x, G.mouse.y)) {
         window.open(SITE_URL, '_blank'); sfxConfirm(); return;
+      }
+      if (inR(discordButton(), G.mouse.x, G.mouse.y)) {
+        window.open(DISCORD_URL, '_blank'); sfxConfirm(); return;
       }
       if (btn === 'perso') { switchCharacter(); sfxClick(); return; }
       if (btn === 'tutoriel') { startTutorial(); sfxConfirm(); return; }
