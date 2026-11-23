@@ -7,6 +7,7 @@ import { storeKey, activeSlot } from './chars.js';
 const API = (typeof location !== 'undefined' && location.port === '8080')
   ? '' // le jeu est servi par le site lui-même
   : 'http://localhost:8080';
+export const SITE_URL = API || (typeof location !== 'undefined' ? location.origin : 'http://localhost:8080');
 const ACC_KEY = 'rpg2d_account';
 
 export const net = {
