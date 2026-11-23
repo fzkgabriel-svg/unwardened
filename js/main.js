@@ -293,7 +293,7 @@ function update(dt) {
     p.hp = Math.min(p.maxHp, p.hp + 30);
     p.attackDamage += 5;
     p.spinDamage += 3;
-    p.speed = Math.min(3.1, p.speed + 0.04);
+    p.speed = Math.min(3.5, p.speed + 0.04);
     addDamageText(p.x, p.y - 20, G.wave === finalWave() ? 'VAGUE FINALE !' : `VAGUE ${G.wave}!`, G.wave === finalWave() ? '#e040fb' : '#ffd740');
     sfxWave();
     if (G.wave === finalWave()) {

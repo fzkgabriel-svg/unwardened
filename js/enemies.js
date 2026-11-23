@@ -171,7 +171,7 @@ export function spawnEnemy(forceType = null, bigPortal = false, px = null, py = 
   G.enemies.push({
     ...t, type,
     hp: t.hp * scale * extraScale * md, maxHp: t.hp * scale * extraScale * md,
-    speed: t.speed * (1 + (G.wave - 1) * 0.08) * ((G.mods && G.mods.speedMult) || 1),
+    speed: t.speed * (1 + (G.wave - 1) * 0.08) * 1.08 * ((G.mods && G.mods.speedMult) || 1),
     damage: t.damage * (1 + (G.wave - 1) * 0.25) * extraScale * dmgMult * md,
     xp: Math.round(t.xp * ((G.mods && G.mods.xpMult) || 1)),
     x, y, attackCooldown: 0, wobble: Math.random() * TAU, slow: 0, spawnT: portalLife, spawnMax: portalLife,

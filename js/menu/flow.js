@@ -199,7 +199,7 @@ export function resetToMenu() {
   const p = G.player;
   const sp = curWorld().spawn;
   Object.assign(p, {
-    x: sp.x, y: sp.y, speed: 2.1,
+    x: sp.x, y: sp.y, speed: 2.4,
     hp: 100, maxHp: 100,
     attackDamage: 30, attackRange: 60, attackArc: Math.PI * 0.7, attackCooldown: 0,
     spinDamage: 70, spinRadius: 110, spinCooldown: 0, spinDuration: 0,

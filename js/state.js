@@ -12,7 +12,7 @@ export const ctx = canvas.getContext('2d');
 ctx.scale(SS, SS);
 export const W = 1200, H = 640;
 export const TAU = Math.PI * 2;
-export const VERSION = '4.14.1';
+export const VERSION = '4.14.2';
 export const FINAL_WAVE = 20; // vague du boss final (campagne 1) // incrémenter à chaque mise à jour du jeu
 // vagues finales : campagne 2 -> 25, 3 -> 30, 4 (Égouts) -> 35, 5 (Espace) -> 40
 export function finalWave() {
@@ -41,7 +41,7 @@ export const G = {
   // joueur
   player: {
     x: W / 2, y: H / 2, r: 15,
-    speed: 2.1,
+    speed: 2.4,
     hp: 100, maxHp: 100,
     attackDamage: 30, attackRange: 60, attackArc: Math.PI * 0.7, attackCooldown: 0,
     spinDamage: 70, spinRadius: 110, spinCooldown: 0, spinDuration: 0,
