@@ -1,4 +1,5 @@
 import { G, saveStats } from './state.js';
+import { sfxAchievement } from './audio.js';
 import { addMaterial, loadInv, saveInv, ITEMS, MATS, DUR_MAX, durMaxOf } from './inventory.js';
 import { storeKey } from './chars.js';
 
@@ -259,6 +260,7 @@ export function checkAchievements() {
     if (!unlocked[a.id] && a.t(G, s)) {
       unlocked[a.id] = { claimed: false };
       changed = true;
+      sfxAchievement();
       G.achToast = { name: a.name, icon: a.icon, t: 3.5 };
     }
   }

@@ -5,7 +5,7 @@ import { G, ctx, W, H, TAU } from './state.js';
 import { roundRect, drawMatIcon, hexA } from './utils.js';
 import { MATS, addMaterial, loadInv, saveInv } from './inventory.js';
 import { MODULES, MOD_IDS, ownModule, modState } from './modules.js';
-import { sfxClick, sfxPickup } from './audio.js';
+import { sfxClick, sfxPickup, sfxBuy } from './audio.js';
 
 // catalogue : clef = matériau vendu (JAMAIS 'emeraude' — on n'achète pas la monnaie)
 // stock: null = illimité · sinon unités max par jour
@@ -166,7 +166,7 @@ export function shopClickAt(x, y) {
       G.shopConfirm = null;
       const r = cf.mod ? buyModule(inv, cf.mod) : buyMaterial(inv, cf.key, cf.qty);
       if (r.ok) {
-        sfxPickup();
+        sfxBuy();
         G.shopFlash = { msg: r.msg, t: G.time };
         G.shopMood = 'joy'; G.shopMoodT = G.time;
         G.shopBurst = { x: L.balance.x + 30, y: L.balance.y + 15, t: G.time, col: '#69f0ae' };
@@ -234,7 +234,7 @@ export function shopClickAt(x, y) {
       else {
         const r = buyMaterial(inv, key, qty);
         if (r.ok) {
-          sfxPickup(); G.shopFlash = { msg: r.msg, t: G.time };
+          sfxBuy(); G.shopFlash = { msg: r.msg, t: G.time };
           G.shopMood = 'joy'; G.shopMoodT = G.time;
           G.shopBurst = { x: L.balance.x + 30, y: L.balance.y + 15, t: G.time, col: '#69f0ae' };
         } else {

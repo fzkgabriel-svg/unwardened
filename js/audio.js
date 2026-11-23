@@ -6,55 +6,121 @@ import { G, ctx, W, H } from './state.js';
 import { roundRect } from './utils.js';
 
 let AC = null;          // AudioContext (créé au premier geste utilisateur)
-let master = null, musicBus = null, sfxBus = null;
+let master = null, musicBus = null, sfxBus = null, ambGain = null, ambFilter = null;
 const MUSIC_GAIN = 0.55;
 let step = 0, nextT = 0, timer = null;
+let curThemeKey = null; // thème musical actif (pour les transitions)
+let lastState = null;   // état précédent (stingers victoire/défaite)
 
 let on = true;
 try { on = localStorage.getItem('rpg2d_music') !== '0'; } catch (e) {}
+const _pv = k => { const n = parseInt(localStorage.getItem(k), 10); return isNaN(n) ? null : n; };
 let vol = 65; // volume musique 0-100 (persisté)
-try { vol = Math.max(0, Math.min(100, parseInt(localStorage.getItem('rpg2d_vol') || '65') || 65)); } catch (e) {}
+try { const v = _pv('rpg2d_vol'); vol = Math.max(0, Math.min(100, v === null ? 65 : v)); } catch (e) {}
 const volGain = () => (vol / 100) * 0.9;
 let sfxVol = 75; // volume effets 0-100 (persisté)
-try { sfxVol = Math.max(0, Math.min(100, parseInt(localStorage.getItem('rpg2d_sfx') || '75') || 75)); } catch (e) {}
+try { const v = _pv('rpg2d_sfx'); sfxVol = Math.max(0, Math.min(100, v === null ? 75 : v)); } catch (e) {}
 const sfxGain = () => (sfxVol / 100) * 0.9;
 let sfxOn = true; // effets sonores activés (persisté)
 try { sfxOn = localStorage.getItem('rpg2d_sfx_on') !== '0'; } catch (e) {}
+let ambVol = 60; // volume ambiances 0-100 (persisté)
+try { const v = _pv('rpg2d_amb'); ambVol = Math.max(0, Math.min(100, v === null ? 60 : v)); } catch (e) {}
+const ambGainFn = () => (ambVol / 100) * 0.5;
+let ambOn = true; // ambiances activées (persisté)
+try { ambOn = localStorage.getItem('rpg2d_amb_on') !== '0'; } catch (e) {}
 
 const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
-// musique par campagne : chaque monde a son thème (gamme, tempo, timbre des pads)
+
+// ---------- THÈMES : un par contexte (menu, forge, boutique, 6 mondes, fins) ----------
+// champs : chords (progression), beat (durée du temps), pad (timbre nappe),
+// lead (instrument mélodique), bass (instrument de basse), drums (0/1/2 =
+// intensité batterie max), amb (bruit d'ambiance : freq filtre + gain),
+// bright (luminosité du filtre musique)
 const MUSIC_THEMES = {
+  menu: { // Menu principal : majestueux et mystérieux (Dm – Bb – F – C, ~96 BPM)
+    chords: [[50, 62, 65, 69], [46, 58, 62, 65], [41, 53, 57, 60], [48, 60, 64, 67]],
+    beat: 0.62, pad: 'sawtooth', lead: 'violin', bass: 'horn', drums: 0,
+    amb: { f: 420, g: 0.014 }, bright: 1200
+  },
+  forge: { // Forge : calme, artisanale et feutrée (Gm – Eb – Bb – Dm, ~80 BPM)
+    chords: [[43, 55, 58, 62], [39, 51, 55, 58], [46, 58, 62, 65], [38, 50, 53, 57]],
+    beat: 0.72, pad: 'triangle', lead: 'flute', bass: 'cello', drums: 0,
+    amb: { f: 300, g: 0.010 }, bright: 1000
+  },
+  shop: { // Boutique : médieval léger et agréable (C – G – Am – F, ~104 BPM)
+    chords: [[48, 60, 64, 67], [43, 55, 59, 62], [45, 57, 60, 64], [41, 53, 57, 60]],
+    beat: 0.58, pad: 'triangle', lead: 'flute', bass: 'cello', drums: 1,
+    amb: { f: 500, g: 0.008 }, bright: 1800
+  },
+  victory: { // fanfare triomphale après un boss / une campagne (C – G – C – F, ~112 BPM)
+    chords: [[48, 60, 64, 67], [43, 55, 59, 62], [48, 60, 64, 67], [41, 53, 57, 60]],
+    beat: 0.54, pad: 'sawtooth', lead: 'violin', bass: 'horn', drums: 2,
+    amb: { f: 600, g: 0.012 }, bright: 2400
+  },
+  defeat: { // marche funèbre lente et grave (Dm – Bb – Gm – A, ~66 BPM)
+    chords: [[50, 62, 65, 69], [46, 58, 62, 65], [43, 55, 58, 62], [45, 57, 60, 64]],
+    beat: 0.85, pad: 'sine', lead: 'cello', bass: 'cello', drums: 0,
+    amb: { f: 250, g: 0.016 }, bright: 700
+  },
   0: { // Les Terres Oubliées : mineur épique, ~115 BPM
     chords: [[45, 57, 60, 64], [41, 53, 57, 60], [38, 50, 53, 57], [40, 52, 55, 59]],
-    beat: 0.52, pad: 'triangle'
+    beat: 0.52, pad: 'triangle', lead: 'violin', bass: 'cello', drums: 1,
+    amb: { f: 380, g: 0.012 }, bright: 1500
   },
-  1: { // La Terre Gelée : plus lent, nappes froides (Dm7 – Bb – Gm7 – Cmaj7)
+  1: { // La Terre Gelée : lent, nappes froides (Dm7 – Bb – Gm7 – Cmaj7)
     chords: [[50, 62, 65, 69], [46, 58, 62, 65], [43, 55, 58, 62], [48, 60, 64, 67]],
-    beat: 0.62, pad: 'sine'
+    beat: 0.62, pad: 'sine', lead: 'flute', bass: 'cello', drums: 0,
+    amb: { f: 900, g: 0.018 }, bright: 1100
   },
-  2: { // Les Enfers : phrygien sombre et rapide (Em7 – F – G7 – E majeur, ~136 BPM)
+  2: { // Les Enfers : phrygien sombre et rapide (Em7 – F – G7 – E, ~136 BPM)
     chords: [[40, 52, 55, 59], [41, 53, 57, 60], [43, 55, 59, 62], [40, 52, 56, 59]],
-    beat: 0.44, pad: 'sawtooth'
+    beat: 0.44, pad: 'sawtooth', lead: 'violin', bass: 'taiko', drums: 2,
+    amb: { f: 200, g: 0.014 }, bright: 900
   },
   3: { // Les Égouts : mineur boueux et visqueux (Dm – Bb – F – C, ~100 BPM)
     chords: [[38, 50, 53, 57], [34, 46, 50, 53], [41, 53, 57, 60], [48, 60, 64, 67]],
-    beat: 0.60, pad: 'triangle'
+    beat: 0.60, pad: 'triangle', lead: 'cello', bass: 'cello', drums: 1,
+    amb: { f: 260, g: 0.016 }, bright: 800
   },
   4: { // L'Espace : planant et mystérieux (Am9 – Fmaj7 – Cmaj7 – G, ~90 BPM)
     chords: [[45, 57, 60, 64, 67], [41, 53, 57, 60, 64], [48, 60, 64, 67, 71], [43, 55, 59, 62, 67]],
-    beat: 0.66, pad: 'sine'
+    beat: 0.66, pad: 'sine', lead: 'bell', bass: 'horn', drums: 0,
+    amb: { f: 1400, g: 0.010 }, bright: 2200
   },
   5: { // Les Tempêtes : mineur tourbillonnant et violent (Dm – Bb – F – C, ~128 BPM)
     chords: [[50, 62, 65, 69], [46, 58, 62, 65], [41, 53, 57, 60], [48, 60, 64, 67]],
-    beat: 0.47, pad: 'sawtooth'
+    beat: 0.47, pad: 'sawtooth', lead: 'violin', bass: 'taiko', drums: 2,
+    amb: { f: 1100, g: 0.020 }, bright: 2600
   }
 };
-// sur la carte de campagne, le thème suit le territoire survolé/sélectionné
-const theme = () => MUSIC_THEMES[
-  G.state === 'menu' && G.menuView === 'campaign' && G.campaignSel !== undefined && G.campaignSel !== null
-    ? G.campaignSel : (G.campaign || 0)
-] || MUSIC_THEMES[0];
+
+// clé du thème courant : contexte d'écran > campagne > carte de campagne
+function themeKey() {
+  if (G.shopOpen) return 'shop';
+  if (G.state === 'victory') return 'victory';
+  if (G.state === 'gameover' || G.state === 'dying') return 'defeat';
+  if (G.state === 'menu') {
+    if (G.menuView === 'forge') return 'forge';
+    if (G.menuView === 'campaign' && G.campaignSel !== undefined && G.campaignSel !== null) return G.campaignSel;
+    return 'menu';
+  }
+  return G.campaign || 0; // playing / paused / intro : thème du monde
+}
+const theme = () => MUSIC_THEMES[themeKey()] || MUSIC_THEMES[0];
 const beatLen = () => theme().beat;
+
+// intensité de combat : 0 (ambiant) → 1 (meute + boss). Lissée pour éviter
+// les sauts brutaux quand les vagues changent.
+function musicIntensity() {
+  const target = G.state === 'playing' || G.state === 'paused'
+    ? Math.min(1, (G.enemies ? G.enemies.length : 0) / 14 + (G.enemies && G.enemies.some(e => e.isBoss) ? 0.35 : 0) + (G.wave || 1) / 80)
+    : 0.12;
+  G._musI = G._musI === undefined ? target : G._musI + (target - G._musI) * 0.12;
+  return G._musI;
+}
+function bossActive() {
+  return !!(G.enemies && G.enemies.some(e => e.isBoss));
+}
 
 // ---------- moteur ----------
 // à appeler sur chaque geste utilisateur (clic, touche) : les navigateurs
@@ -76,6 +142,15 @@ export function ensureAudio() {
       sfxBus = AC.createGain();
       sfxBus.gain.value = sfxOn ? sfxGain() : 0;
       sfxBus.connect(master);
+      // bus ambiances : boucle de bruit filtré (vent, souffle, frimas...)
+      ambGain = AC.createGain();
+      ambGain.gain.value = ambOn ? ambGainFn() : 0;
+      ambFilter = AC.createBiquadFilter();
+      ambFilter.type = 'bandpass'; ambFilter.frequency.value = 400; ambFilter.Q.value = 0.6;
+      const ambSrc = AC.createBufferSource();
+      ambSrc.buffer = getNoise(); ambSrc.loop = true;
+      ambSrc.connect(ambFilter); ambFilter.connect(ambGain); ambGain.connect(master);
+      ambSrc.start();
       nextT = AC.currentTime + 0.1;
       timer = setInterval(scheduleBar, 200);
     } catch (e) { AC = null; }
@@ -117,6 +192,21 @@ export function toggleMusic() {
   return on;
 }
 
+// ---------- réglages ambiances ----------
+export function ambVolLevel() { return ambVol; }
+export function ambOnState() { return ambOn; }
+export function setAmbVol(v) {
+  ambVol = Math.max(0, Math.min(100, Math.round(v)));
+  try { localStorage.setItem('rpg2d_amb', String(ambVol)); } catch (e) {}
+  if (AC && ambGain) ambGain.gain.setTargetAtTime(ambOn ? ambGainFn() : 0, AC.currentTime, 0.1);
+}
+export function toggleAmb() {
+  ambOn = !ambOn;
+  try { localStorage.setItem('rpg2d_amb_on', ambOn ? '1' : '0'); } catch (e) {}
+  if (AC && ambGain) ambGain.gain.setTargetAtTime(ambOn ? ambGainFn() : 0, AC.currentTime, 0.08);
+  return ambOn;
+}
+
 // ---------- synthèse ----------
 function tone(freq, t, dur, type, vol, dest, detune = 0) {
   const o = AC.createOscillator(), g = AC.createGain();
@@ -129,14 +219,16 @@ function tone(freq, t, dur, type, vol, dest, detune = 0) {
 }
 
 function padChord(notes, t, dur, type) {
+  const dark = ['sine', 'triangle'].includes(type);
+  const cutoff = dark ? 750 : 1400;
   for (const n of notes) {
-    for (const det of [-5, 5]) {
+    for (const det of [-6, 6]) {
       const o = AC.createOscillator(), g = AC.createGain(), f = AC.createBiquadFilter();
       o.type = type || 'triangle'; o.frequency.value = mtof(n); o.detune.value = det;
-      f.type = 'lowpass'; f.frequency.value = 850;
+      f.type = 'lowpass'; f.frequency.value = cutoff;
       g.gain.setValueAtTime(0.0001, t);
-      g.gain.linearRampToValueAtTime(0.04, t + 1.5);
-      g.gain.setValueAtTime(0.04, t + Math.max(0.1, dur - 1.4));
+      g.gain.linearRampToValueAtTime(0.038, t + 1.6);
+      g.gain.setValueAtTime(0.038, t + Math.max(0.1, dur - 1.5));
       g.gain.linearRampToValueAtTime(0.0001, t + dur);
       o.connect(f); f.connect(g); g.connect(musicBus);
       o.start(t); o.stop(t + dur + 0.1);
@@ -144,24 +236,99 @@ function padChord(notes, t, dur, type) {
   }
 }
 
-function bassNote(n, t) {
-  const o = AC.createOscillator(), g = AC.createGain();
-  o.type = 'sine'; o.frequency.value = mtof(n);
+// ---------- instruments à voix ----------
+function voice(type, f, t, dur, vol, lp) {
+  const o = AC.createOscillator(), g = AC.createGain(), fl = AC.createBiquadFilter();
+  o.type = type; o.frequency.value = f;
+  fl.type = 'lowpass'; fl.frequency.value = lp || 2400;
   g.gain.setValueAtTime(0.0001, t);
-  g.gain.linearRampToValueAtTime(0.11, t + 0.08);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + beatLen() * 3.4);
+  g.gain.linearRampToValueAtTime(vol, t + Math.min(0.12, dur * 0.25));
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(fl); fl.connect(g); g.connect(musicBus);
+  o.start(t); o.stop(t + dur + 0.05);
+}
+// violon : deux cordes désaccordées + vibrato léger
+function violin(n, t, dur = 0.9, vol = 0.05) {
+  const f = mtof(n);
+  for (const det of [-4, 4]) {
+    const o = AC.createOscillator(), g = AC.createGain(), fl = AC.createBiquadFilter();
+    o.type = 'sawtooth'; o.frequency.value = f; o.detune.value = det;
+    fl.type = 'lowpass'; fl.frequency.value = 2600;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(vol / 2, t + 0.18);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(fl); fl.connect(g); g.connect(musicBus);
+    o.start(t); o.stop(t + dur + 0.05);
+  }
+}
+// violoncelle : fondamentale grave + harmonique douce
+function cello(n, t, dur = 1.1, vol = 0.07) {
+  voice('sawtooth', mtof(n), t, dur, vol, 600);
+  voice('sine', mtof(n) * 2, t, dur * 0.8, vol * 0.4, 1200);
+}
+// cor : montée en puissance lente, timbre cuivré voilé
+function horn(n, t, dur = 1.6, vol = 0.06) {
+  const o = AC.createOscillator(), g = AC.createGain(), fl = AC.createBiquadFilter();
+  o.type = 'sawtooth'; o.frequency.value = mtof(n);
+  fl.type = 'lowpass'; fl.frequency.value = 900;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(vol, t + dur * 0.4);
+  g.gain.setValueAtTime(vol, t + dur * 0.7);
+  g.gain.linearRampToValueAtTime(0.0001, t + dur);
+  o.connect(fl); fl.connect(g); g.connect(musicBus);
+  o.start(t); o.stop(t + dur + 0.05);
+}
+// flûte : sine clair avec vibrato
+function flute(n, t, dur = 0.8, vol = 0.045) {
+  const f = mtof(n);
+  const o = AC.createOscillator(), g = AC.createGain();
+  o.type = 'sine'; o.frequency.value = f;
+  const lfo = AC.createOscillator(), lg = AC.createGain();
+  lfo.frequency.value = 5.2; lg.gain.value = f * 0.006;
+  lfo.connect(lg); lg.connect(o.frequency); lfo.start(t); lfo.stop(t + dur + 0.1);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(vol, t + 0.12);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
   o.connect(g); g.connect(musicBus);
-  o.start(t); o.stop(t + beatLen() * 3.5);
+  o.start(t); o.stop(t + dur + 0.05);
+}
+// chœur : nappe "ahh" — deux voix désaccordées, attaque très douce
+function choir(n, t, dur = 2.6, vol = 0.028) {
+  for (const det of [-8, 8]) {
+    const o = AC.createOscillator(), g = AC.createGain(), fl = AC.createBiquadFilter();
+    o.type = 'sawtooth'; o.frequency.value = mtof(n); o.detune.value = det;
+    fl.type = 'lowpass'; fl.frequency.value = 950;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(vol, t + dur * 0.45);
+    g.gain.linearRampToValueAtTime(0.0001, t + dur);
+    o.connect(fl); fl.connect(g); g.connect(musicBus);
+    o.start(t); o.stop(t + dur + 0.1);
+  }
+}
+// basse : fondamentale + quinte, profil par instrument
+function bassNote(n, t, kind = 'cello') {
+  if (kind === 'taiko') { taiko(t, 0.16); bassNote(n, t, 'cello'); return; }
+  const f = mtof(n);
+  const o = AC.createOscillator(), g = AC.createGain(), fl = AC.createBiquadFilter();
+  o.type = kind === 'horn' ? 'sawtooth' : 'triangle';
+  o.frequency.value = f;
+  fl.type = 'lowpass'; fl.frequency.value = kind === 'horn' ? 500 : 380;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(kind === 'horn' ? 0.075 : 0.1, t + 0.09);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + beatLen() * 3.2);
+  o.connect(fl); fl.connect(g); g.connect(musicBus);
+  o.start(t); o.stop(t + beatLen() * 3.3);
+  if (kind === 'cello') voice('sine', f * 1.5, t + beatLen() * 0.5, beatLen() * 2, 0.05, 400);
 }
 
 function pluck(n, t, dur = 0.55) {
-  tone(mtof(n), t, dur, 'triangle', 0.06);
-  tone(mtof(n) * 2, t, dur * 0.55, 'sine', 0.02);
+  tone(mtof(n), t, dur, 'triangle', 0.055);
+  tone(mtof(n) * 2, t, dur * 0.5, 'sine', 0.018);
 }
 
 function bell(n, t) {
-  tone(mtof(n), t, 2.2, 'sine', 0.05);
-  tone(mtof(n) * 2.76, t, 1.4, 'sine', 0.015);
+  tone(mtof(n), t, 2.2, 'sine', 0.045);
+  tone(mtof(n) * 2.76, t, 1.4, 'sine', 0.013);
 }
 
 let noiseBuf = null;
@@ -173,26 +340,26 @@ function getNoise() {
   }
   return noiseBuf;
 }
-// coup de grosse caisse : sine qui chute 130 -> 42 Hz
-function kick(t) {
+// grosse caisse : sine qui chute 130 -> 42 Hz
+function kick(t, big = false) {
   const o = AC.createOscillator(), g = AC.createGain();
   o.type = 'sine';
-  o.frequency.setValueAtTime(130, t);
+  o.frequency.setValueAtTime(big ? 150 : 130, t);
   o.frequency.exponentialRampToValueAtTime(42, t + 0.11);
-  g.gain.setValueAtTime(0.32, t);
+  g.gain.setValueAtTime(big ? 0.4 : 0.3, t);
   g.gain.exponentialRampToValueAtTime(0.001, t + 0.24);
   o.connect(g); g.connect(musicBus);
   o.start(t); o.stop(t + 0.26);
 }
 // charleston : bruit filtré très court sur les contretemps
-function hat(t) {
+function hat(t, open = false) {
   const s = AC.createBufferSource(); s.buffer = getNoise();
   const f = AC.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 7000;
   const g = AC.createGain();
-  g.gain.setValueAtTime(0.07, t);
-  g.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+  g.gain.setValueAtTime(open ? 0.1 : 0.065, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + (open ? 0.14 : 0.05));
   s.connect(f); f.connect(g); g.connect(musicBus);
-  s.start(t); s.stop(t + 0.06);
+  s.start(t); s.stop(t + (open ? 0.15 : 0.06));
 }
 // caisse claire : bruit medium + ton
 function snare(t) {
@@ -203,36 +370,131 @@ function snare(t) {
   g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
   s.connect(f); f.connect(g); g.connect(musicBus);
   s.start(t); s.stop(t + 0.13);
-  tone(190, t, 0.09, 'triangle', 0.07);
+  tone(190, t, 0.09, 'triangle', 0.065);
 }
+// grosse caisse de guerre (taiko) : membrane grave + claquement bois
+function taiko(t, v = 0.2) {
+  const o = AC.createOscillator(), g = AC.createGain();
+  o.type = 'sine';
+  o.frequency.setValueAtTime(170, t);
+  o.frequency.exponentialRampToValueAtTime(48, t + 0.16);
+  g.gain.setValueAtTime(v, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+  o.connect(g); g.connect(musicBus);
+  o.start(t); o.stop(t + 0.32);
+  const s = AC.createBufferSource(); s.buffer = getNoise();
+  const f = AC.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 900; f.Q.value = 1.5;
+  const ng = AC.createGain();
+  ng.gain.setValueAtTime(v * 0.35, t);
+  ng.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+  s.connect(f); f.connect(ng); ng.connect(musicBus);
+  s.start(t); s.stop(t + 0.06);
+}
+
+// ---------- orchestrateur de pas : couches par intensité ----------
+const LEAD_VOICES = { violin, cello, horn, flute, bell: (n, t) => bell(n, t) };
+function leadVoice(kind) { return LEAD_VOICES[kind] || violin; }
 
 function playStep(s, t) {
   const bt = beatLen();
-  const chord = theme().chords[Math.floor(s / 8) % theme().chords.length];
+  const th = theme();
+  const chord = th.chords[Math.floor(s / 8) % th.chords.length];
   const inBar = s % 8;
-  if (inBar === 0) padChord(chord, t, bt * 8.6, theme().pad);
-  // batterie : grosse caisse sur 1 et 3, caisse claire sur 2 et 4, charlestons en croches
-  if (inBar === 0 || inBar === 4) kick(t);
-  if (inBar === 2 || inBar === 6) snare(t);
-  hat(t + bt / 2);
-  // basse martelée : croche + noire -> pulse entraînant
-  bassNote(chord[0], t);
-  bassNote(chord[0] - 12, t + bt / 2);
-  // arpège : cycle les notes de l'accord à l'octave sup, une note sur deux temps
+  const inten = musicIntensity();
+  const boss = bossActive();
+  const drumsLvl = Math.max(th.drums ? th.drums / 2 : 0, inten * 0.9); // 0..1
+
+  // nappe d'accords : toujours présente, plus sombre/large en combat
+  if (inBar === 0) {
+    padChord(chord, t, bt * 8.6, th.pad);
+    if (inten > 0.45 || boss) choir(chord[0] + 12, t + bt, bt * 7, 0.02 + inten * 0.02);
+  }
+
+  // ---- batterie : niveau suit l'intensité et le thème ----
+  if (drumsLvl > 0.15) {
+    const k = drumsLvl;
+    if (inBar === 0 || (inBar === 4 && k > 0.4) || (boss && inBar === 6)) kick(t, boss);
+    if (inBar === 2 || (inBar === 6 && k > 0.55)) snare(t);
+    if (k > 0.3) hat(t + bt / 2, k > 0.7 && inBar === 7);
+    if (k > 0.5 && inBar % 2 === 1) hat(t, false);
+    if (boss || th.drums === 2) { // boss / thèmes guerriers : nappes de taiko
+      if (inBar === 0 || inBar === 3 || inBar === 6) taiko(t + (inBar === 3 ? bt / 2 : 0), 0.14 + drumsLvl * 0.1);
+    }
+  }
+
+  // ---- basse : toujours, plus présente en combat ----
+  bassNote(chord[0], t, th.bass);
+  if (inBar % 2 === 0 || inten > 0.4) bassNote(chord[0] - 12, t + bt / 2, th.bass);
+
+  // ---- arpège : cycle les notes de l'accord, une note sur deux temps ----
   const arp = chord[(s * 7 + 3) % chord.length] + 24;
   if (s % 2 === 0) pluck(arp, t, 0.4);
-  // mélodie éparse : notes du chord à l'octave supérieure, choix pseudo-aléatoire stable
+
+  // ---- mélodie : densité croissante avec l'intensité ----
+  const lv = leadVoice(th.lead);
   const h = (s * 2654435761) >>> 0;
-  if (inBar % 2 === 0 && h % 100 < 30) {
-    const n = chord[(h >> 6) % chord.length] + 24 + ((h >> 12) % 2) * 12;
-    pluck(n, t);
+  const density = 0.18 + inten * 0.55 + (boss ? 0.15 : 0);
+  if (h % 100 < density * 100) {
+    const n = chord[(h >> 6) % chord.length] + 24 + ((h >> 12) % 3 === 0 ? 12 : 0);
+    const dur = th.lead === 'flute' ? 0.7 : 0.95;
+    lv(n, t, dur, th.lead === 'bell' ? 0.9 : 1);
   }
   if (s % 32 === 16) bell(chord[2] + 24, t);
+}
+
+// fondu de transition quand le thème change (menu -> monde, combat -> calme...)
+function transitionMusic() {
+  const k = themeKey();
+  if (curThemeKey === k) return;
+  const first = curThemeKey === null;
+  curThemeKey = k;
+  if (!AC || !musicBus || first) return;
+  // dip en V : le thème change pendant que le bus s'efface puis revient
+  const now = AC.currentTime;
+  musicBus.gain.cancelScheduledValues(now);
+  musicBus.gain.setValueAtTime(musicBus.gain.value, now);
+  musicBus.gain.linearRampToValueAtTime(0.0001, now + 0.22);
+  musicBus.gain.setValueAtTime(0.0001, now + 0.3);
+  musicBus.gain.setTargetAtTime(volGain(), now + 0.32, 0.5);
+}
+
+// stingers : fanfare de victoire / marche funèbre de défaite
+function stinger() {
+  const st = G.state;
+  if (lastState === st) return;
+  const was = lastState; lastState = st;
+  if (!AC || !musicBus) return;
+  const t = AC.currentTime + 0.15;
+  const seq = st === 'victory' ? [[523, 0], [659, 0.14], [784, 0.28], [1047, 0.46]]
+            : st === 'gameover' ? [[392, 0], [330, 0.3], [262, 0.6], [196, 0.95]]
+            : null;
+  if (!seq) return;
+  for (const [f, dt] of seq) {
+    for (const det of [-5, 5]) {
+      const o = AC.createOscillator(), g = AC.createGain(), fl = AC.createBiquadFilter();
+      o.type = st === 'victory' ? 'sawtooth' : 'triangle';
+      o.frequency.value = f; o.detune.value = det;
+      fl.type = 'lowpass'; fl.frequency.value = st === 'victory' ? 3000 : 900;
+      g.gain.setValueAtTime(0.0001, t + dt);
+      g.gain.linearRampToValueAtTime(st === 'victory' ? 0.05 : 0.07, t + dt + 0.06);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dt + (st === 'victory' ? 0.9 : 1.6));
+      o.connect(fl); fl.connect(g); g.connect(musicBus);
+      o.start(t + dt); o.stop(t + dt + 2);
+    }
+  }
 }
 
 // ordonnanceur : planifie les temps forts à l'avance (précision ~200ms)
 function scheduleBar() {
   if (!AC) return;
+  transitionMusic();
+  stinger();
+  // ambiances : filtre et gain suivent le thème courant
+  if (ambFilter && ambGain) {
+    const a = theme().amb || { f: 400, g: 0.01 };
+    ambFilter.frequency.setTargetAtTime(a.f, AC.currentTime, 0.8);
+    ambGain.gain.setTargetAtTime(ambOn ? (a.g * ambVol / 60) : 0, AC.currentTime, 0.8);
+  }
   if (!on) { nextT = Math.max(nextT, AC.currentTime + 0.1); return; }
   const ahead = AC.currentTime + 0.55;
   if (nextT < AC.currentTime) nextT = AC.currentTime + 0.05;
@@ -277,11 +539,12 @@ export function sfxConfirm() {
   } catch (e) {}
 }
 
-// ---------- boutons ON/OFF (coin haut-droit, toutes les interfaces) ----------
-// deux pastilles empilées : MUSIQUE puis EFFETS
+// ---------- boutons ON/OFF + panneau de réglages (coin haut-droit) ----------
+// trois pastilles : MUSIQUE / EFFETS / ⚙ RÉGLAGES
 export const AUDIO_BTNS = {
   mus: { x: W * 0.77, y: 8, w: 84, h: 30 },
-  sfx: { x: W * 0.845, y: 8, w: 84, h: 30 }
+  sfx: { x: W * 0.845, y: 8, w: 84, h: 30 },
+  opt: { x: W * 0.92, y: 8, w: 84, h: 30 }
 };
 export function audioButtonAt(x, y) {
   for (const k in AUDIO_BTNS) {
@@ -311,6 +574,118 @@ function drawAudioBtn(r, label, active, color) {
 export function drawMusicButton() {
   drawAudioBtn(AUDIO_BTNS.mus, 'MUSIQUE', on, '#d4b062');
   drawAudioBtn(AUDIO_BTNS.sfx, 'EFFETS', sfxOn, '#7fb8d6');
+  drawAudioBtn(AUDIO_BTNS.opt, 'RÉGLAGES', !!G.audioOpen, '#b48ae0');
+}
+
+// ---------- panneau de réglages audio ----------
+const AP_W = 400, AP_H = 268;
+const apRect = () => ({ x: W / 2 - AP_W / 2, y: H / 2 - AP_H / 2, w: AP_W, h: AP_H });
+// une ligne = { key, label, icon, color, getVol, setVol, getOn, toggle }
+const AP_ROWS = [
+  { key: 'mus', label: 'MUSIQUE', icon: '♪', color: '#d4b062',
+    vol: () => vol, set: setMusicVol, on: () => on, tog: toggleMusic },
+  { key: 'sfx', label: 'EFFETS SONORES', icon: '✦', color: '#7fb8d6',
+    vol: () => sfxVol, set: setSfxVol, on: () => sfxOn, tog: toggleSfx },
+  { key: 'amb', label: 'AMBIANCES', icon: '≋', color: '#8fd0a0',
+    vol: () => ambVol, set: setAmbVol, on: () => ambOn, tog: toggleAmb }
+];
+function apRowRect(i) {
+  const r = apRect();
+  return { x: r.x + 22, y: r.y + 66 + i * 62, w: r.w - 44, h: 50 };
+}
+export function audioPanelAt(x, y) {
+  const r = apRect();
+  if (x < r.x || x > r.x + r.w || y < r.y || y > r.y + r.h) return 'outside';
+  // croix de fermeture
+  const cx = r.x + r.w - 26, cy = r.y + 18;
+  if (x >= cx - 9 && x <= cx + 9 && y >= cy - 9 && y <= cy + 9) return 'close';
+  for (let i = 0; i < AP_ROWS.length; i++) {
+    const rr = apRowRect(i);
+    // pastille ON/OFF à gauche
+    if (x >= rr.x && x <= rr.x + 52 && y >= rr.y + 8 && y <= rr.y + 34) return 'tog' + i;
+    // curseur de volume
+    const sx = rr.x + 62, sw = rr.w - 62;
+    if (x >= sx && x <= sx + sw && y >= rr.y + 14 && y <= rr.y + 34) return 'vol' + i;
+  }
+  return 'inside';
+}
+export function audioPanelClickAt(x, y) {
+  const hit = audioPanelAt(x, y);
+  if (hit === 'close') { G.audioOpen = false; return 'close'; }
+  if (hit === 'outside') { G.audioOpen = false; return 'close'; }
+  if (hit && hit[0] === 't' && hit[4] >= '0') {
+    AP_ROWS[+hit[4]].tog(); sfxClick(); return hit;
+  }
+  if (hit && hit[0] === 'v' && hit[3] >= '0') {
+    const i = +hit[3], rr = apRowRect(i);
+    const sx = rr.x + 62, sw = rr.w - 62;
+    const v = Math.max(0, Math.min(100, Math.round(((x - sx) / sw) * 100)));
+    AP_ROWS[i].set(v); sfxClick(); return hit;
+  }
+  return hit;
+}
+export function drawAudioPanel() {
+  if (!G.audioOpen) return;
+  const r = apRect();
+  ctx.save();
+  ctx.fillStyle = 'rgba(6,8,12,0.82)'; ctx.fillRect(0, 0, W, H);
+  // panneau
+  const g = ctx.createLinearGradient(r.x, r.y, r.x, r.y + r.h);
+  g.addColorStop(0, '#171a22'); g.addColorStop(1, '#0d0f16');
+  ctx.fillStyle = g; roundRect(r.x, r.y, r.w, r.h, 14); ctx.fill();
+  ctx.strokeStyle = 'rgba(212,176,98,0.45)'; ctx.lineWidth = 1.5;
+  roundRect(r.x + 0.75, r.y + 0.75, r.w - 1.5, r.h - 1.5, 14); ctx.stroke();
+  // titre
+  ctx.textAlign = 'center';
+  ctx.font = '700 17px Georgia, serif'; ctx.fillStyle = '#e8d9a8';
+  ctx.fillText('⚙ RÉGLAGES AUDIO', W / 2, r.y + 32);
+  ctx.font = 'italic 11px Georgia, serif'; ctx.fillStyle = 'rgba(232,217,176,0.5)';
+  ctx.fillText('volume et activation de chaque catégorie — sauvegardé automatiquement', W / 2, r.y + 50);
+  // lignes
+  for (let i = 0; i < AP_ROWS.length; i++) {
+    const row = AP_ROWS[i], rr = apRowRect(i);
+    const hovRow = G.mouse.x >= rr.x && G.mouse.x <= rr.x + rr.w &&
+                   G.mouse.y >= rr.y && G.mouse.y <= rr.y + rr.h;
+    if (hovRow) { ctx.fillStyle = 'rgba(255,255,255,0.04)'; roundRect(rr.x, rr.y, rr.w, rr.h, 9); ctx.fill(); }
+    // icône + label
+    ctx.textAlign = 'left';
+    ctx.font = '16px sans-serif'; ctx.fillStyle = row.color;
+    ctx.fillText(row.icon, rr.x + 6, rr.y + 30);
+    ctx.font = '700 12px Inter, sans-serif'; ctx.fillStyle = '#e8e2d2';
+    ctx.fillText(row.label, rr.x + 30, rr.y + 30);
+    // pastille ON/OFF
+    const onv = row.on();
+    ctx.fillStyle = onv ? 'rgba(60,140,90,0.35)' : 'rgba(90,40,40,0.3)';
+    roundRect(rr.x, rr.y + 8, 52, 26, 7); ctx.fill();
+    ctx.strokeStyle = onv ? 'rgba(140,230,170,0.6)' : 'rgba(230,140,140,0.4)'; ctx.lineWidth = 1;
+    roundRect(rr.x + 0.5, rr.y + 8.5, 51, 25, 7); ctx.stroke();
+    ctx.textAlign = 'center'; ctx.font = '700 10px Inter, sans-serif';
+    ctx.fillStyle = onv ? '#9fe8b8' : '#e89a9a';
+    ctx.fillText(onv ? 'ON' : 'OFF', rr.x + 26, rr.y + 26);
+    // curseur
+    const sx = rr.x + 62, sw = rr.w - 62, v = row.vol() / 100;
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    roundRect(sx, rr.y + 20, sw, 8, 4); ctx.fill();
+    if (v > 0.01) {
+      const fg = ctx.createLinearGradient(sx, 0, sx + sw * v, 0);
+      fg.addColorStop(0, row.color); fg.addColorStop(1, '#ffffff');
+      ctx.fillStyle = fg;
+      roundRect(sx, rr.y + 20, Math.max(8, sw * v), 8, 4); ctx.fill();
+    }
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(sx + sw * v, rr.y + 24, 6, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = row.color; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(sx + sw * v, rr.y + 24, 6, 0, Math.PI * 2); ctx.stroke();
+    ctx.textAlign = 'right'; ctx.font = '600 10px Inter, sans-serif';
+    ctx.fillStyle = 'rgba(232,226,210,0.7)';
+    ctx.fillText(row.vol() + '%', rr.x + rr.w, rr.y + 44);
+  }
+  // croix
+  const cx = r.x + r.w - 26, cy = r.y + 18;
+  ctx.strokeStyle = 'rgba(232,217,176,0.6)'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(cx - 6, cy - 6); ctx.lineTo(cx + 6, cy + 6);
+  ctx.moveTo(cx + 6, cy - 6); ctx.lineTo(cx - 6, cy + 6); ctx.stroke();
+  ctx.restore();
 }
 
 // ==================== EFFETS SONORES DE JEU ====================
@@ -547,4 +922,35 @@ export function sfxSingularity() { // SINGULARITÉ : compression gravitationnell
   }
   nz(t + 0.45, 0.4, 0.16, 'lowpass', 900, 1); // boom sourd de la distorsion
   nz(t, 0.5, 0.05, 'highpass', 4000);
+}
+
+// ---------- SFX boutique / progression ----------
+export function sfxBuy() { // achat : deux pièces + registre satisfaisant
+  if (!sfxReady()) return; const t = ST();
+  osc('square', 1568, 1568, t, 0.08, 0.07);
+  osc('square', 2093, 2093, t + 0.09, 0.14, 0.07);
+  osc('sine', 1047, 1047, t + 0.05, 0.2, 0.05);
+}
+export function sfxUnlock() { // déblocage : arpège montant cristallin
+  if (!sfxReady()) return; const t = ST();
+  [784, 988, 1175, 1568].forEach((f, i) =>
+    osc('sine', f, f, t + i * 0.08, 0.4, 0.08));
+  nz(t + 0.1, 0.5, 0.04, 'highpass', 6000);
+}
+export function sfxAchievement() { // succès débloqué : petite fanfare dorée
+  if (!sfxReady()) return; const t = ST();
+  [523, 659, 784, 1047, 1319].forEach((f, i) =>
+    osc('triangle', f, f, t + i * 0.1, 0.5, 0.09));
+  osc('sine', 2093, 2093, t + 0.5, 0.6, 0.05);
+}
+export function sfxSell() { // vente : registre grave + pièce
+  if (!sfxReady()) return; const t = ST();
+  osc('sine', 660, 660, t, 0.12, 0.07);
+  osc('square', 1319, 1319, t + 0.1, 0.1, 0.05);
+}
+
+// debug/test : contexte musical courant + intensité
+export function audioDebug() {
+  return { key: themeKey(), inten: +musicIntensity().toFixed(2), boss: bossActive(),
+           themes: Object.keys(MUSIC_THEMES).length };
 }

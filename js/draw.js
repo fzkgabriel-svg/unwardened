@@ -9,7 +9,7 @@ import { drawHUD, drawAchToast, drawWarnToast } from './hud.js';
 import { drawSecrets, drawSwayDecor, drawDecorLights, drawLakeGlints } from './gfx/terrain.js';
 import { drawMenu, drawGameOver, drawPauseMenu, drawVictory, recordRun, drawAdminMenu, drawAdminButton, drawDurWarnPopup } from './menu.js';
 import { initWorlds, updateCamera, worldW, worldH, checkWavePortal, syncCamera, resolveObstacles, curWorld } from './world.js';
-import { drawMusicButton, sfxHurt, sfxWave, sfxPickup, sfxBreak, sfxBoss, sfxWarn, sfxPhase, sfxBossAtk } from './audio.js';
+import { drawMusicButton, drawAudioPanel, sfxHurt, sfxWave, sfxPickup, sfxBreak, sfxBoss, sfxWarn, sfxPhase, sfxBossAtk } from './audio.js';
 import { updateTutorial, drawTutorial } from './tutorial.js';
 import { tickPlaytime } from './chars.js';
 import { drawShop, drawShopBtn } from './shop.js';
@@ -97,7 +97,7 @@ export function draw() {
     ctx.font = '11px Consolas, monospace';
     ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(232,217,176,0.45)';
     ctx.fillText(`v${VERSION}`, W - 14, H - 12);
-    drawMusicButton(); drawShopBtn();
+    drawMusicButton(); drawShopBtn(); drawAudioPanel();
     ctx.restore();
     return;
   }
@@ -107,7 +107,7 @@ export function draw() {
     ctx.font = '11px Consolas, monospace';
     ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(232,217,176,0.45)';
     ctx.fillText(`v${VERSION}`, W - 14, H - 12);
-    drawMusicButton();
+    drawMusicButton(); drawAudioPanel();
     ctx.restore();
     return;
   }
@@ -155,6 +155,7 @@ export function draw() {
   ctx.font = '11px Consolas, monospace';
   ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(232,217,176,0.45)';
   ctx.fillText(`v${VERSION}`, W - 14, H - 12);
+  drawAudioPanel(); // panneau de réglages audio par-dessus tout
   ctx.restore();
 }
 

@@ -4,7 +4,7 @@ import { checkAdminPass, createChar } from './chars.js';
 import { adminMenuClickAt, adminButtonAt, adminUnlocked } from './menu.js';
 import { usePotion } from './player.js';
 import { tryInteract } from './world.js';
-import { ensureAudio, toggleMusic, toggleSfx, audioButtonAt, sfxClick, sfxConfirm } from './audio.js';
+import { ensureAudio, toggleMusic, toggleSfx, audioButtonAt, audioPanelClickAt, sfxClick, sfxConfirm } from './audio.js';
 import { shopButtonAt, shopClickAt, shopDay } from './shop.js';
 import { startTutorial, tutorialEnter } from './tutorial.js';
 import { bowUnlocked } from './bow.js';
@@ -143,17 +143,20 @@ export function initInput() {
     if (G.shopOpen) { shopClickAt(G.mouse.x, G.mouse.y); return; }
     // bouton 💰 boutique : uniquement depuis le menu principal
     if (G.state === 'menu' && shopButtonAt(G.mouse.x, G.mouse.y)) {
-      G.shopOpen = true; G.shopQty = {}; G.shopConfirm = null; G.shopFlash = null;
+      G.shopOpen = true; G.audioOpen = false; G.shopQty = {}; G.shopConfirm = null; G.shopFlash = null;
       G.shopSel = null; G.shopModSel = null; G.shopTab = 'mats'; G.shopTabT = G.time;
       if (G.inv) shopDay(G.inv); // réinitialise le stock si nouveau jour
       sfxClick();
       return;
     }
-    // boutons audio : pastilles MUSIQUE / EFFETS (ON/OFF directs)
+    // panneau de réglages audio ouvert : il intercepte tous les clics
+    if (G.audioOpen) { audioPanelClickAt(G.mouse.x, G.mouse.y); return; }
+    // boutons audio : pastilles MUSIQUE / EFFETS / RÉGLAGES
     if (['menu', 'playing', 'paused', 'gameover', 'victory'].includes(G.state)) {
       const ab = audioButtonAt(G.mouse.x, G.mouse.y);
       if (ab === 'mus') { toggleMusic(); sfxClick(); return; }
       if (ab === 'sfx') { toggleSfx(); sfxClick(); return; }
+      if (ab === 'opt') { G.audioOpen = true; sfxClick(); return; }
     }
     if (G.state === 'menu') {
       // popup durabilité : intercepte tous les clics tant qu'elle est ouverte

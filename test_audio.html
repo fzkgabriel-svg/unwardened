@@ -1,0 +1,60 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>audio test</title></head>
+<body><canvas id="game" width="1200" height="640"></canvas>
+<pre id="out"></pre>
+<script type="module">
+import { G } from './js/state.js';
+const out = [];
+const ok = (n, c) => out.push((c ? 'PASS' : 'FAIL') + ' ' + n);
+try {
+  const A = await import('./js/audio.js');
+  ok('exports', typeof A.ensureAudio === 'function' && typeof A.drawAudioPanel === 'function'
+     && typeof A.audioPanelClickAt === 'function' && typeof A.audioDebug === 'function');
+  ok('btns3', A.AUDIO_BTNS.mus && A.AUDIO_BTNS.sfx && A.AUDIO_BTNS.opt);
+  // contexte : menu principal
+  G.state = 'menu'; G.menuView = 'main'; G.campaign = 0;
+  let d = A.audioDebug();
+  ok('menuTheme', d.key === 'menu');
+  // forge
+  G.menuView = 'forge';
+  d = A.audioDebug();
+  ok('forgeTheme', d.key === 'forge');
+  // boutique
+  G.menuView = 'main'; G.shopOpen = true;
+  d = A.audioDebug();
+  ok('shopTheme', d.key === 'shop');
+  G.shopOpen = false;
+  // campagne survolée
+  G.menuView = 'campaign'; G.campaignSel = 5;
+  d = A.audioDebug();
+  ok('campaignTheme5', d.key === 5 || d.key === '5');
+  // en jeu : thème du monde + intensité combat
+  G.state = 'playing'; G.menuView = 'main'; G.campaign = 2;
+  G.enemies = [{}, {}, {}, {}, {}, {}, {}, {}];
+  d = A.audioDebug();
+  ok('worldTheme', d.key === 2 || d.key === '2');
+  ok('intensity', d.inten > 0.1);
+  // boss -> intensité accrue
+  G.enemies.push({ isBoss: true });
+  d = A.audioDebug();
+  ok('bossFlag', d.boss === true);
+  // victoire / défaite
+  G.state = 'victory';
+  ok('victoryTheme', A.audioDebug().key === 'victory');
+  G.state = 'gameover';
+  ok('defeatTheme', A.audioDebug().key === 'defeat');
+  // panneau : clic extérieur ferme, coulisse volume
+  G.state = 'menu'; G.audioOpen = true;
+  ok('panelClose', A.audioPanelClickAt(-50, -50) === 'close' && G.audioOpen === false);
+  G.audioOpen = true;
+  const r = A.audioPanelAt(600, 320);
+  ok('panelInside', r === 'inside' || /^tog|^vol/.test(r) || r === 'close');
+  // 11 thèmes : menu, forge, shop, victory, defeat + 6 mondes
+  ok('themeCount', A.audioDebug().themes === 11);
+  // persistance volume
+  A.setMusicVol(33); A.setSfxVol(44); A.setAmbVol(55);
+  ok('persist', localStorage.getItem('rpg2d_vol') === '33' && localStorage.getItem('rpg2d_amb') === '55');
+  A.setMusicVol(0);
+  ok('volZero', A.musicVol() === 0);
+} catch (e) { out.push('FAIL exc ' + e.message + ' ' + (e.stack||'').split('\n')[0]); }
+document.getElementById('out').textContent = out.join('\n');
+</script></body></html>
