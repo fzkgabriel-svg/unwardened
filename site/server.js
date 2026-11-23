@@ -12,6 +12,17 @@ import crypto from 'node:crypto';
 import { db, q } from './db.js';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
+
+// .env local (site/.env) : SMTP_URL=..., MAIL_FROM=..., ADMIN_*=...
+// les variables déjà définies dans l'environnement priment
+try {
+  const envFile = join(ROOT, '.env');
+  if (existsSync(envFile)) for (const line of readFileSync(envFile, 'utf8').split(/\r?\n/)) {
+    const m = /^\s*([A-Z_][A-Z0-9_]*)\s*=\s*(.*)\s*$/.exec(line);
+    if (m && !line.trim().startsWith('#') && process.env[m[1]] === undefined)
+      process.env[m[1]] = m[2].replace(/^["']|["']$/g, '');
+  }
+} catch (e) { /* .env absent ou illisible : ignoré */ }
 const PUB = join(ROOT, 'public');
 const DATA = join(ROOT, 'data');
 const PORT = parseInt(process.argv[2] || process.env.PORT || '8080', 10);
