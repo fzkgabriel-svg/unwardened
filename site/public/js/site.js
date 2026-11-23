@@ -1,4 +1,4 @@
-// Tesseract Studio — JS partagé : logo, navigation, particules, session, API.
+// Kaeloryn Studio — JS partagé : logo, navigation, particules, session, API.
 export const LOGO_SVG = `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1">
     <stop offset="0" stop-color="#f0d492"/><stop offset=".5" stop-color="#d4b062"/><stop offset="1" stop-color="#8a6f3a"/>

@@ -1,0 +1,33 @@
+<!doctype html>
+<html><body>
+<canvas id="game" width="1200" height="640"></canvas>
+<pre id="out">RUNNING</pre>
+<script type="module">
+import { G } from './js/state.js';
+import { genWorld, curWorld, tryInteract, nearestInteractable } from './js/world.js';
+import { gainXp } from './js/player.js';
+const out = [];
+try {
+  G.state = 'playing'; G.campaign = 0; G.worldIndex = 0; G.wave = 1;
+  G.player = { x: 100, y: 100, r: 15, hp: 100, maxHp: 100, level: 1, xp: 0, xpNext: 50, potions: 0, maxPotions: 3, alive: true, lastHurt: -99, slowT: 0, hitSlowT: 0, potionCooldown: 0, poisonT: 0, poisonDps: 0, attackMode: 1, speed: 2.1, ultCharge: 0, shieldT: 0, shieldCd: 0, handCd: 0, handUsed: false, switchLock: 0 };
+  G.inv = { mats: {}, items: {}, equip: {}, modules: { owned: [], eq: { act: null, pass: null }, passUnlocked: false } };
+  G.enemies = []; G.drops = []; G.portals = []; G.particles = []; G.damageTexts = []; G.rings = [];
+  G.camX = 0; G.camY = 0; G.time = 1;
+  const w = genWorld(0);
+  out.push('buildings=' + w.buildings.length);
+  const b = w.buildings.find(b => !b.looted) || w.buildings[0];
+  out.push('b0=' + JSON.stringify({ id: b.id, xp: b.xp, potion: b.potion, emerald: b.emerald, looted: b.looted }));
+  // téléporte le joueur contre le bâtiment
+  G.player.x = b.x + b.w / 2 + 30; G.player.y = b.y;
+  const it = nearestInteractable();
+  out.push('nearest=' + (it ? it.kind + ':' + (it.ref.id || it.ref.type || '?') + ' d=' + it.d.toFixed(0) : 'none'));
+  const xp0 = G.player.xp, pot0 = G.player.potions, em0 = (G.inv.mats.emeraude || 0);
+  const r = tryInteract();
+  out.push('interact=' + r + ' looted=' + b.looted +
+    ' dXp=' + (G.player.xp - xp0) + ' dPot=' + (G.player.potions - pot0) + ' dEm=' + ((G.inv.mats.emeraude || 0) - em0));
+  document.getElementById('out').textContent = 'LOOT ' + out.join(' | ');
+} catch (err) {
+  document.getElementById('out').textContent = 'FAIL ' + err.message + ' @' + (err.stack||'').split('\n')[1];
+}
+</script>
+</body></html>

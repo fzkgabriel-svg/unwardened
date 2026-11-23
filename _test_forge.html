@@ -1,0 +1,48 @@
+<!doctype html><html><head><meta charset="utf-8"></head><body><canvas id="game" width="1200" height="640"></canvas><pre id="out">R</pre>
+<script>
+window.onerror=(m,s,l)=>{document.getElementById('out').textContent='JSERR '+m+' @'+l};
+</script>
+<script type="module">
+import { G } from './js/state.js';
+import { drawMenu } from './js/menu.js';
+import { forgeLayout, invCells, craftTabs, craftZones, craftUI, upgradeCards, repairRows, repairAllBtn, heroColLayout, heroSkillCards, heroEquipRows, ultBtns, adminMatsBtn } from './js/menu/forge_state.js';
+const out=[];
+const overlap=(a,b)=>a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
+try{
+G.state='menu';G.menuView='forge';G.time=1;G.mouse={x:0,y:0};
+G.inv={mats:{emeraude:500,bois:120,fer:80,peau:40},items:{epee_bois:2,potion:3},equip:{weapon:'epee_bois'},modules:{owned:[],eq:{act:null,pass:null,pass2:null}},wmode:{epee:{xp:50,lvl:1}},buffs:{hp:35,potions:1}};
+G.stats={campaignDone:{},ngPlus:0,ultSel:'nuke',bowUnlocked:true,iceUlt:true,hellUlt:true};
+G.player={attackMode:1,hp:100};
+const L=forgeLayout();
+out.push(`panel=${L.cw}x${L.ch}`);
+// ---- craft ----
+G.forgeTab='craft'; craftUI.cat='all'; drawMenu(); out.push('craft=ok');
+const Z=craftZones(L);
+for(const t of craftTabs(L)){ if(overlap(t.r,Z)){out.push('OVLtab-zone')} }
+const maxCostY=Z.y0+60+3*30, stY=Z.y1-108;
+out.push(`costFit=${maxCostY<stY-10?'ok':'BAD'}`);
+// ---- upgrade ----
+craftUI.cat='upgrade'; drawMenu(); out.push('upgrade=ok');
+const cards=upgradeCards(L);
+for(let i=0;i<cards.length;i++)for(let j=i+1;j<cards.length;j++) if(overlap(cards[i],cards[j])) out.push('OVLcard');
+// ---- repair ----
+craftUI.cat='repair'; drawMenu(); out.push('repair=ok');
+const rows=repairRows(L), ab=repairAllBtn(L);
+for(const r of rows){ if(overlap(r,ab)) out.push('OVLrepHead'); }
+// ---- inv ----
+G.forgeTab='inv'; drawMenu(); out.push('inv=ok');
+const g=invCells(L);
+for(const t of g.tabs) if(overlap(t.r,g.search)) out.push('OVLinvTab');
+if(overlap(g.search,g.sortBtn)||overlap(g.sortBtn,g.rarBtn)) out.push('OVLtools');
+const last=g.cells[g.cells.length-1];
+if(last && last.y+last.h>g.view.y+g.view.h+1) out.push('OVLcellView');
+// ---- hero ----
+G.forgeTab='hero'; drawMenu(); out.push('hero=ok');
+const CL=heroColLayout(L);
+for(const r of heroEquipRows(L)) if(r.y+r.h>CL.left.y+CL.left.h+1) out.push('OVLequipBottom');
+for(const c of heroSkillCards(L)) if(c.y+c.h>CL.right.y+CL.right.h+1) out.push('OVLskillBottom');
+const mb=adminMatsBtn(L);
+out.push(`adminBottom=${Math.round(mb.y+mb.h)}<tabTop=${L.cy+62}`);
+document.getElementById('out').textContent='FORGE2 '+out.join('|');
+}catch(e){document.getElementById('out').textContent='FAIL '+e.message+' '+(e.stack||'').split('\n')[1]}
+</script></body></html>

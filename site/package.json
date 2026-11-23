@@ -1,7 +1,7 @@
 {
-  "name": "tesseract-studio-site",
+  "name": "kaeloryn-studio-site",
   "version": "1.0.0",
-  "description": "Site officiel de Tesseract Studio — RPG 2D Les Terres Oubliées",
+  "description": "Site officiel de Kaeloryn Studio — RPG 2D Unwardened",
   "type": "module",
   "scripts": {
     "start": "node server.js",

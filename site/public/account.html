@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mon Compte — Tesseract Studio</title>
+<title>Mon Compte — Kaeloryn Studio</title>
 <link rel="stylesheet" href="/css/site.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><path d='M32 4 54 18v28L32 60 10 46V18Z' fill='none' stroke='%23d4b062' stroke-width='4'/></svg>">
 </head>
@@ -10,7 +10,7 @@
 <canvas id="fx"></canvas>
 <header class="site"><nav class="top">
   <a class="brand" href="/"><span id="logo"></span>
-    <span class="t">TESSERACT<small>STUDIO</small></span></a>
+    <span class="t">KAELORYN<small>STUDIO</small></span></a>
   <div class="links" id="navlinks"></div>
   <div id="navauth" style="display:flex;gap:8px"></div>
 </nav></header>
@@ -20,7 +20,7 @@
 <div class="auth-wrap" id="authview">
   <div class="panel">
     <h2 id="authtitle">CONNEXION</h2>
-    <div class="sub" id="authsub">Accédez à votre espace de Tesseractien.</div>
+    <div class="sub" id="authsub">Accédez à votre espace de Kaelorien.</div>
     <form id="authform">
       <label class="f" id="lbPseudo">Pseudo</label>
       <input type="text" id="fPseudo" autocomplete="username" placeholder="Votre pseudo">
@@ -43,7 +43,7 @@
 
 <!-- ===== VUE TABLEAU DE BORD ===== -->
 <div class="hidden" id="dashview">
-  <section style="padding-top:30px"><div class="sec-head"><h2>ESPACE TESSERACTIEN</h2>
+  <section style="padding-top:30px"><div class="sec-head"><h2>ESPACE KAELORIEN</h2>
     <div class="orn">✦ ✦ ✦</div></div>
   <div class="dash">
     <div>
@@ -122,7 +122,7 @@
 
 </main>
 <footer class="site"><div class="wrap">
-  <div class="fl">TESSERACT STUDIO</div><p>© <span id="yr"></span></p>
+  <div class="fl">KAELORYN STUDIO</div><p>© <span id="yr"></span></p>
 </div></footer>
 
 <script type="module">
@@ -140,8 +140,8 @@ function show(which) {
 function authMode(m) {
   mode = m;
   $('authtitle').textContent = m === 'login' ? 'CONNEXION' : 'CRÉATION DE COMPTE';
-  $('authsub').textContent = m === 'login' ? 'Accédez à votre espace de Tesseractien.'
-    : 'Rejoignez la guilde des Tesseractiens.';
+  $('authsub').textContent = m === 'login' ? 'Accédez à votre espace de Kaelorien.'
+    : 'Rejoignez la guilde des Kaeloriens.';
   $('authbtn').textContent = m === 'login' ? 'SE CONNECTER' : 'CRÉER MON COMPTE';
   $('lbPseudo').classList.toggle('hidden', m !== 'register');
   $('fPseudo').classList.toggle('hidden', m !== 'register');

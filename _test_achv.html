@@ -1,0 +1,20 @@
+<!doctype html><html><head><meta charset="utf-8"></head><body><canvas id="game" width="1200" height="640"></canvas><pre id="out">R</pre>
+<script>
+window.onerror=(m,s,l)=>{document.getElementById('out').textContent='JSERR '+m+' @'+l};
+</script>
+<script type="module">
+import { G } from './js/state.js';
+import { drawMenu } from './js/menu.js';
+import { unlocked } from './js/achievements.js';
+const out=[];
+try{
+G.state='menu';G.menuView='achievements';G.time=1;G.mouse={x:0,y:0};
+drawMenu();
+out.push('draw=ok');
+// simule quelques succès débloqués + filtre vide pour tester les deux branches
+for (const id of Object.keys(unlocked).slice(0,3)) unlocked[id]=true;
+drawMenu();
+out.push('drawUnlocked=ok');
+document.getElementById('out').textContent='ACHV '+out.join('|');
+}catch(e){document.getElementById('out').textContent='FAIL '+e.message+' '+(e.stack||'').split('\n')[1]}
+</script></body></html>

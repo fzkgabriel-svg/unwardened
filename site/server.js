@@ -1,7 +1,9 @@
-// Tesseract Studio — serveur officiel.
+// Kaeloryn Studio — serveur officiel.
 // Node.js natif : HTTP + SQLite (node:sqlite) + crypto (scrypt, sessions).
 // Aucune dépendance externe. Lancement : node server.js [port]
 import http from 'node:http';
+import net from 'node:net';
+import tls from 'node:tls';
 import { readFileSync, writeFileSync, existsSync, statSync, createReadStream, mkdirSync, readdirSync } from 'node:fs';
 import { join, extname, normalize } from 'node:path';
 import { dirname } from 'node:path';
@@ -93,11 +95,89 @@ function useToken(tok, kind) {
   if (!t || t.kind !== kind || t.used || t.expires_at < new Date().toISOString()) return null;
   q.useToken.run(tok); return t;
 }
+// ---------- envoi d'e-mails : client SMTP minimal (node:net/tls, zéro dépendance) ----------
+// SMTP_URL=smtps://user:pass@hote:465  (TLS implicite — recommandé)
+// SMTP_URL=smtp://user:pass@hote:25    (clair ; STARTTLS non géré)
+// MAIL_FROM="Kaeloryn Studio <no-reply@domaine>" pour l'expéditeur.
+const MAIL_FROM = process.env.MAIL_FROM || 'Kaeloryn Studio <no-reply@kaeloryn.studio>';
+let smtpCfg = null;
+try {
+  if (process.env.SMTP_URL) {
+    const u = new URL(process.env.SMTP_URL);
+    smtpCfg = {
+      secure: u.protocol === 'smtps:',
+      user: decodeURIComponent(u.username || ''),
+      pass: decodeURIComponent(u.password || ''),
+      host: u.hostname, port: +(u.port || (u.protocol === 'smtps:' ? 465 : 25)),
+    };
+  }
+} catch (e) { console.error('[smtp] SMTP_URL invalide :', e.message); }
+
+function smtpSend({ to, subject, html }) {
+  return new Promise((resolve, reject) => {
+    const sock = smtpCfg.secure
+      ? tls.connect(smtpCfg.port, smtpCfg.host, { servername: smtpCfg.host })
+      : net.connect(smtpCfg.port, smtpCfg.host);
+    sock.setTimeout(15000, () => sock.destroy(new Error('délai SMTP dépassé')));
+    let buf = '', waiter = null, done = false;
+    const finish = (err, r) => { if (!done) { done = true; try { sock.destroy(); } catch (e) {} err ? reject(err) : resolve(r); } };
+    sock.on('error', finish);
+    sock.on('data', d => {
+      buf += d.toString('utf8');
+      let i;
+      while ((i = buf.indexOf('\r\n')) >= 0) {
+        const line = buf.slice(0, i); buf = buf.slice(i + 2);
+        if (waiter && waiter.re.test(line)) { const w = waiter; waiter = null; w.ok(line); }
+      }
+    });
+    // attend une réponse définitive "CODE " (les lignes "CODE-" d'un multiline sont ignorées)
+    const wait = code => new Promise(ok => { waiter = { re: new RegExp('^' + code + ' '), ok }; });
+    const cmd = (line, code) => { sock.write(line + '\r\n'); return wait(code); };
+    const b64 = s => Buffer.from(s, 'utf8').toString('base64');
+    (async () => {
+      await wait('220');
+      await cmd('EHLO kaeloryn.studio', '250');
+      if (smtpCfg.user) {
+        await cmd('AUTH LOGIN', '334');
+        await cmd(b64(smtpCfg.user), '334');
+        await cmd(b64(smtpCfg.pass), '235');
+      }
+      await cmd(`MAIL FROM:<${MAIL_FROM.match(/<([^>]+)>/)?.[1] || 'no-reply@kaeloryn.studio'}>'`, '250');
+      await cmd(`RCPT TO:<${to}>`, '250');
+      await cmd('DATA', '354');
+      const enc = s => '=?UTF-8?B?' + Buffer.from(s, 'utf8').toString('base64') + '?=';
+      const msg = [
+        `From: ${MAIL_FROM}`, `To: ${to}`, `Subject: ${enc(subject)}`,
+        'MIME-Version: 1.0', 'Content-Type: text/html; charset=utf-8',
+        'Content-Transfer-Encoding: base64', '', Buffer.from(html, 'utf8').toString('base64'), '.',
+      ].join('\r\n');
+      sock.write(msg + '\r\n');
+      await wait('250');
+      try { sock.write('QUIT\r\n'); } catch (e) {}
+      finish(null, true);
+    })().catch(finish);
+  });
+}
+
 // sans SMTP configuré : le lien est journalisé (mode dev) — jamais affiché en prod
 const mailNote = (kind, email, link) => {
   const tag = kind === 'verify' ? 'Vérification email' : 'Réinitialisation mot de passe';
-  if (process.env.SMTP_URL) { /* intégration SMTP réelle à brancher ici */ }
-  if (DEV) console.log(`[mail:dev] ${tag} -> ${email}\n  ${link}`);
+  const html = `<div style="font-family:sans-serif;max-width:480px;margin:auto">
+    <h2 style="color:#d4b062">${tag} — Kaeloryn Studio</h2>
+    <p>Bonjour,</p>
+    <p>Cliquez sur le bouton ci-dessous pour ${kind === 'verify' ? 'vérifier votre adresse e-mail' : 'réinitialiser votre mot de passe'} :</p>
+    <p style="text-align:center;margin:26px 0"><a href="${link}" style="background:#d4b062;color:#16130c;
+      padding:12px 26px;border-radius:8px;text-decoration:none;font-weight:bold">${kind === 'verify' ? 'VÉRIFIER MON E-MAIL' : 'RÉINITIALISER'}</a></p>
+    <p style="color:#888;font-size:12px">Ou copiez ce lien :<br><a href="${link}">${link}</a></p>
+    <p style="color:#888;font-size:12px">Ce lien expire dans 24 h. Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail.</p>
+  </div>`;
+  if (smtpCfg) {
+    smtpSend({ to: email, subject: `${tag} — Kaeloryn Studio`, html })
+      .then(() => console.log(`[smtp] ${tag} envoyé à ${email}`))
+      .catch(e => console.error(`[smtp] échec ${tag} → ${email} :`, e.message));
+  } else if (DEV) {
+    console.log(`[mail:dev] ${tag} -> ${email}\n  ${link}`);
+  }
 };
 
 // ---------- API ----------
@@ -532,4 +612,4 @@ function seed() {
 }
 seed();
 
-server.listen(PORT, () => console.log(`Tesseract Studio — http://localhost:${PORT}`));
+server.listen(PORT, () => console.log(`Kaeloryn Studio — http://localhost:${PORT}`));

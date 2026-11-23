@@ -2,10 +2,9 @@
 # Render Dashboard → New → Blueprint → repo Project-Unwardened → Apply
 services:
   - type: web
-    name: tesseract-studio
+    name: kaeloryn-studio
     runtime: node
     plan: free
-    rootDir: site
     buildCommand: ""
     startCommand: "node server.js"
     envVars:

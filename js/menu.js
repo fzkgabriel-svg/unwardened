@@ -92,9 +92,9 @@ export function drawMenu() {
   ctx.textAlign = 'left';
   overline('UN RPG 2D DE SURVIE', MENU_X, 118);
   ctx.save();
-  ctx.font = `600 52px ${SERIF}`; ctx.letterSpacing = '4px';
+  ctx.font = `600 52px ${SERIF}`; ctx.letterSpacing = '3px';
   ctx.fillStyle = C_TEXT;
-  ctx.fillText('UNWARDENED', MENU_X - 3, 196);
+  ctx.fillText('KAELORYN STUDIO', MENU_X - 3, 196);
   ctx.restore();
 
   const b = menuButtons();

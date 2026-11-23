@@ -1,4 +1,4 @@
-// Tesseract Studio — client réseau : compte, sauvegarde cloud, classement.
+// Kaeloryn Studio — client réseau : compte, sauvegarde cloud, classement.
 // Le jeu tourne sur http://localhost:8000, le site sur :8080 → fetch cross-origin
 // avec Bearer token (session créée via /api/game/login, conservée en localStorage).
 import { G, VERSION } from './state.js';

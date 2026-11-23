@@ -1,4 +1,4 @@
-// Tesseract Studio — écrans en ligne : compte/connexion et classement général.
+// Kaeloryn Studio — écrans en ligne : compte/connexion et classement général.
 import { G, ctx, W, H, VERSION } from '../state.js';
 import { roundRect } from '../utils.js';
 import { net, login, logoutAccount, syncCloud, fetchLeaderboard, fetchPlayer } from '../net.js';
@@ -63,7 +63,7 @@ export function drawAccountCard() {
   const p = acctLayout();
   panel(p.cx, p.cy, p.cw, p.ch);
   ctx.textAlign = 'center';
-  overlineCentered('TESSERACT STUDIO', W / 2, p.cy + 44);
+  overlineCentered('KAELORYN STUDIO', W / 2, p.cy + 44);
   ctx.save();
   ctx.fillStyle = C_TEXT; ctx.font = `600 26px ${SERIF}`; ctx.letterSpacing = '2px';
   ctx.fillText('COMPTE EN LIGNE', W / 2 + 1, p.cy + 78);
@@ -103,7 +103,7 @@ export function drawAccountCard() {
   if (!connected) {
     drawMenuButton(p.btnLogin, 'SE CONNECTER', '#2e7d32', '#a5d6a7', !ai.pseudo.trim() || ai.pass.length < 8);
     ctx.font = `11px ${UI}`; ctx.fillStyle = C_MUTED; ctx.textAlign = 'center';
-    ctx.fillText('Compte créé sur tesseract.studio — pas de mot de passe en clair', W / 2, p.btnLogin.y + p.btnLogin.h + 18);
+    ctx.fillText('Compte créé sur kaeloryn.studio — pas de mot de passe en clair', W / 2, p.btnLogin.y + p.btnLogin.h + 18);
   }
   if (connected) {
     drawMenuButton(p.btnSync, net.msg.startsWith('Synchronisation') ? 'SYNC…' : 'SYNC MAINTENANT', '#455a64', '#90a4ae', false);

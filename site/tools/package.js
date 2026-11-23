@@ -34,7 +34,7 @@ for (const item of ['index.html', 'css', 'js', 'fonts']) {
 const { writeFileSync } = await import('node:fs');
 writeFileSync(join(GAME_DIR, 'LISEZMOI.txt'),
   `LES TERRES OUBLIEES v${version}\n============================\n\n` +
-  `Tesseract Studio — Forge Your Own Legend\n\n` +
+  `Kaeloryn Studio — Forge Your Own Legend\n\n` +
   `INSTALLATION :\n1. Gardez ce dossier entier ensemble.\n` +
   `2. Ouvrez index.html dans votre navigateur (Chrome/Edge/Firefox recents).\n` +
   `3. Jouez ! Les sauvegardes sont conservees localement par le navigateur.\n\n` +
