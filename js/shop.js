@@ -4,7 +4,7 @@
 import { G, ctx, W, H, TAU } from './state.js';
 import { roundRect, drawMatIcon, hexA } from './utils.js';
 import { MATS, addMaterial, loadInv, saveInv } from './inventory.js';
-import { MODULES, MOD_IDS, ownModule, modState } from './modules.js';
+import { MODULES, MOD_IDS, ownModule, modState, drawModuleIcon } from './modules.js';
 import { sfxClick, sfxPickup, sfxBuy } from './audio.js';
 
 // catalogue : clef = matériau vendu (JAMAIS 'emeraude' — on n'achète pas la monnaie)
