@@ -19,8 +19,9 @@ export const SHOP = {
   cristal: { price: 10, stock: 12,   maxQty: 12,  tag: 'Rare',       tagCol: '#4fc3f7', desc: 'Gemmes de glace et de foudre. Conduisent la lumière comme un cœur.' },
 };
 
-// bouton 💰 à côté des pastilles MUSIQUE / EFFETS (coin haut-droit)
-export const SHOP_BTN = { x: W * 0.77 - 96, y: 8, w: 88, h: 30 };
+// bouton 💰 BOUTIQUE à côté des pastilles MUSIQUE / EFFETS (coin haut-droit)
+// plus grand et doré — laisse une marge avant la pastille MUSIQUE
+export const SHOP_BTN = { x: W * 0.77 - 152, y: 6, w: 140, h: 36 };
 export function shopButtonAt(x, y) {
   if (G.state !== 'menu' || G.menuView !== 'main') return false;
   const r = SHOP_BTN;
@@ -30,16 +31,46 @@ export function drawShopBtn() {
   if (G.state !== 'menu' || G.menuView !== 'main') return;
   const r = SHOP_BTN;
   const hov = G.mouse.x >= r.x && G.mouse.x <= r.x + r.w && G.mouse.y >= r.y && G.mouse.y <= r.y + r.h;
+  const t = G.time || 0;
   ctx.save();
-  ctx.fillStyle = hov ? 'rgba(30,32,36,0.9)' : 'rgba(12,14,16,0.75)';
-  roundRect(r.x, r.y, r.w, r.h, 8); ctx.fill();
-  ctx.strokeStyle = hov ? 'rgba(105,240,174,0.5)' : 'rgba(255,255,255,0.1)'; ctx.lineWidth = 1;
-  roundRect(r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1, 8); ctx.stroke();
-  ctx.fillStyle = '#69f0ae'; ctx.font = '15px serif'; ctx.textAlign = 'center';
-  ctx.fillText('💰', r.x + 20, r.y + r.h / 2 + 5);
-  ctx.fillStyle = hov ? '#e8e2d2' : '#8d99ae';
-  ctx.font = '600 10px Inter, sans-serif'; ctx.textAlign = 'left'; ctx.letterSpacing = '0.8px';
-  ctx.fillText('BOUTIQUE', r.x + 34, r.y + r.h / 2 + 3.5);
+  // halo doré au survol + lueur permanente discrète
+  if (hov) {
+    const hg = ctx.createRadialGradient(r.x + r.w / 2, r.y + r.h / 2, 4, r.x + r.w / 2, r.y + r.h / 2, r.w * 0.8);
+    hg.addColorStop(0, 'rgba(255,215,64,0.30)'); hg.addColorStop(1, 'rgba(255,215,64,0)');
+    ctx.fillStyle = hg;
+    ctx.beginPath(); ctx.arc(r.x + r.w / 2, r.y + r.h / 2, r.w * 0.8, 0, Math.PI * 2); ctx.fill();
+  }
+  // corps : dégradé sombre chaud
+  const bg = ctx.createLinearGradient(r.x, r.y, r.x, r.y + r.h);
+  bg.addColorStop(0, hov ? 'rgba(58,46,18,0.95)' : 'rgba(30,24,12,0.85)');
+  bg.addColorStop(1, 'rgba(14,11,6,0.9)');
+  ctx.fillStyle = bg;
+  roundRect(r.x, r.y, r.w, r.h, 10); ctx.fill();
+  // bordure dorée (plus vive au survol)
+  ctx.strokeStyle = hov ? 'rgba(255,215,64,0.85)' : 'rgba(212,176,98,0.45)'; ctx.lineWidth = hov ? 1.6 : 1;
+  roundRect(r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1, 10); ctx.stroke();
+  // liseré doré en haut
+  ctx.fillStyle = hov ? 'rgba(255,215,64,0.35)' : 'rgba(212,176,98,0.18)';
+  roundRect(r.x + 8, r.y + 3, r.w - 16, 2.5, 2); ctx.fill();
+  // pièce animée : ellipse dorée qui scintille
+  const cx = r.x + 24, cy = r.y + r.h / 2;
+  const tw = 0.75 + 0.25 * Math.sin(t * 3);
+  const cg = ctx.createRadialGradient(cx - 3, cy - 4, 1, cx, cy, 11);
+  cg.addColorStop(0, `rgba(255,236,160,${tw})`); cg.addColorStop(0.6, '#ffd740'); cg.addColorStop(1, '#b8860b');
+  ctx.fillStyle = cg;
+  ctx.beginPath(); ctx.arc(cx, cy, 10.5, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = 'rgba(120,80,10,0.7)'; ctx.lineWidth = 1.4;
+  ctx.beginPath(); ctx.arc(cx, cy, 7, 0, Math.PI * 2); ctx.stroke();
+  ctx.fillStyle = 'rgba(120,80,10,0.55)'; ctx.font = 'bold 8px Inter, sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('$', cx, cy + 3);
+  // texte
+  ctx.textAlign = 'left';
+  ctx.fillStyle = hov ? '#ffe9a3' : '#e8d9a8';
+  ctx.font = '700 12.5px Inter, sans-serif'; ctx.letterSpacing = '1.2px';
+  ctx.fillText('BOUTIQUE', r.x + 44, r.y + r.h / 2 - 2);
+  ctx.fillStyle = hov ? 'rgba(255,233,163,0.75)' : 'rgba(200,180,130,0.55)';
+  ctx.font = '8.5px Inter, sans-serif'; ctx.letterSpacing = '0.4px';
+  ctx.fillText('MATÉRIAUX + MODULES', r.x + 44, r.y + r.h / 2 + 11);
   ctx.restore();
 }
 
