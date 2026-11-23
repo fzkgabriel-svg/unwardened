@@ -539,11 +539,9 @@ export function sfxConfirm() {
   } catch (e) {}
 }
 
-// ---------- boutons ON/OFF + panneau de réglages (coin haut-droit) ----------
-// trois pastilles : MUSIQUE / EFFETS / ⚙ RÉGLAGES
+// ---------- bouton RÉGLAGES + panneau (coin haut-droit) ----------
+// une seule pastille ⚙ : les interrupteurs ON/OFF vivent dans le panneau
 export const AUDIO_BTNS = {
-  mus: { x: W * 0.77, y: 8, w: 84, h: 30 },
-  sfx: { x: W * 0.845, y: 8, w: 84, h: 30 },
   opt: { x: W * 0.92, y: 8, w: 84, h: 30 }
 };
 export function audioButtonAt(x, y) {
@@ -572,9 +570,7 @@ function drawAudioBtn(r, label, active, color) {
 }
 
 export function drawMusicButton() {
-  drawAudioBtn(AUDIO_BTNS.mus, 'MUSIQUE', on, '#d4b062');
-  drawAudioBtn(AUDIO_BTNS.sfx, 'EFFETS', sfxOn, '#7fb8d6');
-  drawAudioBtn(AUDIO_BTNS.opt, 'RÉGLAGES', !!G.audioOpen, '#b48ae0');
+  drawAudioBtn(AUDIO_BTNS.opt, '⚙ RÉGLAGES', !!G.audioOpen, '#b48ae0');
 }
 
 // ---------- panneau de réglages audio ----------
@@ -620,8 +616,8 @@ export function audioPanelClickAt(x, y) {
   const hit = audioPanelAt(x, y);
   if (hit === 'close') { G.audioOpen = false; audDrag = -1; return 'close'; }
   if (hit === 'outside') { G.audioOpen = false; audDrag = -1; return 'close'; }
-  if (hit && hit[0] === 't' && hit[4] >= '0') {
-    AP_ROWS[+hit[4]].tog(); sfxClick(); return hit;
+  if (hit && hit[0] === 't' && hit[3] >= '0') {
+    AP_ROWS[+hit[3]].tog(); sfxClick(); return hit;
   }
   if (hit && hit[0] === 'v' && hit[3] >= '0') {
     audDrag = +hit[3];
