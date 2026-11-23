@@ -230,9 +230,9 @@ function drawSkillCard(x, y, w, h, sd, locked) {
 function drawUltStrip(L) {
   const ub = ultBtns(L);
   const y = ub.nuke.y;
-  // label
+  // label (sous la zone contenu, au-dessus des boutons)
   ctx.fillStyle = C_GOLD; ctx.font = `bold 10px ${UI}`; ctx.textAlign = 'left';
-  ctx.fillText('ULTIME · F', ub.nuke.x, y - 12);
+  ctx.fillText('ULTIME · F', ub.nuke.x, y - 8);
   const sel = G.stats.ultSel || 'nuke';
   const iceOk = !!G.stats.iceUlt, hellOk = !!G.stats.hellUlt;
   const defs = [

@@ -607,8 +607,10 @@ export function heroDoll(L) {
 }
 
 // sélecteur d'ultime : 3 boutons compacts sur la bande du bas (gauche)
+// la bande commence à stripY = cy+ch-54 : les boutons restent EN DESSOUS
+// pour ne jamais chevaucher la liste d'équipement du PERSONNAGE
 export function ultBtns(L) {
-  const y = L.cy + L.ch - 68, h = 34;
+  const y = L.cy + L.ch - 50, h = 30;
   const w = 196, gap = 10, x0 = L.cx + 24;
   return {
     nuke:  { x: x0, y, w, h },

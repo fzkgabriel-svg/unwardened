@@ -1,0 +1,16 @@
+<!doctype html><html><head><meta charset="utf-8"></head><body><canvas id="game" width="1200" height="640"></canvas><pre id="out">R</pre>
+<script type="module">
+import { G } from './js/state.js';
+import { forgeLayout, ultBtns, heroEquipRows, heroColLayout } from './js/menu/forge_state.js';
+const out=[];
+try{
+const L=forgeLayout();
+const ub=ultBtns(L);
+const rows=heroEquipRows(L);
+const last=rows[rows.length-1];
+const CL=heroColLayout(L);
+out.push('ultY='+ub.nuke.y+'..'+(ub.nuke.y+ub.nuke.h)+' contentBottom='+(CL.stripY-10)+' lastEquipRowBottom='+(last.y+last.h)+' hellX='+(ub.hell.x+ub.hell.w)+' panelRight='+(L.cx+L.cw));
+out.push(ub.nuke.y>=CL.stripY-10 && ub.nuke.y+ub.nuke.h<=L.cy+L.ch-14 ? 'NO_OVERLAP' : 'OVERLAP!');
+document.getElementById('out').textContent='ULT '+out.join(' | ');
+}catch(e){document.getElementById('out').textContent='FAIL '+e.message}
+</script></body></html>
