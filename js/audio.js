@@ -542,7 +542,7 @@ export function sfxConfirm() {
 // ---------- bouton RÉGLAGES + panneau (coin haut-droit) ----------
 // une seule pastille ⚙ : les interrupteurs ON/OFF vivent dans le panneau
 export const AUDIO_BTNS = {
-  opt: { x: W * 0.92, y: 8, w: 84, h: 30 }
+  opt: { x: W - 206, y: 8, w: 104, h: 34 }
 };
 export function audioButtonAt(x, y) {
   for (const k in AUDIO_BTNS) {

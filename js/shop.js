@@ -21,7 +21,7 @@ export const SHOP = {
 
 // bouton 💰 BOUTIQUE à côté des pastilles MUSIQUE / EFFETS (coin haut-droit)
 // plus grand et doré — laisse une marge avant la pastille MUSIQUE
-export const SHOP_BTN = { x: W * 0.77 - 152, y: 6, w: 140, h: 36 };
+export const SHOP_BTN = { x: W - 402, y: 8, w: 190, h: 34 };
 export function shopButtonAt(x, y) {
   if (G.state !== 'menu' || G.menuView !== 'main') return false;
   const r = SHOP_BTN;
