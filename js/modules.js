@@ -409,13 +409,139 @@ export function moduleAbsorb(dmg) {
 }
 
 // ---------- DESSIN ----------
+// Médaillon de relique : anneau métallique par rareté + glyphe magique propre
+// à chaque module (traits argentés/or sur disque sombre — style grimorio).
+const RAR_METAL = { 'Commun': '#a5854f', 'Rare': '#b9c8d9', 'Épique': '#9a7bd0', 'Légendaire': '#e8c05a' };
+const RAR_GLOW = { 'Commun': 'rgba(165,133,79,0.35)', 'Rare': 'rgba(185,200,217,0.4)', 'Épique': 'rgba(154,123,208,0.45)', 'Légendaire': 'rgba(232,192,90,0.5)' };
+
+// glyphe magique du module, dessiné dans une boîte ~±13 autour de l'origine
+function drawModGlyph(id, col) {
+  ctx.save();
+  ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  ctx.beginPath();
+  switch (id) {
+    case 'bouclier': // bouclier heaters + rune centrale
+      ctx.moveTo(0, -12); ctx.quadraticCurveTo(9, -9, 10, -2); ctx.lineTo(10, 3);
+      ctx.quadraticCurveTo(10, 9, 0, 13); ctx.quadraticCurveTo(-10, 9, -10, 3); ctx.lineTo(-10, -2);
+      ctx.quadraticCurveTo(-9, -9, 0, -12); ctx.closePath(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, -7); ctx.lineTo(0, 8); ctx.moveTo(-4, -2); ctx.lineTo(4, -2); ctx.stroke();
+      break;
+    case 'ruee': // aile de ruée + traînées de vitesse
+      ctx.moveTo(-11, 6); ctx.quadraticCurveTo(-4, -2, 3, -9); ctx.quadraticCurveTo(9, -13, 12, -12);
+      ctx.moveTo(-7, 9); ctx.quadraticCurveTo(0, 1, 7, -6);
+      ctx.moveTo(-12, 1); ctx.lineTo(-8, 3); ctx.moveTo(-13, 6); ctx.lineTo(-9, 7); ctx.stroke();
+      break;
+    case 'surcharge': // foudre
+      ctx.moveTo(3, -13); ctx.lineTo(-5, 1); ctx.lineTo(-1, 1); ctx.lineTo(-4, 13); ctx.lineTo(6, -3); ctx.lineTo(1, -3);
+      ctx.closePath(); ctx.stroke();
+      break;
+    case 'regeneration': // pousse enchantée : tige + deux feuilles
+      ctx.moveTo(0, 12); ctx.quadraticCurveTo(-1, 4, 0, -2); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(-4, -5, 4.5, 2.4, -0.6, 0, TAU); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(4, -7, 4.5, 2.4, 0.6, 0, TAU); ctx.stroke();
+      break;
+    case 'onde': // onde de choc : arcs concentriques
+      for (const r of [4, 8, 12]) { ctx.beginPath(); ctx.arc(0, 4, r, Math.PI * 1.15, Math.PI * 1.85); ctx.stroke(); }
+      ctx.beginPath(); ctx.arc(0, 4, 1.6, 0, TAU); ctx.fillStyle = col; ctx.fill();
+      break;
+    case 'instinct': // arc de chasseur + flèche
+      ctx.beginPath(); ctx.arc(-2, 0, 11, Math.PI * 0.62, Math.PI * 1.38); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-13, 0); ctx.lineTo(13, 0); ctx.moveTo(9, -3); ctx.lineTo(13, 0); ctx.lineTo(9, 3); ctx.stroke();
+      break;
+    case 'distorsion': // sablier du temps
+      ctx.moveTo(-8, -11); ctx.lineTo(8, -11); ctx.moveTo(-8, 11); ctx.lineTo(8, 11);
+      ctx.moveTo(-8, -11); ctx.lineTo(0, -1); ctx.lineTo(8, -11);
+      ctx.moveTo(-8, 11); ctx.lineTo(0, 1); ctx.lineTo(8, 11); ctx.stroke();
+      break;
+    case 'absorption': // vortex aspirant
+      for (let k = 0; k < 26; k++) {
+        const a = k * 0.5, r = 12 - k * 0.42;
+        const px = Math.cos(a) * r, py = Math.sin(a) * r * 0.8;
+        k ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+      }
+      ctx.stroke();
+      break;
+    case 'orbitale': // comète + traînée
+      ctx.moveTo(-12, 9); ctx.lineTo(-4, 3); ctx.moveTo(-10, 12); ctx.lineTo(-3, 7); ctx.moveTo(-8, -11); ctx.lineTo(-2, -5);
+      ctx.beginPath(); ctx.arc(5, -6, 5, 0, TAU); ctx.stroke();
+      ctx.beginPath(); ctx.arc(5, -6, 1.8, 0, TAU); ctx.fillStyle = col; ctx.fill();
+      break;
+    case 'resistance': // tour-bouclier crénelé
+      ctx.moveTo(-8, -11); ctx.lineTo(-8, -6); ctx.lineTo(-4, -6); ctx.lineTo(-4, -9); ctx.lineTo(0, -9); ctx.lineTo(0, -6); ctx.lineTo(4, -6); ctx.lineTo(4, -9); ctx.lineTo(8, -9); ctx.lineTo(8, -11);
+      ctx.lineTo(8, 2); ctx.quadraticCurveTo(8, 8, 0, 12); ctx.quadraticCurveTo(-8, 8, -8, 2);
+      ctx.closePath(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, -4); ctx.lineTo(0, 9); ctx.moveTo(-5, 1); ctx.lineTo(5, 1); ctx.stroke();
+      break;
+    case 'impulsion': // triple bourrasque de vent
+      ctx.moveTo(-11, -7); ctx.quadraticCurveTo(-3, -10, 7, -7);
+      ctx.moveTo(-12, 0); ctx.quadraticCurveTo(-3, -3, 8, 0);
+      ctx.moveTo(-10, 7); ctx.quadraticCurveTo(-2, 4, 8, 7); ctx.stroke();
+      break;
+    case 'rempart': // oriflamme sur mur
+      ctx.moveTo(-10, 12); ctx.lineTo(-10, -12); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-10, -12); ctx.lineTo(8, -9); ctx.lineTo(-10, -5); ctx.closePath(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-12, 12); ctx.lineTo(12, 12); ctx.stroke();
+      break;
+    case 'rage': // lame enflammée
+      ctx.moveTo(0, -12); ctx.quadraticCurveTo(4, -5, 1, 3); ctx.quadraticCurveTo(-1, 8, 0, 12);
+      ctx.moveTo(-5, 12); ctx.lineTo(5, 12); ctx.moveTo(-7, 12); ctx.lineTo(-7, 8); ctx.moveTo(7, 12); ctx.lineTo(7, 8); ctx.stroke();
+      break;
+    case 'carapace': // carapace hexagonale rivetée
+      for (let k = 0; k < 6; k++) { const a = k * TAU / 6 - Math.PI / 2; const px = Math.cos(a) * 11, py = Math.sin(a) * 11; k ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }
+      ctx.closePath(); ctx.stroke();
+      for (let k = 0; k < 6; k++) { const a = k * TAU / 6 - Math.PI / 2; ctx.beginPath(); ctx.arc(Math.cos(a) * 6.5, Math.sin(a) * 6.5, 0.9, 0, TAU); ctx.fillStyle = col; ctx.fill(); }
+      break;
+    case 'supernova': // supernova : étoile à 8 branches
+      for (let k = 0; k < 8; k++) {
+        const a = k * TAU / 8, l = k % 2 ? 7 : 12;
+        ctx.moveTo(Math.cos(a) * 3, Math.sin(a) * 3); ctx.lineTo(Math.cos(a) * l, Math.sin(a) * l);
+      }
+      ctx.stroke();
+      break;
+    case 'meteorite': // météore + traînée
+      ctx.moveTo(-12, 10); ctx.lineTo(-5, 4); ctx.moveTo(-10, 13); ctx.lineTo(-4, 8); ctx.moveTo(-9, -10); ctx.lineTo(-3, -5);
+      ctx.beginPath();
+      for (let k = 0; k < 7; k++) { const a = k * TAU / 7; const px = 5 + Math.cos(a) * 5.5, py = -5 + Math.sin(a) * 5.5; k ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }
+      ctx.closePath(); ctx.stroke();
+      break;
+    default: // glyphe générique : losange runique
+      ctx.moveTo(0, -11); ctx.lineTo(8, 0); ctx.lineTo(0, 11); ctx.lineTo(-8, 0); ctx.closePath(); ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, 0, 2, 0, TAU); ctx.fillStyle = col; ctx.fill();
+  }
+  ctx.restore();
+}
+
 export function drawModuleIcon(id, x, y, s = 1) {
   const m = MODULES[id]; if (!m) return;
+  const metal = RAR_METAL[m.rar] || '#a5854f';
+  const glow = RAR_GLOW[m.rar] || 'rgba(200,170,90,0.35)';
   ctx.save();
   ctx.translate(x, y); ctx.scale(s, s);
-  ctx.shadowColor = m.col; ctx.shadowBlur = 12;
-  ctx.font = '26px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText(m.icon, 0, 1);
+  // halo d'élément
+  const hg = ctx.createRadialGradient(0, 0, 4, 0, 0, 24);
+  hg.addColorStop(0, hexA(m.col, 0.30)); hg.addColorStop(1, hexA(m.col, 0));
+  ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(0, 0, 24, 0, TAU); ctx.fill();
+  // disque sombre du médaillon
+  const dg = ctx.createRadialGradient(-4, -5, 2, 0, 0, 21);
+  dg.addColorStop(0, '#2a2013'); dg.addColorStop(0.7, '#17110a'); dg.addColorStop(1, '#0c0905');
+  ctx.fillStyle = dg; ctx.beginPath(); ctx.arc(0, 0, 20, 0, TAU); ctx.fill();
+  // anneau métallique de rareté + seconde bordure fine
+  ctx.strokeStyle = metal; ctx.lineWidth = 2.6;
+  ctx.beginPath(); ctx.arc(0, 0, 20.5, 0, TAU); ctx.stroke();
+  ctx.strokeStyle = hexA(metal, 0.45); ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(0, 0, 17.5, 0, TAU); ctx.stroke();
+  // graduations runiques autour de l'anneau
+  ctx.strokeStyle = hexA(metal, 0.8); ctx.lineWidth = 1.2;
+  for (let k = 0; k < 8; k++) {
+    const a = k * TAU / 8 + Math.PI / 8;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a) * 20.5, Math.sin(a) * 20.5);
+    ctx.lineTo(Math.cos(a) * 23.5, Math.sin(a) * 23.5);
+    ctx.stroke();
+  }
+  // lueur de rareté sous le glyphe
+  ctx.shadowColor = glow; ctx.shadowBlur = 8;
+  drawModGlyph(id, m.col);
   ctx.restore();
 }
 
@@ -430,11 +556,13 @@ export function drawModuleHUD() {
     const cdLeft = moduleCooldownLeft(id);
     const cdMax = m.cd || 1;
     const ready = cdLeft <= 0;
-    // cadre
-    ctx.fillStyle = 'rgba(8,12,20,0.8)';
+    // cadre cuir + liseré bronze
+    ctx.fillStyle = 'rgba(14,11,7,0.85)';
     roundRect(x, y, 52, 52, 10); ctx.fill();
-    ctx.strokeStyle = ready ? hexA(m.col, 0.8) : 'rgba(255,255,255,0.15)';
+    ctx.strokeStyle = ready ? hexA(m.col, 0.8) : 'rgba(216,180,90,0.4)';
     ctx.lineWidth = 1.5; roundRect(x, y, 52, 52, 10); ctx.stroke();
+    ctx.strokeStyle = 'rgba(216,180,90,0.18)'; ctx.lineWidth = 1;
+    roundRect(x + 3, y + 3, 46, 46, 8); ctx.stroke();
     drawModuleIcon(id, x + 26, y + 20, 0.85);
     ctx.font = 'bold 10px Inter, sans-serif'; ctx.textAlign = 'center';
     ctx.fillStyle = ready ? m.col : '#6f7378';
@@ -453,9 +581,9 @@ export function drawModuleHUD() {
     }
   } else {
     // aucun module actif : slot vide discret
-    ctx.fillStyle = 'rgba(8,12,20,0.5)';
+    ctx.fillStyle = 'rgba(14,11,7,0.6)';
     roundRect(x, y, 52, 52, 10); ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(216,180,90,0.15)'; ctx.lineWidth = 1;
     roundRect(x, y, 52, 52, 10); ctx.stroke();
     ctx.font = '20px serif'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,0.15)';
     ctx.fillText('◇', x + 26, y + 22);

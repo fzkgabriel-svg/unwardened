@@ -117,7 +117,7 @@ export function modShopToday() {
   return pool.slice(0, MOD_DAY_COUNT)
     .sort((a, b) => (rarRank[MODULES[a].rar] ?? 9) - (rarRank[MODULES[b].rar] ?? 9));
 }
-export const RAR_COL = { 'Commun': '#b0bec5', 'Rare': '#4fc3f7', 'Épique': '#ce93d8', 'Légendaire': '#ffd740', 'Mythique': '#ff5252' };
+export const RAR_COL = { 'Commun': '#c0a878', 'Rare': '#a9c6e2', 'Épique': '#b388ff', 'Légendaire': '#ffd54f', 'Mythique': '#ff8a65' };
 // un module est achetable s'il est dans le tirage du jour, pas possédé,
 // et que le joueur a assez d'émeraudes — une seule fois par compte
 export function modOnSaleToday(inv, id) { return !!(inv && modShopToday().includes(id)); }
@@ -183,7 +183,7 @@ export function shopClickAt(x, y) {
   // onglets MATÉRIAUX / MODULES
   if (inR(L.tabs.mats, x, y)) { setShopTab('mats'); return 'tab'; }
   if (inR(L.tabs.mods, x, y)) { setShopTab('mods'); return 'tab'; }
-  // ===== onglet MODULES : hologrammes =====
+  // ===== onglet MODULES : reliquaire =====
   if ((G.shopTab || 'mats') === 'mods') {
     // clic sur une carte -> panneau de détail
     for (const cd of L.modCards) {
@@ -364,9 +364,9 @@ export function drawShop() {
 
   // ===== EN-TÊTE : titre + solde + compte à rebours + fermer =====
   ctx.textAlign = 'center';
-  ctx.fillStyle = tab === 'mods' ? '#4fc3f7' : C_GOLD;
+  ctx.fillStyle = tab === 'mods' ? C_GOLD : C_GOLD;
   ctx.font = 'bold 24px Cinzel, serif';
-  ctx.fillText(tab === 'mods' ? '⚡ SANCTUAIRE DES MODULES' : '💰 BOUTIQUE DU MAÎTRE MARCHAND', W / 2, 44);
+  ctx.fillText(tab === 'mods' ? '✦ RELIQUAIRE DES MODULES' : '💰 BOUTIQUE DU MAÎTRE MARCHAND', W / 2, 44);
   ctx.fillStyle = C_MUT; ctx.font = 'italic 11.5px Inter, sans-serif';
   ctx.fillText(tab === 'mods'
     ? `Tirage du jour : ${MOD_DAY_COUNT} modules au hasard — chaque module ne s'achète qu'une seule fois`
@@ -452,10 +452,9 @@ export function drawShop() {
     const cf = G.shopConfirm;
     const P = L.confirmPanel;
     ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, 0, W, H);
-    const isMod = !!cf.mod;
-    const cEdge = isMod ? '#4fc3f7' : C_GOLD;
+    const cEdge = C_GOLD;
     const cg = ctx.createLinearGradient(0, P.y, 0, P.y + P.h);
-    cg.addColorStop(0, isMod ? '#0d2b45' : '#33271a'); cg.addColorStop(1, isMod ? '#06121f' : '#1c140c');
+    cg.addColorStop(0, '#33271a'); cg.addColorStop(1, '#1c140c');
     ctx.fillStyle = cg; roundRect(P.x, P.y, P.w, P.h, 14); ctx.fill();
     ctx.strokeStyle = cEdge; ctx.lineWidth = 2; roundRect(P.x, P.y, P.w, P.h, 14); ctx.stroke();
     // coin ornements
@@ -792,7 +791,7 @@ function drawDetail(L, inv, t) {
 function drawShopTabs(L, t, tab) {
   for (const [key, label, icon, col] of [
     ['mats', 'MATÉRIAUX', '💰', '#d4b062'],
-    ['mods', 'MODULES', '⚡', '#4fc3f7'],
+    ['mods', 'MODULES', '✦', '#d8b45a'],
   ]) {
     const r = L.tabs[key], act = tab === key;
     const hov = inR(r, G.mouse.x, G.mouse.y);
@@ -817,43 +816,42 @@ function drawShopTabs(L, t, tab) {
   }
 }
 
-// ---------- FOND « SANCTUAIRE » : grille holo + particules ----------
+// ---------- FOND « RELIQUAIRE » : cuir sombre, poussières d'or, sceau runique ----------
 function drawModBackdrop(t) {
-  // voile bleu-violet profond par-dessus le mur
+  // voile chaud par-dessus le mur : dégradé cuir profond
   const bg = ctx.createLinearGradient(0, 0, 0, H);
-  bg.addColorStop(0, 'rgba(6,10,26,0.72)'); bg.addColorStop(0.55, 'rgba(10,16,40,0.66)'); bg.addColorStop(1, 'rgba(4,6,16,0.8)');
+  bg.addColorStop(0, 'rgba(16,12,7,0.78)'); bg.addColorStop(0.55, 'rgba(26,20,11,0.72)'); bg.addColorStop(1, 'rgba(12,9,5,0.85)');
   ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
-  // halo central cyan
+  // halo central ambre
   const cg = ctx.createRadialGradient(W / 2, 300, 60, W / 2, 340, 620);
-  cg.addColorStop(0, 'rgba(79,195,247,0.10)'); cg.addColorStop(0.6, 'rgba(120,80,220,0.06)'); cg.addColorStop(1, 'rgba(0,0,0,0)');
+  cg.addColorStop(0, 'rgba(216,164,74,0.10)'); cg.addColorStop(0.6, 'rgba(160,110,50,0.06)'); cg.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = cg; ctx.fillRect(0, 0, W, H);
-  // grille perspective qui défile vers le bas
+  // sceau runique géant en filigrane, rotation très lente
   ctx.save();
-  ctx.strokeStyle = 'rgba(79,195,247,0.10)'; ctx.lineWidth = 1;
-  const hz = 470, vx = W / 2;
-  for (let i = -8; i <= 8; i++) {
-    const bx = vx + i * 110;
-    const k = ((i * 37 + t * 22) % 110 + 110) % 110 / 110; // défilement
-    const ex = vx + i * 520;
-    ctx.globalAlpha = 0.10 + k * 0.22;
-    ctx.beginPath(); ctx.moveTo(vx + i * 60, hz); ctx.lineTo(ex, H); ctx.stroke();
-  }
-  for (let j = 0; j < 7; j++) {
-    const yy = hz + (H - hz) * Math.pow((j + ((t * 0.35) % 1)) / 7, 1.7);
-    ctx.globalAlpha = 0.12 + (j / 7) * 0.2;
-    ctx.beginPath(); ctx.moveTo(0, yy); ctx.lineTo(W, yy); ctx.stroke();
+  ctx.translate(W / 2, 330); ctx.rotate(t * 0.03); ctx.globalAlpha = 0.06;
+  ctx.strokeStyle = '#d8b45a'; ctx.lineWidth = 2;
+  ctx.setLineDash([14, 18]);
+  ctx.beginPath(); ctx.arc(0, 0, 210, 0, TAU); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.beginPath(); ctx.arc(0, 0, 236, 0, TAU); ctx.stroke();
+  for (let k = 0; k < 16; k++) {
+    const a = k * TAU / 16;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a) * 210, Math.sin(a) * 210);
+    ctx.lineTo(Math.cos(a) * 222, Math.sin(a) * 222);
+    ctx.stroke();
   }
   ctx.restore(); ctx.globalAlpha = 1;
-  // particules holographiques dérivantes
-  ctx.save(); ctx.globalCompositeOperation = 'lighter';
-  for (let i = 0; i < 30; i++) {
-    const px = (i * 173 + t * (12 + (i % 5) * 7)) % (W + 60) - 30;
-    const py = (i * 211 + Math.sin(t * 0.8 + i * 1.7) * 46 + H * 3) % (H * 0.85);
-    const tw = 0.4 + 0.6 * Math.abs(Math.sin(t * 2 + i * 2.3));
-    ctx.globalAlpha = tw * 0.5;
-    ctx.fillStyle = i % 3 === 0 ? '#b388ff' : i % 3 === 1 ? '#4fc3f7' : '#e1f5fe';
-    const s = 1 + (i % 3) * 0.7;
-    ctx.fillRect(px, py, s, s);
+  // poussières d'or en suspension
+  ctx.save();
+  for (let i = 0; i < 34; i++) {
+    const px = (i * 173 + Math.sin(t * 0.5 + i * 1.3) * 42 + W * 3) % (W + 60) - 30;
+    const py = (i * 211 + t * (3 + (i % 5) * 2) + H * 2) % (H * 0.9);
+    const tw = 0.4 + 0.6 * Math.abs(Math.sin(t * 1.4 + i * 2.1));
+    ctx.globalAlpha = tw * 0.4;
+    ctx.fillStyle = i % 3 === 0 ? '#f4dc9a' : i % 3 === 1 ? '#d8b45a' : '#b388ff';
+    const s = 0.8 + (i % 3) * 0.6;
+    ctx.beginPath(); ctx.arc(px, py, s, 0, TAU); ctx.fill();
   }
   ctx.restore(); ctx.globalAlpha = 1;
 }
@@ -868,43 +866,42 @@ function drawModCard(cd, t, inv) {
   const col = RAR_COL[m.rar] || m.col;
   const { x, y, w, h } = cd;
   ctx.save();
-  // relief au survol : translation + ombre
+  // relief au survol : translation + ombre chaude
   const lift = hov ? -4 : sel ? -2 : 0;
   ctx.translate(0, lift);
   // halo de rareté (pulse lent, plus fort au survol/sélection)
   const pulse = 0.5 + 0.5 * Math.sin(t * 3 + x * 0.02);
   const hg = ctx.createRadialGradient(x + w / 2, y + h / 2, 8, x + w / 2, y + h / 2, w * 0.75);
-  hg.addColorStop(0, hexA(col, (hov || sel ? 0.30 : 0.14) + pulse * 0.08));
+  hg.addColorStop(0, hexA(col, (hov || sel ? 0.22 : 0.10) + pulse * 0.06));
   hg.addColorStop(1, hexA(col, 0));
   ctx.fillStyle = hg; ctx.fillRect(x - 14, y - 14 + lift, w + 28, h + 28);
-  // corps de la carte : verre sombre avec dégradé
+  // corps de la carte : parchemin sombre veiné
   const cg = ctx.createLinearGradient(x, y, x, y + h);
-  cg.addColorStop(0, owned ? 'rgba(10,26,18,0.85)' : hov ? hexA(col, 0.16) : 'rgba(8,14,30,0.78)');
-  cg.addColorStop(1, 'rgba(4,8,18,0.85)');
+  cg.addColorStop(0, owned ? 'rgba(34,26,15,0.9)' : hov ? hexA(col, 0.10) : 'rgba(28,22,13,0.88)');
+  cg.addColorStop(1, 'rgba(14,11,7,0.92)');
   ctx.fillStyle = cg;
-  roundRect(x, y, w, h, 12); ctx.fill();
-  // bordure animée selon la rareté : liseré extérieur pulsé
-  ctx.strokeStyle = owned ? 'rgba(105,240,174,0.55)' : hexA(col, hov ? 0.95 : sel ? 0.8 : 0.4 + pulse * 0.15);
-  ctx.lineWidth = hov || sel ? 2 : 1.3;
-  roundRect(x + 0.5, y + 0.5, w - 1, h - 1, 12); ctx.stroke();
-  // coins holographiques
-  ctx.fillStyle = hexA(col, 0.8);
-  for (const [cx, cy] of [[x + 8, y + 8], [x + w - 8, y + 8], [x + 8, y + h - 8], [x + w - 8, y + h - 8]]) {
-    ctx.fillRect(cx - 2.5, cy - 2.5, 5, 5);
-  }
-  // icône animée : flottement + halo + scintillement
-  const icx = x + w / 2, icy = y + 44 + Math.sin(t * 2.2 + x * 0.04) * 3;
-  const ig = ctx.createRadialGradient(icx, icy, 4, icx, icy, 34);
-  ig.addColorStop(0, hexA(col, 0.4)); ig.addColorStop(1, hexA(col, 0));
-  ctx.fillStyle = ig; ctx.beginPath(); ctx.arc(icx, icy, 34, 0, TAU); ctx.fill();
+  roundRect(x, y, w, h, 10); ctx.fill();
+  // bordure bronze fine + liseré rareté en haut
+  ctx.strokeStyle = owned ? 'rgba(105,240,174,0.5)' : hexA(col, hov ? 0.9 : sel ? 0.75 : 0.35 + pulse * 0.12);
+  ctx.lineWidth = hov || sel ? 1.8 : 1.2;
+  roundRect(x + 0.5, y + 0.5, w - 1, h - 1, 10); ctx.stroke();
+  const lg = ctx.createLinearGradient(x + 8, y, x + w - 8, y);
+  lg.addColorStop(0, hexA(col, owned ? 0.7 : 0.22)); lg.addColorStop(0.5, hexA(col, 0.1)); lg.addColorStop(1, hexA(col, 0));
+  ctx.fillStyle = lg; roundRect(x + 8, y + 2, w - 16, 2, 2); ctx.fill();
+  // médaillon gravé + icône de relique animée
+  const icx = x + w / 2, icy = y + 46 + Math.sin(t * 2.2 + x * 0.04) * 3;
+  ctx.strokeStyle = hexA(col, owned ? 0.4 : 0.15); ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(icx, icy, 27, 0, TAU); ctx.stroke();
+  ctx.strokeStyle = hexA(col, owned ? 0.15 : 0.06); ctx.lineWidth = 0.7;
+  ctx.setLineDash([3, 5]);
+  ctx.beginPath(); ctx.arc(icx, icy, 30, 0, TAU); ctx.stroke();
+  ctx.setLineDash([]);
   ctx.save();
   ctx.translate(icx, icy);
-  const sc = (hov ? 1.18 : 1) * (1 + Math.sin(t * 4 + x) * 0.04);
+  const sc = (hov ? 1.12 : 1) * (1 + Math.sin(t * 3 + x) * 0.03);
   ctx.scale(sc, sc);
-  ctx.font = '34px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.shadowColor = col; ctx.shadowBlur = hov ? 18 : 10;
-  ctx.fillStyle = owned ? '#69f0ae' : m.col;
-  ctx.fillText(m.icon, 0, 2);
+  if (owned) { ctx.shadowColor = '#69f0ae'; ctx.shadowBlur = 10; }
+  drawModuleIcon(cd.id, 0, 2, 1.15);
   ctx.restore();
   // nom (tronqué proprement)
   ctx.textAlign = 'center';
@@ -938,45 +935,46 @@ function drawModDetail(L, inv, t) {
   const mid = G.shopModSel;
   if (!mid || !MODULES[mid] || !modShopToday().includes(mid)) {
     // hint
-    ctx.fillStyle = 'rgba(79,195,247,0.05)';
+    ctx.fillStyle = 'rgba(216,180,90,0.05)';
     roundRect(d.x, d.y, d.w, d.h, 12); ctx.fill();
-    ctx.strokeStyle = 'rgba(79,195,247,0.18)'; ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(216,180,90,0.25)'; ctx.lineWidth = 1;
     roundRect(d.x, d.y, d.w, d.h, 12); ctx.stroke();
-    ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(160,200,230,0.55)';
-    ctx.font = 'italic 12.5px Inter, sans-serif';
-    ctx.fillText('👆 Sélectionnez un module pour afficher sa fiche holographique complète', W / 2, d.y + d.h / 2 + 4);
+    ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(216,180,90,0.6)';
+    ctx.font = 'italic 12.5px Georgia, serif';
+    ctx.fillText('✦ Sélectionnez un module pour déchiffrer sa page de grimoire ✦', W / 2, d.y + d.h / 2 + 4);
     return;
   }
   const m = MODULES[mid];
   const owned = modState(inv).owned.includes(mid);
   const col = RAR_COL[m.rar] || m.col;
   const afford = emeralds(inv) >= m.price && !owned;
-  // panneau verre
-  const dg = ctx.createLinearGradient(d.x, d.y, d.x + d.w, d.y + d.h);
-  dg.addColorStop(0, 'rgba(10,20,42,0.92)'); dg.addColorStop(1, 'rgba(6,10,24,0.92)');
+  // page de grimoire : cuir sombre + double filet bronze
+  const dg = ctx.createLinearGradient(d.x, d.y, d.x, d.y + d.h);
+  dg.addColorStop(0, 'rgba(32,25,14,0.95)'); dg.addColorStop(1, 'rgba(18,14,8,0.95)');
   ctx.fillStyle = dg; roundRect(d.x, d.y, d.w, d.h, 12); ctx.fill();
-  ctx.strokeStyle = hexA(col, 0.75); ctx.lineWidth = 1.6;
+  ctx.strokeStyle = hexA(col, 0.8); ctx.lineWidth = 1.6;
   roundRect(d.x, d.y, d.w, d.h, 12); ctx.stroke();
-  // scanlines holographiques discrètes
+  ctx.strokeStyle = 'rgba(216,180,90,0.35)'; ctx.lineWidth = 1;
+  roundRect(d.x + 6, d.y + 6, d.w - 12, d.h - 12, 9); ctx.stroke();
+  // veines de parchemin + lueur de relique
   ctx.save(); roundRect(d.x, d.y, d.w, d.h, 12); ctx.clip();
-  ctx.fillStyle = 'rgba(140,220,255,0.05)';
-  for (let yy = d.y + ((t * 30) % 8); yy < d.y + d.h; yy += 8) ctx.fillRect(d.x, yy, d.w, 1);
+  const vg = ctx.createRadialGradient(d.x + d.w * 0.3, d.y + 40, 10, d.x + d.w * 0.3, d.y + 40, 300);
+  vg.addColorStop(0, hexA(col, 0.07)); vg.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = vg; ctx.fillRect(d.x, d.y, d.w, d.h);
   ctx.restore();
-  // grande icône animée à gauche
+  // grande icône animée à gauche — médaillon de relique
   const ix = d.x + 74, iy = d.y + d.h / 2 + 4;
   const bob = Math.sin(t * 2.4) * 4;
   const ig = ctx.createRadialGradient(ix, iy + bob, 6, ix, iy + bob, 56);
   ig.addColorStop(0, hexA(col, 0.4)); ig.addColorStop(1, hexA(col, 0));
   ctx.fillStyle = ig; ctx.beginPath(); ctx.arc(ix, iy + bob, 56, 0, TAU); ctx.fill();
   ctx.save(); ctx.translate(ix, iy + bob); ctx.scale(1.7, 1.7);
-  ctx.font = '34px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.shadowColor = col; ctx.shadowBlur = 20;
-  ctx.fillStyle = m.col; ctx.fillText(m.icon, 0, 2);
+  drawModuleIcon(mid, 0, 2, 1);
   ctx.restore();
   // nom + badges
   const tx = d.x + 140;
   ctx.textAlign = 'left';
-  ctx.fillStyle = '#eaf4ff'; ctx.font = 'bold 17px Inter, sans-serif';
+  ctx.fillStyle = '#f0e6d0'; ctx.font = 'bold 17px Georgia, serif';
   ctx.fillText(m.name, tx, d.y + 32);
   const badgeW = { 'ACTIF': '#ffab40', 'PASSIF': '#69f0ae' }[m.type.toUpperCase()] || '#90a4ae';
   ctx.fillStyle = col; ctx.font = '700 10px Inter, sans-serif'; ctx.letterSpacing = '1.2px';
@@ -986,14 +984,14 @@ function drawModDetail(L, inv, t) {
   ctx.fillStyle = hexA(badgeW, 0.18); roundRect(tx, d.y + 44, m.type === 'actif' ? 62 : 74, 18, 9); ctx.fill();
   ctx.strokeStyle = badgeW; ctx.lineWidth = 1; roundRect(tx, d.y + 44, m.type === 'actif' ? 62 : 74, 18, 9); ctx.stroke();
   ctx.fillStyle = badgeW; ctx.font = '700 9.5px Inter, sans-serif'; ctx.textAlign = 'center';
-  ctx.fillText(m.type === 'actif' ? '⚡ ACTIF [X]' : '✚ PASSIF AUTO', tx + (m.type === 'actif' ? 31 : 37), d.y + 57);
+  ctx.fillText(m.type === 'actif' ? '✦ ACTIF [X]' : '✚ PASSIF AUTO', tx + (m.type === 'actif' ? 31 : 37), d.y + 57);
   ctx.textAlign = 'left';
   // description complète (retour à la ligne si besoin)
-  ctx.fillStyle = '#a8c4dc'; ctx.font = '11px Inter, sans-serif';
+  ctx.fillStyle = '#c9b896'; ctx.font = 'italic 11px Georgia, serif';
   wrapText(m.desc, tx, d.y + 76, d.w - 380, 14);
   // stats : recharge + amélioration + stock
   const statY = d.y + 116;
-  ctx.fillStyle = '#7d9db8'; ctx.font = '10.5px Inter, sans-serif';
+  ctx.fillStyle = '#9a8a66'; ctx.font = '10.5px Georgia, serif';
   const cdTxt = m.cd > 0 ? `recharge ${m.cd} s · s'améliore niv 1→3` : 'effet permanent · s\'améliore niv 1→3';
   ctx.fillText(cdTxt, tx, statY);
   ctx.fillStyle = '#69f0ae'; ctx.font = 'bold 11px Consolas, monospace';
@@ -1007,7 +1005,7 @@ function drawModDetail(L, inv, t) {
   ctx.lineWidth = 1.6; roundRect(b.x, b.y, b.w, b.h, 10); ctx.stroke();
   ctx.fillStyle = owned ? '#69f0ae' : afford ? '#fff' : '#6f7378';
   ctx.font = 'bold 13px Inter, sans-serif'; ctx.textAlign = 'center';
-  ctx.fillText(owned ? '✔ DÉJÀ DANS VOTRE INVENTAIRE' : afford ? `⚡ ACHETER · ${m.price} ◆` : `IL FAUT ${m.price} ◆`, b.x + b.w / 2, b.y + b.h / 2 + 5);
+  ctx.fillText(owned ? '✔ DÉJÀ DANS VOTRE INVENTAIRE' : afford ? `✦ ACHETER · ${m.price} ◆` : `IL FAUT ${m.price} ◆`, b.x + b.w / 2, b.y + b.h / 2 + 5);
   // équiper -> rappel menu modules
   if (!owned) {
     ctx.fillStyle = 'rgba(160,200,230,0.5)'; ctx.font = '9.5px Inter, sans-serif'; ctx.textAlign = 'center';

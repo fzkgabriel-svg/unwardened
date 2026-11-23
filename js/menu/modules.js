@@ -1,16 +1,17 @@
-// js/menu/modules.js — interface MODULES holographique futuriste
-// Scène tech : fond animée (grille, particules, scanlines), pods d'équipement,
-// cartes holographiques par rareté, panneau de détail, boutique intégrée.
+// js/menu/modules.js — interface MODULES : reliquaire médiéval fantasy
+// Scène grimoire : fond cuir/parchemin, poussières d'or, médaillons de reliques,
+// cartes parchemin par rareté, panneau de détail, boutique intégrée.
 import { G, ctx, W, H, TAU } from '../state.js';
 import { roundRect, hexA } from '../utils.js';
-import { MODULES, MOD_IDS, modState, modulesUnlocked, ensureModules, unlockPassSlot, PASS_SLOT_PRICE, modLevel, modUpgradeCost, upgradeModule, pass2Unlocked } from '../modules.js';
+import { MODULES, MOD_IDS, modState, modulesUnlocked, ensureModules, unlockPassSlot, PASS_SLOT_PRICE, modLevel, modUpgradeCost, upgradeModule, pass2Unlocked, drawModuleIcon } from '../modules.js';
 import { saveInv } from '../inventory.js';
 import { inR, UI, SERIF, C_TEXT, C_MUTED, C_GOLD, menuButtons, drawMenuButton } from './common.js';
 import { sfxClick, sfxEquip, sfxConfirm } from '../audio.js';
 
-const RAR_COL = { 'Commun': '#90a4ae', 'Rare': '#40c4ff', 'Épique': '#b388ff', 'Légendaire': '#ffd740' };
-const RAR_GLOW = { 'Commun': 'rgba(144,164,174,0.5)', 'Rare': 'rgba(64,196,255,0.55)', 'Épique': 'rgba(179,136,255,0.6)', 'Légendaire': 'rgba(255,215,64,0.65)' };
-const CYAN = '#18ffff', VIOLET = '#7b2ff7';
+// raretés à l'ancienne : bronze & cuir / argent bleuté / violet enchanté / or ancien
+const RAR_COL = { 'Commun': '#c0a878', 'Rare': '#a9c6e2', 'Épique': '#b388ff', 'Légendaire': '#ffd54f' };
+const RAR_GLOW = { 'Commun': 'rgba(192,168,120,0.4)', 'Rare': 'rgba(169,198,226,0.45)', 'Épique': 'rgba(179,136,255,0.5)', 'Légendaire': 'rgba(255,213,79,0.55)' };
+const GOLD = '#d8b45a', GOLD_HI = '#f4dc9a', INK = '#0d0a06';
 
 // ---------- layout ----------
 function layout() {
@@ -151,48 +152,52 @@ export function modClickAt(x, y) {
   return 'inside';
 }
 
-// ---------- décor de fond technologique ----------
-function drawTechBG(t) {
+// ---------- décor de fond : reliquaire (cuir, parchemin, poussières d'or) ----------
+function drawGrimoireBG(t) {
+  // cuir sombre incliné : dégradé chaud profond
   const g = ctx.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, '#04060e'); g.addColorStop(0.55, '#070b18'); g.addColorStop(1, '#04060e');
+  g.addColorStop(0, '#141009'); g.addColorStop(0.5, '#1c150c'); g.addColorStop(1, '#100c07');
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-  // grille perspective animée
+  // fibres de cuir : fines stries verticales déterministes
   ctx.save();
-  ctx.strokeStyle = 'rgba(24,255,255,0.05)'; ctx.lineWidth = 1;
-  const off = (t * 18) % 40;
-  for (let y = 90 + off; y < H; y += 40) {
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  for (let i = 0; i < 90; i++) {
+    const fx = (i * 137) % W;
+    ctx.strokeStyle = `rgba(216,180,90,${0.015 + (i % 5) * 0.006})`;
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(fx, 0); ctx.bezierCurveTo(fx + 14, H * 0.33, fx - 14, H * 0.66, fx + 6, H); ctx.stroke();
   }
-  for (let x = 0; x <= W; x += 60) {
-    ctx.beginPath(); ctx.moveTo(x, 90); ctx.lineTo(x, H); ctx.stroke();
+  // poussières d'or en suspension (dérive lente)
+  for (let i = 0; i < 40; i++) {
+    const px = (i * 197 + Math.sin(t * 0.35 + i) * 36 + W * 3) % W;
+    const py = (i * 131 + t * (4 + (i % 5) * 2)) % H;
+    const a = 0.10 + 0.12 * Math.sin(t * 1.6 + i * 1.9);
+    ctx.fillStyle = `rgba(216,180,90,${Math.max(0, a)})`;
+    ctx.beginPath(); ctx.arc(px, py, 0.8 + (i % 3) * 0.5, 0, TAU); ctx.fill();
   }
   ctx.restore();
-  // particules dérivantes
+  // cercle runique watermark derrière le titre (très discret)
   ctx.save();
-  for (let i = 0; i < 42; i++) {
-    const px = (i * 197 + Math.sin(t * 0.4 + i) * 30 + W * 3) % W;
-    const py = (i * 131 + t * (6 + (i % 5) * 3)) % H;
-    const a = 0.10 + 0.10 * Math.sin(t * 2 + i * 1.7);
-    ctx.fillStyle = i % 3 ? `rgba(24,255,255,${a})` : `rgba(179,136,255,${a})`;
-    ctx.beginPath(); ctx.arc(px, py, 1 + (i % 3) * 0.5, 0, TAU); ctx.fill();
+  ctx.translate(W / 2, 60); ctx.globalAlpha = 0.05;
+  ctx.strokeStyle = GOLD; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(0, 0, 120, 0, TAU); ctx.stroke();
+  ctx.setLineDash([6, 10]);
+  ctx.beginPath(); ctx.arc(0, 0, 132, 0, TAU); ctx.stroke();
+  ctx.setLineDash([]);
+  for (let k = 0; k < 12; k++) {
+    const a = k * TAU / 12;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a) * 120, Math.sin(a) * 120);
+    ctx.lineTo(Math.cos(a) * 128, Math.sin(a) * 128);
+    ctx.stroke();
   }
   ctx.restore();
-  // balayage lumineux vertical
-  const sx = (t * 90) % (W + 300) - 150;
-  const sg = ctx.createLinearGradient(sx - 90, 0, sx + 90, 0);
-  sg.addColorStop(0, 'rgba(24,255,255,0)'); sg.addColorStop(0.5, 'rgba(24,255,255,0.045)'); sg.addColorStop(1, 'rgba(24,255,255,0)');
-  ctx.fillStyle = sg; ctx.fillRect(0, 0, W, H);
-  // lignes de circuit décoratives dans les coins
-  ctx.strokeStyle = 'rgba(24,255,255,0.10)'; ctx.lineWidth = 1;
-  const deco = (x, y, dx, dy) => {
-    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + dx * 60, y); ctx.lineTo(x + dx * 60, y + dy * 26); ctx.stroke();
-    ctx.fillStyle = 'rgba(24,255,255,0.35)';
-    ctx.beginPath(); ctx.arc(x + dx * 60, y + dy * 26, 2, 0, TAU); ctx.fill();
-  };
-  deco(0, 0, 1, 1); deco(W, 0, -1, 1); deco(0, H, 1, -1); deco(W, H, -1, -1);
-  // vignette
-  const v = ctx.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.9);
-  v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,0.5)');
+  // lueur chaude centrale derrière les panneaux
+  const cg = ctx.createRadialGradient(W / 2, H * 0.42, 80, W / 2, H * 0.42, 620);
+  cg.addColorStop(0, 'rgba(216,164,74,0.07)'); cg.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = cg; ctx.fillRect(0, 0, W, H);
+  // vignette chaude
+  const v = ctx.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.95);
+  v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(8,5,2,0.55)');
   ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
 }
 
@@ -201,24 +206,27 @@ function drawHeader(t) {
   ctx.textAlign = 'center';
   ctx.save();
   ctx.font = `600 11px ${UI}`; ctx.letterSpacing = '4px';
-  ctx.fillStyle = CYAN;
-  ctx.fillText('SYSTÈME DE PERSONNALISATION DU HÉROS', W / 2, 44);
+  ctx.fillStyle = GOLD;
+  ctx.fillText('RELIQUES & ARTEFACTS DU HÉROS', W / 2, 44);
   ctx.restore();
   ctx.font = `700 34px ${SERIF}`; ctx.letterSpacing = '6px';
   const tg = ctx.createLinearGradient(W / 2 - 160, 0, W / 2 + 160, 0);
-  tg.addColorStop(0, CYAN); tg.addColorStop(0.5, '#eafcff'); tg.addColorStop(1, VIOLET);
+  tg.addColorStop(0, '#8a6d3b'); tg.addColorStop(0.5, GOLD_HI); tg.addColorStop(1, '#8a6d3b');
   ctx.fillStyle = tg;
   ctx.fillText('MODULES', W / 2, 76);
   ctx.letterSpacing = '0px';
-  // filet animé sous le titre
+  // filet ornemental : ligne — losange — ligne, lueur douce qui respire
   const lw = 340, lx = W / 2 - lw / 2;
-  ctx.strokeStyle = 'rgba(24,255,255,0.25)'; ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(216,180,90,0.4)'; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(lx, 86); ctx.lineTo(lx + lw, 86); ctx.stroke();
-  const px = lx + ((t * 140) % (lw + 80)) - 40;
-  const pg = ctx.createLinearGradient(px - 40, 0, px + 40, 0);
-  pg.addColorStop(0, 'rgba(24,255,255,0)'); pg.addColorStop(0.5, 'rgba(160,250,255,0.9)'); pg.addColorStop(1, 'rgba(24,255,255,0)');
-  ctx.strokeStyle = pg; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(Math.max(lx, px - 40), 86); ctx.lineTo(Math.min(lx + lw, px + 40), 86); ctx.stroke();
+  ctx.save();
+  ctx.translate(W / 2, 86); ctx.rotate(Math.PI / 4);
+  ctx.fillStyle = `rgba(244,220,154,${0.55 + 0.25 * Math.sin(t * 2)})`;
+  ctx.fillRect(-3.4, -3.4, 6.8, 6.8);
+  ctx.restore();
+  ctx.fillStyle = 'rgba(216,180,90,0.35)';
+  ctx.font = '11px serif'; ctx.textAlign = 'center';
+  ctx.fillText('✦', lx + 14, 90); ctx.fillText('✦', lx + lw - 14, 90);
 }
 
 // ---------- pods d'équipement ----------
@@ -230,49 +238,53 @@ function drawSlot(s, id, locked, t) {
   const fxAge = G.modFx !== undefined ? t - G.modFx : 99;
   const fxK = fxAge < 0.7 ? 1 - fxAge / 0.7 : 0;
   ctx.save();
-  // halo
+  // halo chaud de la relique installée
   if (m) {
     const hg = ctx.createRadialGradient(s.x + s.w / 2, s.y + s.h / 2, 8, s.x + s.w / 2, s.y + s.h / 2, s.w * 0.75);
-    hg.addColorStop(0, hexA(m.col, 0.20 + fxK * 0.3)); hg.addColorStop(1, hexA(m.col, 0));
+    hg.addColorStop(0, hexA(m.col, 0.16 + fxK * 0.25)); hg.addColorStop(1, hexA(m.col, 0));
     ctx.fillStyle = hg;
     ctx.beginPath(); ctx.arc(s.x + s.w / 2, s.y + s.h / 2, s.w * 0.75, 0, TAU); ctx.fill();
   }
-  // corps du pod
-  ctx.fillStyle = hov ? 'rgba(16,26,48,0.85)' : 'rgba(8,14,28,0.75)';
-  roundRect(s.x, s.y, s.w, s.h, 14); ctx.fill();
+  // corps : panneau cuir sombre à bordure bronze
+  ctx.fillStyle = hov ? 'rgba(38,28,16,0.9)' : 'rgba(24,18,10,0.85)';
+  roundRect(s.x, s.y, s.w, s.h, 12); ctx.fill();
   const bg = ctx.createLinearGradient(s.x, s.y, s.x, s.y + s.h);
-  bg.addColorStop(0, 'rgba(255,255,255,0.07)'); bg.addColorStop(0.4, 'rgba(255,255,255,0.0)');
-  ctx.fillStyle = bg; roundRect(s.x, s.y, s.w, s.h, 14); ctx.fill();
-  // anneau rotatif
+  bg.addColorStop(0, 'rgba(216,180,90,0.10)'); bg.addColorStop(0.4, 'rgba(216,180,90,0.0)');
+  ctx.fillStyle = bg; roundRect(s.x, s.y, s.w, s.h, 12); ctx.fill();
+  // anneau bronze : arc lent + 4 clous runiques
   ctx.save();
   ctx.translate(s.x + s.w - 26, s.y + 26);
-  ctx.rotate(t * (m ? 0.9 : 0.35));
-  ctx.strokeStyle = m ? hexA(m.col, 0.75) : 'rgba(255,255,255,0.18)';
-  ctx.lineWidth = 2; ctx.setLineDash([7, 9]);
-  ctx.beginPath(); ctx.arc(0, 0, 13, 0, TAU); ctx.stroke();
+  ctx.rotate(-t * (m ? 0.5 : 0.2));
+  ctx.strokeStyle = m ? hexA(GOLD, 0.7) : 'rgba(216,180,90,0.25)';
+  ctx.lineWidth = 1.6;
+  ctx.beginPath(); ctx.arc(0, 0, 12, 0, TAU * 0.72); ctx.stroke();
   ctx.setLineDash([]);
-  ctx.fillStyle = m ? m.col : 'rgba(255,255,255,0.3)';
-  ctx.beginPath(); ctx.arc(0, 0, 3, 0, TAU); ctx.fill();
+  for (let k = 0; k < 4; k++) {
+    const a = k * TAU / 4 + Math.PI / 4;
+    ctx.fillStyle = m ? hexA(GOLD, 0.8) : 'rgba(216,180,90,0.3)';
+    ctx.beginPath(); ctx.arc(Math.cos(a) * 12, Math.sin(a) * 12, 1.4, 0, TAU); ctx.fill();
+  }
+  ctx.fillStyle = m ? GOLD : 'rgba(216,180,90,0.35)';
+  ctx.beginPath(); ctx.arc(0, 0, 2.6, 0, TAU); ctx.fill();
   ctx.restore();
   // label + hint
   ctx.textAlign = 'left'; ctx.font = `600 10px ${UI}`; ctx.letterSpacing = '2px';
-  ctx.fillStyle = CYAN;
+  ctx.fillStyle = GOLD;
   ctx.fillText(s.label, s.x + 16, s.y + 20);
   ctx.letterSpacing = '0px';
-  if (s.hint) { ctx.fillStyle = 'rgba(255,215,64,0.75)'; ctx.font = `700 9px ${UI}`; ctx.fillText(`[${s.hint}]`, s.x + s.w - 52, s.y + 20); }
+  if (s.hint) { ctx.fillStyle = 'rgba(244,220,154,0.8)'; ctx.font = `700 9px ${UI}`; ctx.fillText(`[${s.hint}]`, s.x + s.w - 52, s.y + 20); }
   if (m) {
-    // icône flottante
-    const bob = Math.sin(t * 2.2 + s.x * 0.01) * 3;
+    // médaillon de la relique : flotte doucement
+    const bob = Math.sin(t * 2.2 + s.x * 0.01) * 2.5;
     ctx.save();
-    ctx.shadowColor = m.col; ctx.shadowBlur = 14;
-    ctx.font = '30px serif'; ctx.textAlign = 'center';
-    ctx.fillText(m.icon, s.x + 34, s.y + s.h / 2 + 8 + bob);
+    ctx.shadowColor = m.col; ctx.shadowBlur = 10;
+    drawModuleIcon(id, s.x + 34, s.y + s.h / 2 + 6 + bob, 0.82);
     ctx.restore();
     ctx.textAlign = 'left'; ctx.font = `700 13.5px ${UI}`; ctx.fillStyle = C_TEXT;
     ctx.fillText(m.name, s.x + 58, s.y + s.h / 2 - 8);
-    ctx.font = `10px ${UI}`; ctx.fillStyle = m.col;
-    ctx.fillText(`${m.type.toUpperCase()} · ${m.rar.toUpperCase()}`, s.x + 58, s.y + s.h / 2 + 10);
-    ctx.font = `9px ${UI}`; ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.font = `10px ${UI}`; ctx.fillStyle = RAR_COL[m.rar] || m.col;
+    ctx.fillText(`${m.rar.toUpperCase()} · ${m.type.toUpperCase()}`, s.x + 58, s.y + s.h / 2 + 10);
+    ctx.font = `9px ${UI}`; ctx.fillStyle = 'rgba(230,220,200,0.4)';
     ctx.fillText('cliquez pour retirer', s.x + 58, s.y + s.h / 2 + 26);
   } else if (isLocked) {
     ctx.font = '26px serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#ffd740';
@@ -290,27 +302,32 @@ function drawSlot(s, id, locked, t) {
       ctx.fillText('slot passif verrouillé — cliquez pour acheter', s.x + 16, s.y + s.h - 12);
     }
   } else {
-    ctx.font = '24px serif'; ctx.textAlign = 'center';
-    ctx.fillStyle = hov ? 'rgba(24,255,255,0.5)' : 'rgba(255,255,255,0.14)';
-    ctx.fillText('◇', s.x + s.w / 2, s.y + s.h / 2 - 6);
+    ctx.font = '22px serif'; ctx.textAlign = 'center';
+    ctx.fillStyle = hov ? 'rgba(216,180,90,0.5)' : 'rgba(230,220,200,0.15)';
+    ctx.fillText('✦', s.x + s.w / 2, s.y + s.h / 2 - 6);
     ctx.font = `10px ${UI}`; ctx.textAlign = 'center';
-    ctx.fillStyle = 'rgba(255,255,255,0.22)';
-    ctx.fillText('slot vide — sélectionnez un module', s.x + s.w / 2, s.y + s.h - 14);
+    ctx.fillStyle = 'rgba(230,220,200,0.25)';
+    ctx.fillText('emplacement vide — choisissez une relique', s.x + s.w / 2, s.y + s.h - 14);
   }
-  // onde d'installation
+  // onde d'installation : cercle doré qui s'estompe
   if (fxK > 0) {
-    ctx.strokeStyle = m ? hexA(m.col, fxK * 0.9) : `rgba(24,255,255,${fxK * 0.8})`;
-    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = m ? hexA(m.col, fxK * 0.9) : `rgba(216,180,90,${fxK * 0.8})`;
+    ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(s.x + s.w / 2, s.y + s.h / 2, 20 + (1 - fxK) * 70, 0, TAU); ctx.stroke();
   }
-  // bordure
-  ctx.strokeStyle = m ? hexA(m.col, hov ? 0.95 : 0.55) : isLocked ? 'rgba(255,215,64,0.35)' : hov ? 'rgba(24,255,255,0.5)' : 'rgba(255,255,255,0.12)';
+  // bordure bronze gravée
+  ctx.strokeStyle = m ? hexA(GOLD, hov ? 0.95 : 0.55) : isLocked ? 'rgba(255,213,79,0.4)' : hov ? 'rgba(216,180,90,0.5)' : 'rgba(216,180,90,0.15)';
   ctx.lineWidth = m || hov ? 1.8 : 1.2;
-  roundRect(s.x + 0.5, s.y + 0.5, s.w - 1, s.h - 1, 14); ctx.stroke();
+  roundRect(s.x + 0.5, s.y + 0.5, s.w - 1, s.h - 1, 12); ctx.stroke();
+  // clous aux quatre coins
+  ctx.fillStyle = 'rgba(216,180,90,0.5)';
+  for (const [nx, ny] of [[s.x + 7, s.y + 7], [s.x + s.w - 7, s.y + 7], [s.x + 7, s.y + s.h - 7], [s.x + s.w - 7, s.y + s.h - 7]]) {
+    ctx.beginPath(); ctx.arc(nx, ny, 1.6, 0, TAU); ctx.fill();
+  }
   ctx.restore();
 }
 
-// ---------- carte holographique ----------
+// ---------- carte de relique (parchemin gravé par rareté) ----------
 function drawCard(c, t) {
   const id = c.id, m = MODULES[id];
   const owned = modState(G.inv).owned.includes(id);
@@ -318,90 +335,101 @@ function drawCard(c, t) {
   const eq = modState(G.inv).eq;
   const equipped = eq.act === id || eq.pass === id || eq.pass2 === id;
   const hov = inR(c, G.mouse.x, G.mouse.y);
-  const rc = RAR_COL[m.rar] || '#90a4ae';
+  const rc = RAR_COL[m.rar] || '#c0a878';
   const enter = Math.max(0, Math.min(1, (t - (G.modViewT || 0)) / 0.6 - c.i * 0.045));
   ctx.save();
   ctx.globalAlpha = enter;
   ctx.translate(0, (1 - enter) * 16);
-  // halo rareté
-  const hg = ctx.createRadialGradient(c.x + c.w / 2, c.y + c.h * 0.45, 6, c.x + c.w / 2, c.y + c.h * 0.45, c.w * 0.7);
-  hg.addColorStop(0, owned ? hexA(rc, sel ? 0.20 : 0.10) : 'rgba(255,255,255,0.02)');
+  // halo de rareté doux
+  const hg = ctx.createRadialGradient(c.x + c.w / 2, c.y + c.h * 0.42, 6, c.x + c.w / 2, c.y + c.h * 0.42, c.w * 0.72);
+  hg.addColorStop(0, owned ? hexA(rc, sel ? 0.18 : 0.09) : 'rgba(216,180,90,0.03)');
   hg.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = hg;
-  ctx.beginPath(); ctx.arc(c.x + c.w / 2, c.y + c.h * 0.45, c.w * 0.7, 0, TAU); ctx.fill();
-  // corps
-  ctx.fillStyle = owned ? (sel ? hexA(rc, 0.10) : hov ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.035)') : 'rgba(255,255,255,0.015)';
-  roundRect(c.x, c.y, c.w, c.h, 12); ctx.fill();
-  // liseré haut coloré par rareté
+  ctx.beginPath(); ctx.arc(c.x + c.w / 2, c.y + c.h * 0.42, c.w * 0.72, 0, TAU); ctx.fill();
+  // corps : parchemin sombre veiné
+  const cg = ctx.createLinearGradient(c.x, c.y, c.x, c.y + c.h);
+  cg.addColorStop(0, owned ? (sel ? 'rgba(46,36,20,0.92)' : hov ? 'rgba(40,31,18,0.92)' : 'rgba(32,25,14,0.9)') : 'rgba(24,19,11,0.85)');
+  cg.addColorStop(1, 'rgba(16,12,7,0.92)');
+  ctx.fillStyle = cg;
+  roundRect(c.x, c.y, c.w, c.h, 10); ctx.fill();
+  // liseré supérieur : filigrane doré par rareté
   const lg = ctx.createLinearGradient(c.x, c.y, c.x + c.w, c.y);
-  lg.addColorStop(0, hexA(rc, owned ? 0.8 : 0.25)); lg.addColorStop(0.5, hexA(rc, owned ? 0.15 : 0.05)); lg.addColorStop(1, hexA(rc, 0));
-  ctx.fillStyle = lg; roundRect(c.x, c.y, c.w, 3, 2); ctx.fill();
-  // icône : anneau rotatif + flottement
-  const ix = c.x + c.w / 2, iy = c.y + c.h * 0.38;
+  lg.addColorStop(0, hexA(rc, owned ? 0.75 : 0.2)); lg.addColorStop(0.5, hexA(rc, owned ? 0.12 : 0.04)); lg.addColorStop(1, hexA(rc, 0));
+  ctx.fillStyle = lg; roundRect(c.x + 8, c.y, c.w - 16, 2.5, 2); ctx.fill();
+  // médaillon de la relique dans un cercle gravé
+  const ix = c.x + c.w / 2, iy = c.y + c.h * 0.36;
   ctx.save();
-  ctx.translate(ix, iy);
-  ctx.rotate(t * 0.5 + c.i);
-  ctx.strokeStyle = owned ? hexA(rc, hov || sel ? 0.9 : 0.45) : 'rgba(255,255,255,0.12)';
-  ctx.lineWidth = 1.4; ctx.setLineDash([5, 7]);
-  ctx.beginPath(); ctx.arc(0, 0, 21, 0, TAU); ctx.stroke();
+  ctx.strokeStyle = owned ? hexA(rc, hov || sel ? 0.75 : 0.4) : 'rgba(216,180,90,0.15)';
+  ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.arc(ix, iy, 23, 0, TAU); ctx.stroke();
+  ctx.strokeStyle = hexA(rc, owned ? 0.25 : 0.08); ctx.lineWidth = 0.8;
+  ctx.setLineDash([3, 5]);
+  ctx.beginPath(); ctx.arc(ix, iy, 26.5, 0, TAU); ctx.stroke();
   ctx.setLineDash([]);
+  // 4 clous cardinaux
+  ctx.fillStyle = hexA(rc, owned ? 0.7 : 0.2);
+  for (let k = 0; k < 4; k++) {
+    const a = k * TAU / 4 + Math.PI / 4;
+    ctx.beginPath(); ctx.arc(ix + Math.cos(a) * 23, iy + Math.sin(a) * 23, 1.5, 0, TAU); ctx.fill();
+  }
   ctx.restore();
-  const bob = Math.sin(t * 2 + c.i * 1.3) * 2.5;
+  const bob = Math.sin(t * 2 + c.i * 1.3) * 2;
   ctx.save();
-  if (owned) { ctx.shadowColor = m.col; ctx.shadowBlur = sel ? 20 : hov ? 14 : 7; }
-  ctx.globalAlpha = enter * (owned ? 1 : 0.45);
-  ctx.font = '30px serif'; ctx.textAlign = 'center';
-  ctx.fillText(m.icon, ix, iy + bob + 1);
+  if (owned) { ctx.shadowColor = m.col; ctx.shadowBlur = sel ? 16 : hov ? 11 : 5; }
+  ctx.globalAlpha = enter * (owned ? 1 : 0.5);
+  drawModuleIcon(id, ix, iy + bob, 0.95);
   ctx.restore();
-  // étincelle orbitale sur la carte sélectionnée
+  // poussière dorée orbitant la carte sélectionnée
   if (sel && owned) {
-    const a = t * 2.4;
-    ctx.fillStyle = rc;
-    ctx.beginPath(); ctx.arc(ix + Math.cos(a) * 26, iy + Math.sin(a) * 26, 2, 0, TAU); ctx.fill();
+    const a = t * 1.8;
+    ctx.fillStyle = GOLD_HI;
+    ctx.beginPath(); ctx.arc(ix + Math.cos(a) * 27, iy + Math.sin(a) * 27, 1.8, 0, TAU); ctx.fill();
   }
   // nom + type/rareté
   ctx.textAlign = 'center';
-  ctx.font = `600 11px ${UI}`; ctx.fillStyle = owned ? C_TEXT : 'rgba(255,255,255,0.35)';
-  ctx.fillText(m.name, ix, c.y + c.h - 34, c.w - 12);
-  ctx.font = `8.5px ${UI}`; ctx.fillStyle = owned ? rc : 'rgba(255,255,255,0.25)';
-  ctx.fillText(`${m.rar.toUpperCase()} · ${m.type === 'actif' ? 'ACTIF' : 'PASSIF'}`, ix, c.y + c.h - 20);
-  // niveau du module (possédé) : pastilles en haut à droite
+  ctx.font = `600 11px ${UI}`; ctx.fillStyle = owned ? C_TEXT : 'rgba(230,220,200,0.35)';
+  ctx.fillText(m.name, ix, c.y + c.h - 36, c.w - 12);
+  ctx.font = `8.5px ${UI}`; ctx.fillStyle = owned ? rc : 'rgba(230,220,200,0.25)';
+  ctx.fillText(`${m.rar.toUpperCase()} · ${m.type === 'actif' ? 'ACTIF' : 'PASSIF'}`, ix, c.y + c.h - 22);
+  // niveau du module (possédé) : losanges dorés en haut à droite
   if (owned) {
     const lv = modLevel(id);
     ctx.textAlign = 'right';
     for (let k = 0; k < 3; k++) {
-      ctx.fillStyle = k < lv ? '#ffd740' : 'rgba(255,255,255,0.15)';
-      ctx.beginPath(); ctx.arc(c.x + c.w - 14 - (2 - k) * 10, c.y + 14, 3.2, 0, TAU); ctx.fill();
+      ctx.fillStyle = k < lv ? '#ffd54f' : 'rgba(255,255,255,0.14)';
+      ctx.save(); ctx.translate(c.x + c.w - 14 - (2 - k) * 10, c.y + 14); ctx.rotate(Math.PI / 4);
+      ctx.fillRect(-3.2, -3.2, 6.4, 6.4); ctx.restore();
     }
     ctx.textAlign = 'center';
   }
   // badge bas : équipé / touche X / prix
   if (equipped) {
-    ctx.fillStyle = m.col; ctx.font = `700 9px ${UI}`;
-    ctx.fillText('◈ INSTALLÉ', ix, c.y + c.h - 7);
+    ctx.fillStyle = GOLD_HI; ctx.font = `700 9px ${UI}`;
+    ctx.fillText('❖ INSTALLÉ', ix, c.y + c.h - 8);
   } else if (!owned) {
-    ctx.fillStyle = '#ffd740'; ctx.font = `700 9.5px ${UI}`;
-    ctx.fillText(`🔒 ${m.price} ◆`, ix, c.y + c.h - 7);
+    ctx.fillStyle = '#ffd54f'; ctx.font = `700 9.5px ${UI}`;
+    ctx.fillText(`🔒 ${m.price} ◆`, ix, c.y + c.h - 8);
   } else if (m.type === 'actif') {
-    ctx.fillStyle = 'rgba(255,215,64,0.6)'; ctx.font = `700 8.5px ${UI}`;
-    ctx.fillText('[X] actif', ix, c.y + c.h - 7);
+    ctx.fillStyle = 'rgba(244,220,154,0.65)'; ctx.font = `700 8.5px ${UI}`;
+    ctx.fillText('[X] actif', ix, c.y + c.h - 8);
   }
-  // balayage électrique au survol
+  // reflet doré doux au survol
   if (hov && owned) {
     ctx.save();
-    ctx.strokeStyle = hexA(rc, 0.5); ctx.lineWidth = 1;
-    for (let j = 0; j < 3; j++) {
-      const ex = c.x + ((t * 300 + j * 97 + c.i * 53) % c.w);
-      const ey = c.y + ((t * 200 + j * 71) % c.h);
-      ctx.beginPath(); ctx.moveTo(ex - 5, ey); ctx.lineTo(ex + 5, ey); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(ex, ey - 5); ctx.lineTo(ex, ey + 5); ctx.stroke();
-    }
+    ctx.globalAlpha = 0.10;
+    const hg2 = ctx.createLinearGradient(c.x, c.y, c.x + c.w, c.y + c.h);
+    hg2.addColorStop(0, 'rgba(244,220,154,0)'); hg2.addColorStop(0.5, 'rgba(244,220,154,0.9)'); hg2.addColorStop(1, 'rgba(244,220,154,0)');
+    ctx.fillStyle = hg2;
+    const sx = c.x + ((t * 90) % (c.w * 2)) - c.w * 0.5;
+    ctx.beginPath();
+    ctx.moveTo(sx - 14, c.y); ctx.lineTo(sx + 14, c.y); ctx.lineTo(sx + c.w * 0.4, c.y + c.h); ctx.lineTo(sx - c.w * 0.4 - 28, c.y + c.h);
+    ctx.closePath(); ctx.fill();
     ctx.restore();
   }
-  // bordure
-  ctx.strokeStyle = equipped ? m.col : sel ? hexA(rc, 0.95) : hov && owned ? hexA(rc, 0.55) : owned ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.07)';
-  ctx.lineWidth = equipped || sel ? 2 : 1.2;
-  roundRect(c.x + 0.5, c.y + 0.5, c.w - 1, c.h - 1, 12); ctx.stroke();
+  // bordure : bronze gravée, renforcée si sélectionnée/équipée
+  ctx.strokeStyle = equipped ? m.col : sel ? hexA(rc, 0.95) : hov && owned ? hexA(rc, 0.6) : owned ? 'rgba(216,180,90,0.28)' : 'rgba(216,180,90,0.14)';
+  ctx.lineWidth = equipped || sel ? 1.8 : 1.1;
+  roundRect(c.x + 0.5, c.y + 0.5, c.w - 1, c.h - 1, 10); ctx.stroke();
   ctx.restore();
 }
 
@@ -417,35 +445,46 @@ function drawDetail(L, id, t) {
   ctx.save();
   ctx.globalAlpha = enter;
   ctx.translate((1 - enter) * 24, 0);
-  // panneau verre
-  ctx.fillStyle = 'rgba(8,14,28,0.82)';
-  roundRect(d.x, d.y, d.w, d.h, 14); ctx.fill();
+  // page de grimoire : cuir sombre, double filet bronze, coins gravés
   const pg = ctx.createLinearGradient(d.x, d.y, d.x + d.w, d.y + d.h);
-  pg.addColorStop(0, hexA(CYAN, 0.14)); pg.addColorStop(0.5, hexA(VIOLET, 0.07)); pg.addColorStop(1, hexA(CYAN, 0.05));
-  ctx.fillStyle = pg; roundRect(d.x, d.y, d.w, d.h, 14); ctx.fill();
-  // coins tech
-  ctx.strokeStyle = hexA(m.col, 0.8); ctx.lineWidth = 1.6;
-  const cl = 14;
-  [[d.x, d.y, 1, 1], [d.x + d.w, d.y, -1, 1], [d.x, d.y + d.h, 1, -1], [d.x + d.w, d.y + d.h, -1, -1]].forEach(([cx, cy, sx, sy]) => {
-    ctx.beginPath(); ctx.moveTo(cx + sx * cl, cy); ctx.lineTo(cx, cy); ctx.lineTo(cx, cy + sy * cl); ctx.stroke();
+  pg.addColorStop(0, 'rgba(34,26,15,0.94)'); pg.addColorStop(1, 'rgba(20,15,9,0.94)');
+  ctx.fillStyle = pg;
+  roundRect(d.x, d.y, d.w, d.h, 12); ctx.fill();
+  ctx.strokeStyle = hexA(GOLD, 0.65); ctx.lineWidth = 1.4;
+  roundRect(d.x + 5, d.y + 5, d.w - 10, d.h - 10, 9); ctx.stroke();
+  ctx.strokeStyle = hexA(GOLD, 0.22); ctx.lineWidth = 0.8;
+  roundRect(d.x + 10, d.y + 10, d.w - 20, d.h - 20, 7); ctx.stroke();
+  // coins ornementaux : crosses pattées
+  ctx.strokeStyle = hexA(GOLD, 0.8); ctx.lineWidth = 1.2;
+  const cl = 10;
+  [[d.x + 14, d.y + 14, 1, 1], [d.x + d.w - 14, d.y + 14, -1, 1], [d.x + 14, d.y + d.h - 14, 1, -1], [d.x + d.w - 14, d.y + d.h - 14, -1, -1]].forEach(([cx, cy, sx, sy]) => {
+    ctx.beginPath();
+    ctx.moveTo(cx + sx * cl, cy); ctx.lineTo(cx, cy); ctx.lineTo(cx, cy + sy * cl);
+    ctx.moveTo(cx + sx * cl * 0.5, cy + sy * cl * 0.5); ctx.lineTo(cx + sx * cl * 0.5 + sx * 3, cy + sy * cl * 0.5);
+    ctx.moveTo(cx + sx * cl * 0.5, cy + sy * cl * 0.5); ctx.lineTo(cx + sx * cl * 0.5, cy + sy * cl * 0.5 + sy * 3);
+    ctx.stroke();
   });
   const ix = d.x + d.w / 2;
-  // grande icône : hexagone tournant + orbite
+  // grande médaillon de relique : anneau double + points cardinaux
   const iy = d.y + 74;
   ctx.save();
-  ctx.translate(ix, iy);
-  ctx.rotate(t * 0.4);
-  ctx.strokeStyle = hexA(m.col, owned ? 0.7 : 0.2); ctx.lineWidth = 1.6;
-  ctx.beginPath();
-  for (let k = 0; k < 6; k++) { const a = k * TAU / 6; const px = Math.cos(a) * 44, py = Math.sin(a) * 44; k ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }
-  ctx.closePath(); ctx.stroke();
+  ctx.strokeStyle = hexA(GOLD, owned ? 0.6 : 0.2); ctx.lineWidth = 1.4;
+  ctx.beginPath(); ctx.arc(ix, iy, 48, 0, TAU); ctx.stroke();
+  ctx.strokeStyle = hexA(rc, owned ? 0.5 : 0.15); ctx.lineWidth = 1;
+  ctx.setLineDash([4, 6]); ctx.lineDashOffset = -t * 8;
+  ctx.beginPath(); ctx.arc(ix, iy, 54, 0, TAU); ctx.stroke();
+  ctx.setLineDash([]);
+  for (let k = 0; k < 4; k++) {
+    const a = k * TAU / 4 + Math.PI / 4;
+    ctx.fillStyle = hexA(GOLD, owned ? 0.8 : 0.25);
+    ctx.beginPath(); ctx.arc(ix + Math.cos(a) * 48, iy + Math.sin(a) * 48, 2, 0, TAU); ctx.fill();
+  }
   ctx.restore();
-  const bob = Math.sin(t * 2.2) * 4;
+  const bob = Math.sin(t * 2.2) * 3;
   ctx.save();
-  ctx.shadowColor = m.col; ctx.shadowBlur = owned ? 26 : 6;
-  ctx.font = '44px serif'; ctx.textAlign = 'center';
+  ctx.shadowColor = owned ? m.col : 'transparent'; ctx.shadowBlur = owned ? 18 : 0;
   ctx.globalAlpha = enter * (owned ? 1 : 0.4);
-  ctx.fillText(m.icon, ix, iy + bob);
+  drawModuleIcon(id, ix, iy + bob, 2.1);
   ctx.restore();
   // nom
   const lvl = owned ? modLevel(id) : 1;
@@ -487,7 +526,7 @@ function drawDetail(L, id, t) {
   const sy = d.y + d.h - 118;
   ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(d.x + 24, sy - 14); ctx.lineTo(d.x + d.w - 24, sy - 14); ctx.stroke();
-  ctx.font = `600 9.5px ${UI}`; ctx.letterSpacing = '2px'; ctx.fillStyle = CYAN;
+  ctx.font = `600 9.5px ${UI}`; ctx.letterSpacing = '2px'; ctx.fillStyle = GOLD;
   ctx.fillText('STATISTIQUES', ix, sy + 2); ctx.letterSpacing = '0px';
   ctx.font = `11px ${UI}`; ctx.fillStyle = owned ? C_MUTED : 'rgba(255,255,255,0.28)';
   statLines(m, lvl).forEach((l, i) => ctx.fillText(l, ix, sy + 20 + i * 14));
@@ -517,7 +556,7 @@ function drawDetail(L, id, t) {
     roundRect(b.x, b.y, b.w, b.h, 10); ctx.fill();
     ctx.strokeStyle = m.col; ctx.lineWidth = 1.5; roundRect(b.x, b.y, b.w, b.h, 10); ctx.stroke();
     ctx.fillStyle = m.col; ctx.font = `700 12.5px ${UI}`;
-    ctx.fillText('◈ INSTALLÉ', b.x + b.w / 2, b.y + b.h / 2 + 4);
+    ctx.fillText('❖ INSTALLÉ', b.x + b.w / 2, b.y + b.h / 2 + 4);
   } else if (!owned) {
     ctx.fillStyle = hov ? 'rgba(255,215,64,0.9)' : 'rgba(255,215,64,0.55)';
     roundRect(b.x, b.y, b.w, b.h, 10); ctx.fill();
@@ -528,7 +567,7 @@ function drawDetail(L, id, t) {
     ctx.fillStyle = passLocked ? (hov ? 'rgba(255,215,64,0.9)' : 'rgba(255,215,64,0.55)') : hov ? hexA(m.col, 0.95) : hexA(m.col, 0.5);
     roundRect(b.x, b.y, b.w, b.h, 10); ctx.fill();
     ctx.fillStyle = passLocked ? '#16130c' : '#06101e'; ctx.font = `700 12.5px ${UI}`;
-    ctx.fillText(passLocked ? `🔒 SLOT PASSIF — ${PASS_SLOT_PRICE} ◆` : (m.type === 'actif' ? '⚡ INSTALLER [X]' : '⬡ INSTALLER PASSIF'), b.x + b.w / 2, b.y + b.h / 2 + 4);
+    ctx.fillText(passLocked ? `🔒 SLOT PASSIF — ${PASS_SLOT_PRICE} ◆` : (m.type === 'actif' ? '✦ INSTALLER [X]' : '❖ INSTALLER PASSIF'), b.x + b.w / 2, b.y + b.h / 2 + 4);
   }
   ctx.restore();
 }
@@ -537,16 +576,18 @@ function drawEmptyDetail(L, t) {
   const d = L.det;
   ctx.save();
   ctx.globalAlpha = Math.max(0, Math.min(1, (t - (G.modViewT || 0)) / 0.6 - 0.15));
-  ctx.fillStyle = 'rgba(8,14,28,0.6)';
-  roundRect(d.x, d.y, d.w, d.h, 14); ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1;
-  roundRect(d.x, d.y, d.w, d.h, 14); ctx.stroke();
+  const pg2 = ctx.createLinearGradient(d.x, d.y, d.x + d.w, d.y + d.h);
+  pg2.addColorStop(0, 'rgba(34,26,15,0.8)'); pg2.addColorStop(1, 'rgba(20,15,9,0.8)');
+  ctx.fillStyle = pg2;
+  roundRect(d.x, d.y, d.w, d.h, 12); ctx.fill();
+  ctx.strokeStyle = 'rgba(216,180,90,0.3)'; ctx.lineWidth = 1;
+  roundRect(d.x, d.y, d.w, d.h, 12); ctx.stroke();
   ctx.textAlign = 'center';
-  ctx.font = '30px serif'; ctx.fillStyle = 'rgba(255,255,255,0.15)';
-  ctx.fillText('◇', d.x + d.w / 2, d.y + d.h / 2 - 10);
+  ctx.font = '26px serif'; ctx.fillStyle = 'rgba(216,180,90,0.4)';
+  ctx.fillText('✦', d.x + d.w / 2, d.y + d.h / 2 - 10);
   ctx.font = `12px ${UI}`; ctx.fillStyle = C_MUTED;
-  ctx.fillText('Sélectionnez un module pour', d.x + d.w / 2, d.y + d.h / 2 + 18);
-  ctx.fillText('examiner ses statistiques.', d.x + d.w / 2, d.y + d.h / 2 + 36);
+  ctx.fillText('Choisissez une relique pour', d.x + d.w / 2, d.y + d.h / 2 + 18);
+  ctx.fillText('examiner ses pouvoirs.', d.x + d.w / 2, d.y + d.h / 2 + 36);
   ctx.restore();
 }
 
@@ -557,8 +598,8 @@ function drawSummary(t) {
   const y = H - 20;
   ctx.textAlign = 'left';
   ctx.font = `600 10px ${UI}`; ctx.letterSpacing = '2px';
-  ctx.fillStyle = CYAN;
-  ctx.fillText('INSTALLEZ', 34, y);
+  ctx.fillStyle = GOLD;
+  ctx.fillText('RELIQUES ÉQUIPÉES', 34, y);
   ctx.letterSpacing = '0px';
   if (!eqIds.length) {
     ctx.font = `11px ${UI}`; ctx.fillStyle = 'rgba(255,255,255,0.3)';
@@ -582,19 +623,28 @@ function drawSummary(t) {
 
 // ---------- écran verrouillé ----------
 function drawLocked(t) {
-  drawTechBG(t);
+  drawGrimoireBG(t);
   drawHeader(t);
   const cw = 620, ch = 330, cx = W / 2 - cw / 2, cy = H / 2 - ch / 2 + 20;
-  ctx.fillStyle = 'rgba(8,14,28,0.9)';
+  ctx.fillStyle = 'rgba(24,18,10,0.92)';
   roundRect(cx, cy, cw, ch, 16); ctx.fill();
-  ctx.strokeStyle = 'rgba(24,255,255,0.3)'; ctx.lineWidth = 1.5;
-  roundRect(cx, cy, cw, ch, 16); ctx.stroke();
+  ctx.strokeStyle = 'rgba(216,180,90,0.4)'; ctx.lineWidth = 1.5;
+  roundRect(cx + 5, cy + 5, cw - 10, ch - 10, 12); ctx.stroke();
   const lx = cx + cw / 2, ly = cy + 100;
   ctx.save();
-  ctx.translate(lx, ly); ctx.rotate(t * 0.6);
-  ctx.strokeStyle = 'rgba(255,215,64,0.7)'; ctx.lineWidth = 2; ctx.setLineDash([10, 8]);
+  ctx.translate(lx, ly); ctx.rotate(t * 0.4);
+  ctx.strokeStyle = 'rgba(216,180,90,0.7)'; ctx.lineWidth = 1.6; ctx.setLineDash([8, 7]);
   ctx.beginPath(); ctx.arc(0, 0, 44, 0, TAU); ctx.stroke();
-  ctx.setLineDash([]); ctx.restore();
+  ctx.setLineDash([]);
+  for (let k = 0; k < 8; k++) {
+    const a = k * TAU / 8;
+    ctx.strokeStyle = 'rgba(216,180,90,0.5)'; ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a) * 44, Math.sin(a) * 44);
+    ctx.lineTo(Math.cos(a) * 51, Math.sin(a) * 51);
+    ctx.stroke();
+  }
+  ctx.restore();
   ctx.font = '52px serif'; ctx.textAlign = 'center';
   ctx.fillText('🔒', lx, ly + 18);
   ctx.font = `700 24px ${SERIF}`; ctx.fillStyle = C_TEXT; ctx.letterSpacing = '2px';
@@ -614,9 +664,9 @@ function drawMsg(t) {
   ctx.font = `700 13px ${UI}`; ctx.textAlign = 'center';
   const msg = G.modMsg.msg;
   const wTxt = ctx.measureText(msg).width + 36;
-  ctx.fillStyle = 'rgba(8,14,28,0.9)';
+  ctx.fillStyle = 'rgba(24,18,10,0.94)';
   roundRect(W / 2 - wTxt / 2, 168, wTxt, 30, 15); ctx.fill();
-  ctx.strokeStyle = G.modMsg.bad ? 'rgba(255,120,110,0.6)' : 'rgba(24,255,255,0.6)';
+  ctx.strokeStyle = G.modMsg.bad ? 'rgba(255,120,110,0.6)' : 'rgba(216,180,90,0.6)';
   ctx.lineWidth = 1.2; roundRect(W / 2 - wTxt / 2 + 0.5, 168.5, wTxt - 1, 29, 15); ctx.stroke();
   ctx.fillStyle = G.modMsg.bad ? '#ff8a80' : '#69f0ae';
   ctx.fillText(msg, W / 2, 188);
@@ -654,7 +704,7 @@ export function drawModulesView() {
   }
   if (!modulesUnlocked()) { drawLocked(t); return; }
   const L = layout();
-  drawTechBG(t);
+  drawGrimoireBG(t);
   drawHeader(t);
   // pods
   const eq = modState(inv).eq;
@@ -662,8 +712,8 @@ export function drawModulesView() {
   for (const s of L.slots) drawSlot(s, eq[s.key], s.key === 'pass' && !ms.passUnlocked, t);
   // grille
   ctx.textAlign = 'left'; ctx.font = `600 10px ${UI}`; ctx.letterSpacing = '2px';
-  ctx.fillStyle = CYAN;
-  ctx.fillText(`MODULES · ${ms.owned.length}/${MOD_IDS.length} DÉBLOQUÉS`, 34, 190);
+  ctx.fillStyle = GOLD;
+  ctx.fillText(`RELIQUES · ${ms.owned.length}/${MOD_IDS.length} DÉCOUVERTES`, 34, 190);
   ctx.letterSpacing = '0px';
   // grille rognée à la zone visible (les cartes défilent sous l'en-tête)
   ctx.save();
@@ -677,7 +727,7 @@ export function drawModulesView() {
     roundRect(gx, gy, 5, gh, 3); ctx.fill();
     const thumbH = Math.max(30, gh * (gh / (gh + L.scrollMax)));
     const thumbY = gy + (gh - thumbH) * ((G.modScroll || 0) / L.scrollMax);
-    ctx.fillStyle = 'rgba(24,255,255,0.45)';
+    ctx.fillStyle = 'rgba(216,180,90,0.4)';
     roundRect(gx, thumbY, 5, thumbH, 3); ctx.fill();
   }
   // détail
@@ -685,6 +735,6 @@ export function drawModulesView() {
   else drawEmptyDetail(L, t);
   drawSummary(t);
   drawMsg(t);
-  drawMenuButton(menuButtons().back, '← RETOUR', '#1d4e5f', '#7de8ff', false);
+  drawMenuButton(menuButtons().back, '← RETOUR', '#4a3817', GOLD_HI, false);
   ctx.textAlign = 'center';
 }
