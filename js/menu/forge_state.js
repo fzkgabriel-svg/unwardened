@@ -28,11 +28,11 @@ export function forgeScrollMax() {
     return Math.max(0, g.totalH - g.view.h);
   }
   if (forgeTab === 'craft' && craftUI.cat === 'repair') {
-    return Math.max(0, repairCount() * 64 - (L.ch - 188));
+    return Math.max(0, repairCount() * 74 - (L.ch - 190));
   }
   if (forgeTab === 'craft' && craftUI.cat !== 'upgrade') {
     const rows = craftList(L).length;
-    return Math.max(0, rows * 48 - (L.ch - 250));
+    return Math.max(0, rows * 58 - (L.ch - 176));
   }
   return 0;
 }
@@ -47,7 +47,7 @@ export function setForgeScroll(v) { forgeScroll = Math.max(0, v); }
 export function setItemDetail(id) { itemDetail = id; }
 
 export function forgeLayout() {
-  const cw = 960, ch = 470;
+  const cw = Math.min(1120, W - 64), ch = Math.min(560, H - 64);
   return { cx: W / 2 - cw / 2, cy: H / 2 - ch / 2, cw, ch };
 }
 export function forgeTabs(L) {
@@ -59,7 +59,8 @@ export function forgeTabs(L) {
   };
 }
 // bouton admin « don de matériaux » : visible à la forge uniquement si admin débloqué
-export function adminMatsBtn(L) { return { x: L.cx + L.cw - 176, y: L.cy + 34, w: 156, h: 30 }; }
+// remonté au-dessus de la rangée d'onglets pour ne jamais chevaucher les sous-onglets PERSONNAGE
+export function adminMatsBtn(L) { return { x: L.cx + L.cw - 176, y: L.cy + 30, w: 156, h: 26 }; }
 
 // ---------- INVENTAIRE : catégories + recherche + tri + filtre rareté + grille ----------
 export const INV_CATS = [
@@ -105,35 +106,35 @@ export function invCells(L) {
   const tx = L.cx + 30, tw = L.cw - 60;
   // rangée d'onglets catégories
   const tabs = [];
-  const cw2 = (tw - 6 * 8) / 7, ty = L.cy + 96, th = 30;
+  const cw2 = (tw - 6 * 8) / 7, ty = L.cy + 104, th = 32;
   INV_CATS.forEach(([key, label], i) => {
     tabs.push({ key, label, r: { x: tx + i * (cw2 + 8), y: ty, w: cw2, h: th }, count: invCatCount(key) });
   });
   // barre d'outils : recherche + tri + filtre rareté
-  const oy = ty + th + 8;
-  const search = { x: tx, y: oy, w: 230, h: 30 };
+  const oy = ty + th + 10;
+  const search = { x: tx, y: oy, w: 240, h: 32 };
   const sortNames = { name: 'Tri : Nom', rar: 'Tri : Rareté', slot: 'Tri : Catégorie' };
-  const sortBtn = { x: tx + search.w + 10, y: oy, w: 150, h: 30 };
+  const sortBtn = { x: tx + search.w + 10, y: oy, w: 160, h: 32 };
   const rarNames = { all: 'Toutes raretés', commun: 'Commun', rare: 'Rare', epique: 'Épique', legendaire: 'Légendaire' };
-  const rarBtn = { x: sortBtn.x + sortBtn.w + 10, y: oy, w: 150, h: 30 };
-  const countTxt = { x: rarBtn.x + rarBtn.w + 12, y: oy + 20 };
+  const rarBtn = { x: sortBtn.x + sortBtn.w + 10, y: oy, w: 170, h: 32 };
+  const countTxt = { x: rarBtn.x + rarBtn.w + 14, y: oy + 21 };
   // zone de grille
-  const view = { x: tx, y: oy + 40, w: tw, h: L.cy + L.ch - 12 - (oy + 40) };
+  const view = { x: tx, y: oy + 44, w: tw, h: L.cy + L.ch - 14 - (oy + 44) };
   const cells = [];
   let totalH = 0;
   if (invUI.cat === 'mats') {
     // les matériaux (liste dynamique : s'adapte au nombre de MATS)
     const nM = Object.keys(MATS).length;
     const colsM = nM <= 5 ? nM : 6;
-    const cw3 = (tw - (colsM - 1) * 12) / colsM, ch3 = 92;
+    const cw3 = (tw - (colsM - 1) * 12) / colsM, ch3 = 100;
     Object.keys(MATS).forEach((m, i) => {
       cells.push({ mat: m, x: view.x + (i % colsM) * (cw3 + 12), y: view.y + Math.floor(i / colsM) * (ch3 + 10), w: cw3, h: ch3 });
     });
     totalH = Math.ceil(nM / colsM) * (ch3 + 10);
   } else {
     const ids = invVisible();
-    const cols = 6, gap = 10;
-    const cw4 = (tw - (cols - 1) * gap) / cols, ch4 = 96;
+    const cols = 6, gap = 12;
+    const cw4 = (tw - (cols - 1) * gap) / cols, ch4 = 104;
     ids.forEach((id, i) => {
       cells.push({
         id, x: view.x + (i % cols) * (cw4 + gap), y: view.y + Math.floor(i / cols) * (ch4 + gap),
@@ -179,7 +180,7 @@ export function craftList(L) {
 
 // chips de catégories forge (partagé dessin / clic)
 export function craftTabs(L) {
-  const tx = L.cx + 30, ty = L.cy + 96, th = 30;
+  const tx = L.cx + 30, ty = L.cy + 104, th = 32;
   const cw = (L.cw - 60 - 5 * 8) / 6;
   return CRAFT_CATS.map(([key, label], i) => ({
     key, label,
@@ -190,22 +191,22 @@ export function craftTabs(L) {
 
 // layout 3 zones de l'onglet forge : liste | aperçu | coûts+fabrication
 export function craftZones(L) {
-  const y0 = L.cy + 140, y1 = L.cy + L.ch - 14;
-  const lx = L.cx + 24, lw = 252;
-  const cx2 = lx + lw + 14, cw2 = 316;
-  const rx = cx2 + cw2 + 14, rw = L.cx + L.cw - 24 - rx;
+  const y0 = L.cy + 152, y1 = L.cy + L.ch - 16;
+  const lx = L.cx + 26, lw = 280;
+  const cx2 = lx + lw + 16, cw2 = 340;
+  const rx = cx2 + cw2 + 16, rw = L.cx + L.cw - 26 - rx;
   // liste scrollable des recettes
   const ids = craftList(L);
-  const rows = ids.map((id, i) => ({ id, x: lx, y: y0 + i * 50 - forgeScroll, w: lw, h: 44 }));
+  const rows = ids.map((id, i) => ({ id, x: lx, y: y0 + i * 58 - forgeScroll, w: lw, h: 50 }));
   // recette sélectionnée (première par défaut)
   const selId = craftUI.sel && ids.includes(craftUI.sel) ? craftUI.sel : ids[0];
   const it = selId && ITEMS[selId];
   // panneau droit : matériaux + statut + bouton
-  const ry = y0 + 8;
-  const costRows = it ? Object.keys(it.cost).map((m, i) => ({ m, y: ry + 96 + i * 24 })) : [];
+  const ry = y0 + 10;
+  const costRows = it ? Object.keys(it.cost).map((m, i) => ({ m, y: ry + 104 + i * 28 })) : [];
   return {
     lx, lw, cx2, cw2, rx, rw, y0, y1, rows, selId, it,
-    craftBtn: it ? { x: rx + 16, y: y1 - 52, w: rw - 32, h: 38 } : null,
+    craftBtn: it ? { x: rx + 18, y: y1 - 58, w: rw - 36, h: 42 } : null,
     costRows
   };
 }
@@ -224,31 +225,31 @@ export function upgradeXpGain(inv, key) {
 }
 // rects des 3 cartes d'amélioration d'armes
 export function upgradeCards(L) {
-  const y0 = L.cy + 150, ch = 190, gap = 16;
+  const y0 = L.cy + 186, ch = 270, gap = 20;
   const cw = (L.cw - 60 - 2 * gap) / 3, x0 = L.cx + 30;
   return ['epee', 'lance', 'arc'].map((key, i) => ({
     key, x: x0 + i * (cw + gap), y: y0, w: cw, h: ch,
-    btn: { x: x0 + i * (cw + gap) + 18, y: y0 + ch - 48, w: cw - 36, h: 32 }
+    btn: { x: x0 + i * (cw + gap) + 20, y: y0 + ch - 56, w: cw - 40, h: 38 }
   }));
 }
 // ---------- RÉPARATION : liste des équipements endommagés ----------
 export function repairCount() { return damagedItems(G.inv).length; }
 // lignes de la liste de réparation (scroll forgeScroll, tri : plus endommagé d'abord)
 export function repairRows(L) {
-  const y0 = L.cy + 178, y1 = L.cy + L.ch - 14;
+  const y0 = L.cy + 190, y1 = L.cy + L.ch - 16;
   const lx = L.cx + 30, lw = L.cw - 60;
-  const rh = 56, gap = 8;
+  const rh = 64, gap = 10;
   return damagedItems(G.inv).map((id, i) => ({
     id, x: lx, y: y0 + i * (rh + gap) - forgeScroll, w: lw, h: rh
-  })).filter(r => r.y + r.h > y0 - 60 && r.y < y1 + 60);
+  })).filter(r => r.y + r.h > y0 - 70 && r.y < y1 + 70);
 }
 // bouton « tout réparer » en haut à droite de l'onglet
 export function repairAllBtn(L) {
-  return { x: L.cx + L.cw - 240, y: L.cy + 130, w: 210, h: 28 };
+  return { x: L.cx + L.cw - 250, y: L.cy + 132, w: 220, h: 32 };
 }
 // bouton de réparation d'une ligne (à droite de la ligne)
 export function repairRowBtn(row) {
-  return { x: row.x + row.w - 140, y: row.y + row.h / 2 - 14, w: 120, h: 28 };
+  return { x: row.x + row.w - 150, y: row.y + row.h / 2 - 16, w: 130, h: 32 };
 }
 
 // liste des objets possédés pour l'inventaire (rétro-compat : utilisé par les anciens appels)
@@ -557,9 +558,9 @@ export function forgeClickAt(x, y) {
 // ---------- onglet PERSONNAGE : colonnes gauche/centre/droite + bandeau bas ----------
 // zone de contenu : sous les onglets, au-dessus de la bande ULTIME/PROGRESSION
 export function heroColLayout(L) {
-  const ix = L.cx + 18, iy = L.cy + 96, iw = L.cw - 36;
-  const stripY = L.cy + L.ch - 54;         // haut de la bande du bas
-  const ih = stripY - 10 - iy;             // hauteur utile du contenu
+  const ix = L.cx + 22, iy = L.cy + 104, iw = L.cw - 44;
+  const stripY = L.cy + L.ch - 62;         // haut de la bande du bas
+  const ih = stripY - 14 - iy;             // hauteur utile du contenu
   const colW = 240;
   return {
     ix, iy, iw, ih, colW, stripY,
@@ -583,7 +584,7 @@ export function heroTabs(L) {
 // cartes d'armes de la colonne COMPÉTENCES (personnage) : ordre = SKILL_DEF de forge_gear.js
 export function heroSkillCards(L) {
   const col = heroColLayout(L).right;
-  const x = col.x + 14, w = col.w - 28, ch = 84, gap = 12, y0 = col.y + 54;
+  const x = col.x + 14, w = col.w - 28, ch = 96, gap = 14, y0 = col.y + 56;
   return ['epee', 'arc', 'lance'].map((key, i) => ({
     key, x, y: y0 + i * (ch + gap), w, h: ch
   }));
@@ -594,7 +595,7 @@ export function heroEquipRows(L) {
   const CL = heroColLayout(L);
   const col = CL.left;
   const x = col.x + 10, w = col.w - 20;
-  const y0 = col.y + 56, rh = 38, gap = 4; // hauteur réduite pour éviter empilement
+  const y0 = col.y + 50, rh = 48, gap = 8;
   return ['weapon', 'armor', 'helm', 'gloves', 'charm', 'boots'].map((slot, i) => ({
     slot, x, y: y0 + i * (rh + gap), w, h: rh
   }));
@@ -610,7 +611,7 @@ export function heroDoll(L) {
 // la bande commence à stripY = cy+ch-54 : les boutons restent EN DESSOUS
 // pour ne jamais chevaucher la liste d'équipement du PERSONNAGE
 export function ultBtns(L) {
-  const y = L.cy + L.ch - 42, h = 28;
+  const y = L.cy + L.ch - 50, h = 32;
   const w = 196, gap = 10, x0 = L.cx + 24;
   return {
     nuke:  { x: x0, y, w, h },

@@ -47,8 +47,8 @@ export function drawHeroPaperdoll(L) {
   drawEquipList(L, CL.left);
   drawHeroCenter(L, CL);
   drawSkillsColumn(L, CL.right);
-  drawBuffsNote(CL.right);
   drawUltStrip(L);
+  drawBuffsNote(L);
   drawProgressionStrip(L);
 }
 
@@ -71,21 +71,21 @@ function drawEquipList(L, col) {
     roundRect(r.x, r.y, r.w, r.h, 8); ctx.stroke();
     ctx.textAlign = 'left';
     if (it) {
-      drawItemIcon(it, r.x + 24, r.y + r.h / 2, 15);
-      ctx.fillStyle = broken ? '#ff8a80' : '#ffe9a3'; ctx.font = `bold 11.5px ${UI}`;
-      ctx.fillText(fitText(it.name + (broken ? ' 💥' : ''), r.w - 70), r.x + 46, r.y + 17);
+      drawItemIcon(it, r.x + 26, r.y + r.h / 2, 16);
+      ctx.fillStyle = broken ? '#ff8a80' : '#ffe9a3'; ctx.font = `bold 12px ${UI}`;
+      ctx.fillText(fitText(it.name + (broken ? ' 💥' : ''), r.w - 76), r.x + 50, r.y + 20);
       ctx.fillStyle = tier; ctx.font = `9.5px ${UI}`;
-      ctx.fillText(`${ITEM_RARITY[it.rar] || ''} · ${SLOT_LABEL[r.slot]}`, r.x + 46, r.y + 29);
-      const dbx = r.x + 46, dbw = r.w - 66, dby = r.y + r.h - 8; // largeur réduite pour rester dans le cadre
+      ctx.fillText(`${ITEM_RARITY[it.rar] || ''} · ${SLOT_LABEL[r.slot]}`, r.x + 50, r.y + 34);
+      const dbx = r.x + 50, dbw = r.w - 72, dby = r.y + r.h - 11; // largeur réduite pour rester dans le cadre
       ctx.fillStyle = 'rgba(255,255,255,0.12)'; roundRect(dbx, dby, dbw, 4, 2); ctx.fill();
       const dst = durState(dur, durMaxOf(id));
       const dc = dst === 'ok' ? '#69f0ae' : dst === 'warn' ? '#ffd740' : '#ff5252';
       if (dur > 0) { ctx.fillStyle = dc; roundRect(dbx, dby, dbw * dur / durMaxOf(id), 4, 2); ctx.fill(); }
     } else {
-      ctx.fillStyle = '#546e7a'; ctx.font = '15px serif';
-      ctx.fillText('—', r.x + 24, r.y + r.h / 2 + 5);
-      ctx.fillStyle = '#455a64'; ctx.font = `italic 10.5px ${UI}`;
-      ctx.fillText(`${SLOT_LABEL[r.slot]} : vide`, r.x + 46, r.y + r.h / 2 + 4);
+      ctx.fillStyle = '#546e7a'; ctx.font = '16px serif';
+      ctx.fillText('—', r.x + 26, r.y + r.h / 2 + 6);
+      ctx.fillStyle = '#455a64'; ctx.font = `italic 11px ${UI}`;
+      ctx.fillText(`${SLOT_LABEL[r.slot]} : vide`, r.x + 50, r.y + r.h / 2 + 5);
     }
   });
 }
@@ -193,36 +193,36 @@ function drawSkillCard(x, y, w, h, sd, locked) {
   roundRect(x, y, w, h, 10); ctx.stroke();
   ctx.globalAlpha = locked || (!carried && !active) ? 0.55 : 1;
   // icône + nom + niveau
-  ctx.textAlign = 'left'; ctx.font = `20px serif`;
-  ctx.fillText(sd.icon, x + 12, y + 26);
-  ctx.fillStyle = locked ? '#7c6aa8' : sd.color; ctx.font = `bold 14px ${UI}`;
-  ctx.fillText(sd.label, x + 44, y + 24);
-  ctx.fillStyle = locked ? '#5a5470' : '#ffe9a3'; ctx.font = `bold 15px Consolas, monospace`; ctx.textAlign = 'right';
-  ctx.fillText(locked ? '???' : `NIV. ${info.lvl}`, x + w - 12, y + 25);
-  ctx.fillStyle = locked ? '#5a5470' : '#8d99ae'; ctx.font = `10px ${UI}`; ctx.textAlign = 'left';
-  ctx.fillText(locked ? 'arme légendaire' : `+${Math.round((modeMult(G.inv, sd.key) - 1) * 100)} % de dégâts`, x + 44, y + 41);
+  ctx.textAlign = 'left'; ctx.font = `24px serif`;
+  ctx.fillText(sd.icon, x + 14, y + 32);
+  ctx.fillStyle = locked ? '#7c6aa8' : sd.color; ctx.font = `bold 15px ${UI}`;
+  ctx.fillText(sd.label, x + 50, y + 30);
+  ctx.fillStyle = locked ? '#5a5470' : '#ffe9a3'; ctx.font = `bold 16px Consolas, monospace`; ctx.textAlign = 'right';
+  ctx.fillText(locked ? '???' : `NIV. ${info.lvl}`, x + w - 14, y + 31);
+  ctx.fillStyle = locked ? '#5a5470' : '#8d99ae'; ctx.font = `10.5px ${UI}`; ctx.textAlign = 'left';
+  ctx.fillText(locked ? 'arme légendaire' : `+${Math.round((modeMult(G.inv, sd.key) - 1) * 100)} % de dégâts`, x + 50, y + 48);
   // badge d'état : EN COURS (arme active) > EMPORTÉE (chargement) > NON EMPORTÉE
   if (active || carried) {
-    ctx.fillStyle = active ? sd.color : '#81c784'; ctx.font = `bold 9px ${UI}`; ctx.textAlign = 'right';
-    ctx.fillText(active ? 'EN COURS' : 'EMPORTÉE', x + w - 12, y + 41);
+    ctx.fillStyle = active ? sd.color : '#81c784'; ctx.font = `bold 9.5px ${UI}`; ctx.textAlign = 'right';
+    ctx.fillText(active ? 'EN COURS' : 'EMPORTÉE', x + w - 14, y + 48);
   } else {
-    ctx.fillStyle = '#546e7a'; ctx.font = `bold 9px ${UI}`; ctx.textAlign = 'right';
-    ctx.fillText('NON EMPORTÉE', x + w - 12, y + 41);
+    ctx.fillStyle = '#546e7a'; ctx.font = `bold 9.5px ${UI}`; ctx.textAlign = 'right';
+    ctx.fillText('NON EMPORTÉE', x + w - 14, y + 48);
   }
   if (locked) {
     ctx.fillStyle = 'rgba(0,0,0,0.4)';
     roundRect(x, y, w, h, 10); ctx.fill();
-    ctx.fillStyle = '#b388ff'; ctx.font = `bold 10px ${UI}`; ctx.textAlign = 'center';
-    ctx.fillText('🔒 VAINCRE L\'ABOMINATION COSMIQUE', x + w / 2, y + h - 12);
+    ctx.fillStyle = '#b388ff'; ctx.font = `bold 10.5px ${UI}`; ctx.textAlign = 'center';
+    ctx.fillText('🔒 VAINCRE L\'ABOMINATION COSMIQUE', x + w / 2, y + h - 14);
     ctx.globalAlpha = 1; return;
   }
   // barre d'XP
-  const bx = x + 12, bw = w - 24, by = y + h - 14;
-  ctx.fillStyle = 'rgba(255,255,255,0.12)'; roundRect(bx, by, bw, 5, 2.5); ctx.fill();
+  const bx = x + 14, bw = w - 28, by = y + h - 20;
+  ctx.fillStyle = 'rgba(255,255,255,0.12)'; roundRect(bx, by, bw, 6, 3); ctx.fill();
   ctx.fillStyle = sd.color;
-  roundRect(bx, by, bw * info.pct, 5, 2.5); ctx.fill();
-  ctx.fillStyle = '#aab4c0'; ctx.font = `8.5px ${UI}`; ctx.textAlign = 'center';
-  ctx.fillText(info.lvl >= MODE_MAX_LVL ? 'NIVEAU MAX' : `${Math.floor(info.xp).toLocaleString('fr-FR')} / ${info.need.toLocaleString('fr-FR')} XP`, x + w / 2, by - 3);
+  roundRect(bx, by, bw * info.pct, 6, 3); ctx.fill();
+  ctx.fillStyle = '#aab4c0'; ctx.font = `9px ${UI}`; ctx.textAlign = 'center';
+  ctx.fillText(info.lvl >= MODE_MAX_LVL ? 'NIVEAU MAX' : `${Math.floor(info.xp).toLocaleString('fr-FR')} / ${info.need.toLocaleString('fr-FR')} XP`, x + w / 2, by - 5);
   ctx.globalAlpha = 1;
 }
 
@@ -291,7 +291,7 @@ function drawHeroStatsTab(L) {
     { icon: '💥', label: 'Rayon ultime', val: `+${Math.round((b.ultR - 1) * 100)} %`, tip: 'Portée de l\'ultime (touche F)' },
     { icon: '👹', label: 'Dégâts boss (ult.)', val: `+${Math.round(b.ultBoss * 100)} %`, tip: 'Dégâts bonus de l\'ultime sur les boss' }
   ];
-  const cols = 2, cw = (w - 20) / cols, rh = 30, x0 = x + 10, y0 = y + 40;
+  const cols = 2, cw = (w - 20) / cols, rh = 34, x0 = x + 10, y0 = y + 44;
   rows.forEach((r, i) => {
     const cx = x0 + (i % cols) * cw, cy = y0 + Math.floor(i / cols) * rh;
     const hov = inR({ x: cx, y: cy - 14, w: cw - 10, h: rh }, G.mouse.x, G.mouse.y);
@@ -327,17 +327,20 @@ function drawHeroStatsTab(L) {
   });
 }
 
-// note des bonus permanents des consommables (sous les compétences)
-function drawBuffsNote(col) {
+// note des bonus permanents des consommables : affichée dans la bande du bas,
+// à droite des boutons d'ultime (la colonne compétences est désormais pleine)
+function drawBuffsNote(L) {
   const buffs = G.inv.buffs || {};
   if (!buffs.hp && !buffs.potions) return;
-  const y = col.y + col.h - 58;
-  ctx.fillStyle = '#69f0ae'; ctx.font = `bold 10px ${UI}`; ctx.textAlign = 'left';
-  ctx.fillText('BONUS CONSOMMABLES', col.x + 14, y);
-  ctx.fillStyle = C_MUTED; ctx.font = `10px ${UI}`;
-  let yy = y + 15;
-  if (buffs.hp) { ctx.fillText(`+${buffs.hp} PV max`, col.x + 14, yy); yy += 14; }
-  if (buffs.potions) { ctx.fillText(`+${buffs.potions} fiole max`, col.x + 14, yy); }
+  const ub = ultBtns(L);
+  const x = ub.hell.x + ub.hell.w + 18, y = ub.nuke.y + ub.nuke.h / 2;
+  ctx.fillStyle = C_GOLD; ctx.font = `bold 10px ${UI}`; ctx.textAlign = 'left';
+  ctx.fillText('BONUS CONSOMMABLES', x, y - 12);
+  ctx.fillStyle = '#69f0ae'; ctx.font = `10.5px ${UI}`;
+  const parts = [];
+  if (buffs.hp) parts.push(`+${buffs.hp} PV max`);
+  if (buffs.potions) parts.push(`+${buffs.potions} fiole max`);
+  ctx.fillText(parts.join('  ·  '), x, y + 4);
 }
 
 export function drawForgeInv(L) {
@@ -415,26 +418,26 @@ function drawInvCell(c) {
   ctx.lineWidth = equipped || hov ? 2 : 1.2;
   roundRect(c.x, c.y, c.w, c.h, 9); ctx.stroke();
   // icône
-  drawItemIcon(it, c.x + c.w / 2, c.y + 30, 20);
+  drawItemIcon(it, c.x + c.w / 2, c.y + 36, 22);
   // nom + rareté
   ctx.textAlign = 'center';
-  ctx.fillStyle = broken ? '#ff8a80' : '#ffe9a3'; ctx.font = `bold 10.5px ${UI}`;
-  ctx.fillText(fitText(it.name, c.w - 12), c.x + c.w / 2, c.y + 60);
-  ctx.fillStyle = tier; ctx.font = `8.5px ${UI}`;
-  ctx.fillText(ITEM_RARITY[it.rar] || '', c.x + c.w / 2, c.y + 73);
+  ctx.fillStyle = broken ? '#ff8a80' : '#ffe9a3'; ctx.font = `bold 11px ${UI}`;
+  ctx.fillText(fitText(it.name, c.w - 12), c.x + c.w / 2, c.y + 68);
+  ctx.fillStyle = tier; ctx.font = `9px ${UI}`;
+  ctx.fillText(ITEM_RARITY[it.rar] || '', c.x + c.w / 2, c.y + 81);
   // badges : quantité conso / équipé / cassé / durabilité
   if (it.conso) {
-    ctx.fillStyle = '#b9f6ca'; ctx.font = `bold 11px Consolas, monospace`;
-    ctx.fillText(`×${qty}`, c.x + c.w - 14, c.y + 16);
+    ctx.fillStyle = '#b9f6ca'; ctx.font = `bold 12px Consolas, monospace`;
+    ctx.fillText(`×${qty}`, c.x + c.w - 16, c.y + 18);
   } else if (equipped) {
-    ctx.fillStyle = tier; ctx.font = `bold 10px ${UI}`;
-    ctx.fillText('✓ ÉQUIPÉ', c.x + c.w / 2, c.y + 86);
+    ctx.fillStyle = tier; ctx.font = `bold 10.5px ${UI}`;
+    ctx.fillText('✓ ÉQUIPÉ', c.x + c.w / 2, c.y + 94);
   } else if (broken) {
-    ctx.fillStyle = '#ff8a80'; ctx.font = `bold 9.5px ${UI}`;
-    ctx.fillText('💥 CASSÉ', c.x + c.w / 2, c.y + 86);
+    ctx.fillStyle = '#ff8a80'; ctx.font = `bold 10px ${UI}`;
+    ctx.fillText('💥 CASSÉ', c.x + c.w / 2, c.y + 94);
   } else if (dur < dmax) {
-    ctx.fillStyle = '#8d99ae'; ctx.font = `9px ${UI}`;
-    ctx.fillText(`${Math.round(dur / dmax * 100)} %`, c.x + c.w / 2, c.y + 86);
+    ctx.fillStyle = '#8d99ae'; ctx.font = `9.5px ${UI}`;
+    ctx.fillText(`${Math.round(dur / dmax * 100)} %`, c.x + c.w / 2, c.y + 94);
   }
 }
 
@@ -448,11 +451,11 @@ function drawMatCell(c) {
   ctx.strokeStyle = hov ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.15)';
   ctx.lineWidth = 1.2;
   roundRect(c.x, c.y, c.w, c.h, 9); ctx.stroke();
-  drawMatIcon(m, c.x + c.w / 2, c.y + 26, 12);
+  drawMatIcon(m, c.x + c.w / 2, c.y + 32, 13);
   ctx.textAlign = 'center';
-  ctx.fillStyle = '#e8e0c8'; ctx.font = `bold 11.5px ${UI}`;
-  ctx.fillText(info.name, c.x + c.w / 2, c.y + 56);
-  ctx.fillStyle = '#ffd740'; ctx.font = `bold 15px Consolas, monospace`;
-  ctx.fillText(`×${n.toLocaleString('fr-FR')}`, c.x + c.w / 2, c.y + 76);
+  ctx.fillStyle = '#e8e0c8'; ctx.font = `bold 12px ${UI}`;
+  ctx.fillText(info.name, c.x + c.w / 2, c.y + 64);
+  ctx.fillStyle = '#ffd740'; ctx.font = `bold 16px Consolas, monospace`;
+  ctx.fillText(`×${n.toLocaleString('fr-FR')}`, c.x + c.w / 2, c.y + 86);
 }
 

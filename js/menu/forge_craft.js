@@ -289,18 +289,18 @@ export function drawForgeCraft(L) {
     ctx.strokeStyle = sel ? tier : owned ? 'rgba(105,240,174,0.45)' : ok ? `rgba(255,215,64,${0.3 + 0.15 * Math.sin(G.time * 3 + r.x * 0.02)})` : 'rgba(255,255,255,0.12)';
     ctx.lineWidth = sel ? 2 : 1.2;
     roundRect(r.x, r.y, r.w, r.h, 8); ctx.stroke();
-    drawItemIcon(it, r.x + 24, r.y + r.h / 2, 15);
+    drawItemIcon(it, r.x + 26, r.y + r.h / 2, 16);
     ctx.textAlign = 'left';
-    ctx.fillStyle = owned ? '#69f0ae' : '#ffe9a3'; ctx.font = 'bold 11.5px Inter, sans-serif';
-    ctx.fillText(fitText(it.name, lw - 60), r.x + 44, r.y + 18);
-    ctx.fillStyle = tier; ctx.font = `9px Inter, sans-serif`;
-    ctx.fillText(`${ITEM_RARITY[it.rar] || ''}${owned ? ' · possédé' : ''}`, r.x + 44, r.y + 33);
+    ctx.fillStyle = owned ? '#69f0ae' : '#ffe9a3'; ctx.font = 'bold 12px Inter, sans-serif';
+    ctx.fillText(fitText(it.name, lw - 70), r.x + 48, r.y + 21);
+    ctx.fillStyle = tier; ctx.font = `9.5px Inter, sans-serif`;
+    ctx.fillText(`${ITEM_RARITY[it.rar] || ''}${owned ? ' · possédé' : ''}`, r.x + 48, r.y + 37);
     // pastille état : ✓ok / ✗manque / ✓possédé
-    ctx.textAlign = 'right'; ctx.font = `bold 10px Inter, sans-serif`;
+    ctx.textAlign = 'right'; ctx.font = `bold 11px Inter, sans-serif`;
     if (owned) ctx.fillStyle = '#69f0ae';
     else if (ok) ctx.fillStyle = '#81c784';
     else ctx.fillStyle = '#ef9a9a';
-    ctx.fillText(owned ? '✓' : ok ? '◆' : '✗', r.x + r.w - 12, r.y + 20);
+    ctx.fillText(owned ? '✓' : ok ? '◆' : '✗', r.x + r.w - 14, r.y + 22);
   }
   ctx.restore();
   // scrollbar liste
@@ -327,48 +327,48 @@ export function drawForgeCraft(L) {
   panel(cx2, y0, cw2, y1 - y0);
   const px = cx2 + cw2 / 2;
   // halo de rareté
-  const hg = ctx.createRadialGradient(px, y0 + 90, 10, px, y0 + 90, 90);
+  const hg = ctx.createRadialGradient(px, y0 + 96, 10, px, y0 + 96, 96);
   hg.addColorStop(0, hexA(tier, 0.22)); hg.addColorStop(1, hexA(tier, 0));
   ctx.fillStyle = hg;
-  ctx.beginPath(); ctx.arc(px, y0 + 90, 90, 0, TAU); ctx.fill();
-  drawItemIcon(it, px, y0 + 82, 34);
+  ctx.beginPath(); ctx.arc(px, y0 + 96, 96, 0, TAU); ctx.fill();
+  drawItemIcon(it, px, y0 + 88, 36);
   ctx.textAlign = 'center';
-  ctx.fillStyle = '#ffe9a3'; ctx.font = `bold 16px ${SERIF}`;
-  ctx.fillText(fitText(it.name, cw2 - 30), px, y0 + 142);
-  ctx.fillStyle = tier; ctx.font = `bold 11px Inter, sans-serif`;
-  ctx.fillText(`◆ ${ITEM_RARITY[it.rar] || 'Objet forgé'}`, px, y0 + 160);
+  ctx.fillStyle = '#ffe9a3'; ctx.font = `bold 17px ${SERIF}`;
+  ctx.fillText(fitText(it.name, cw2 - 30), px, y0 + 152);
+  ctx.fillStyle = tier; ctx.font = `bold 11.5px Inter, sans-serif`;
+  ctx.fillText(`◆ ${ITEM_RARITY[it.rar] || 'Objet forgé'}`, px, y0 + 172);
   // description
-  ctx.fillStyle = '#9e9e9e'; ctx.font = `12px Inter, sans-serif`;
+  ctx.fillStyle = '#9e9e9e'; ctx.font = `12.5px Inter, sans-serif`;
   const dLines = wrapLines(it.desc, cw2 - 50).slice(0, 3);
-  dLines.forEach((ln, i) => ctx.fillText(ln, px, y0 + 186 + i * 17));
+  dLines.forEach((ln, i) => ctx.fillText(ln, px, y0 + 200 + i * 18));
   // stats détaillées (bonus réels)
-  const fxY = y0 + 250;
-  ctx.fillStyle = '#ffd740'; ctx.font = `bold 11px Inter, sans-serif`; ctx.textAlign = 'left';
-  ctx.fillText('BONUS APPLIQUÉS', cx2 + 24, fxY);
-  const fxLines = itemFxLines(id);
-  ctx.font = `11.5px Inter, sans-serif`; ctx.fillStyle = '#a5d6a7';
-  fxLines.forEach((ln, i) => ctx.fillText(ln, cx2 + 24, fxY + 20 + i * 16));
+  const fxY = y0 + 276;
+  ctx.fillStyle = '#ffd740'; ctx.font = `bold 11.5px Inter, sans-serif`; ctx.textAlign = 'left';
+  ctx.fillText('BONUS APPLIQUÉS', cx2 + 26, fxY);
+  const fxLines = itemFxLines(id).slice(0, 4);
+  ctx.font = `12px Inter, sans-serif`; ctx.fillStyle = '#a5d6a7';
+  fxLines.forEach((ln, i) => ctx.fillText(ln, cx2 + 26, fxY + 22 + i * 18));
   // emplacement
-  ctx.fillStyle = '#90caf9'; ctx.font = `bold 10.5px Inter, sans-serif`; ctx.textAlign = 'center';
-  ctx.fillText(SLOT_TXT[it.slot] || it.slot.toUpperCase(), px, y1 - 14);
+  ctx.fillStyle = '#90caf9'; ctx.font = `bold 11px Inter, sans-serif`; ctx.textAlign = 'center';
+  ctx.fillText(SLOT_TXT[it.slot] || it.slot.toUpperCase(), px, y1 - 16);
 
   // ---------- DROITE : matériaux + coût + statut + fabrication ----------
   panel(rx, y0, rw, y1 - y0);
   const qx = rx + 18;
   ctx.textAlign = 'left'; ctx.fillStyle = '#ffd740'; ctx.font = `bold 12px Inter, sans-serif`;
-  ctx.fillText('MATÉRIAUX REQUIS', qx, y0 + 26);
-  let my = y0 + 52;
+  ctx.fillText('MATÉRIAUX REQUIS', qx, y0 + 30);
+  let my = y0 + 60;
   for (const m in it.cost) {
     const have = G.inv.mats[m] || 0, need = it.cost[m];
     const enough = have >= need;
-    drawMatIcon(m, qx + 8, my - 4, 7);
-    ctx.fillStyle = '#e8e0c8'; ctx.font = `12px Inter, sans-serif`;
-    ctx.fillText(MATS[m].name, qx + 22, my);
-    ctx.font = `bold 12px Consolas, monospace`; ctx.textAlign = 'right';
+    drawMatIcon(m, qx + 8, my - 5, 8);
+    ctx.fillStyle = '#e8e0c8'; ctx.font = `12.5px Inter, sans-serif`;
+    ctx.fillText(MATS[m].name, qx + 24, my);
+    ctx.font = `bold 12.5px Consolas, monospace`; ctx.textAlign = 'right';
     ctx.fillStyle = owned ? '#69f0ae' : enough ? '#a5d6a7' : '#ef9a9a';
-    ctx.fillText(`${have.toLocaleString('fr-FR')} / ${need}`, rx + rw - 18, my);
+    ctx.fillText(`${have.toLocaleString('fr-FR')} / ${need}`, rx + rw - 20, my);
     ctx.textAlign = 'left';
-    my += 26;
+    my += 30;
   }
   // statut + bouton
   const stY = y1 - 108;
@@ -412,9 +412,9 @@ function drawUpgradeTab(L) {
     { key: 'lance', icon: '🔱', label: 'LANCE', color: '#4fc3f7' },
     { key: 'arc', icon: '🏹', label: 'ARC CINÉTIQUE', color: '#b388ff' }
   ];
-  const y0 = L.cy + 142;
-  ctx.fillStyle = C_MUTED; ctx.font = `italic 12px Inter, sans-serif`; ctx.textAlign = 'center';
-  ctx.fillText('Chaque amélioration ajoute 10 % de l\'XP nécessaire au niveau suivant — payable en Émeraudes uniquement.', L.cx + L.cw / 2, y0 - 14);
+  const y0 = L.cy + 186;
+  ctx.fillStyle = C_MUTED; ctx.font = `italic 12.5px Inter, sans-serif`; ctx.textAlign = 'center';
+  ctx.fillText('Chaque amélioration ajoute 10 % de l\'XP nécessaire au niveau suivant — payable en Émeraudes uniquement.', L.cx + L.cw / 2, y0 - 18);
   for (const card of upgradeCards(L)) {
     const def = defs.find(d => d.key === card.key);
     const info = modeInfo(G.inv, card.key);
@@ -429,30 +429,30 @@ function drawUpgradeTab(L) {
     ctx.strokeStyle = locked ? 'rgba(124,77,255,0.4)' : def.color; ctx.lineWidth = 1.6;
     roundRect(card.x, card.y, card.w, card.h, 12); ctx.stroke();
     ctx.globalAlpha = locked ? 0.55 : 1;
-    ctx.textAlign = 'left'; ctx.font = `22px serif`;
-    ctx.fillText(def.icon, card.x + 18, card.y + 36);
-    ctx.fillStyle = def.color; ctx.font = `bold 16px Inter, sans-serif`;
-    ctx.fillText(def.label, card.x + 52, card.y + 34);
-    ctx.fillStyle = '#ffe9a3'; ctx.font = `bold 18px Consolas, monospace`; ctx.textAlign = 'right';
-    ctx.fillText(locked ? '???' : `NIV ${info.lvl}`, card.x + card.w - 16, card.y + 36);
+    ctx.textAlign = 'left'; ctx.font = `26px serif`;
+    ctx.fillText(def.icon, card.x + 20, card.y + 48);
+    ctx.fillStyle = def.color; ctx.font = `bold 18px Inter, sans-serif`;
+    ctx.fillText(def.label, card.x + 58, card.y + 46);
+    ctx.fillStyle = '#ffe9a3'; ctx.font = `bold 20px Consolas, monospace`; ctx.textAlign = 'right';
+    ctx.fillText(locked ? '???' : `NIV ${info.lvl}`, card.x + card.w - 18, card.y + 48);
     // barre XP
-    const bx = card.x + 18, bw = card.w - 36, by = card.y + 58;
-    ctx.fillStyle = 'rgba(255,255,255,0.12)'; roundRect(bx, by, bw, 10, 5); ctx.fill();
+    const bx = card.x + 20, bw = card.w - 40, by = card.y + 84;
+    ctx.fillStyle = 'rgba(255,255,255,0.12)'; roundRect(bx, by, bw, 12, 6); ctx.fill();
     ctx.fillStyle = def.color;
-    roundRect(bx, by, bw * info.pct, 10, 5); ctx.fill();
-    ctx.fillStyle = '#aab4c0'; ctx.font = `10px Inter, sans-serif`; ctx.textAlign = 'center';
-    ctx.fillText(maxed ? 'NIVEAU MAX' : `${Math.floor(info.xp).toLocaleString('fr-FR')} / ${info.need.toLocaleString('fr-FR')} XP`, card.x + card.w / 2, by - 6);
+    roundRect(bx, by, bw * info.pct, 12, 6); ctx.fill();
+    ctx.fillStyle = '#aab4c0'; ctx.font = `11px Inter, sans-serif`; ctx.textAlign = 'center';
+    ctx.fillText(maxed ? 'NIVEAU MAX' : `${Math.floor(info.xp).toLocaleString('fr-FR')} / ${info.need.toLocaleString('fr-FR')} XP`, card.x + card.w / 2, by - 8);
     // coût
-    ctx.textAlign = 'left'; ctx.font = `11.5px Consolas, monospace`;
-    let cy = card.y + 92;
+    ctx.textAlign = 'left'; ctx.font = `12.5px Consolas, monospace`;
+    let cy = card.y + 128;
     for (const m in cost) {
       const have = G.inv.mats[m] || 0;
       ctx.fillStyle = have >= cost[m] ? '#a5d6a7' : '#ef9a9a';
-      ctx.fillText(`${MATS[m].name} ${have}/${cost[m]}`, card.x + 18, cy);
-      cy += 17;
+      ctx.fillText(`${MATS[m].name} ${have}/${cost[m]}`, card.x + 20, cy);
+      cy += 22;
     }
-    ctx.fillStyle = '#8d99ae'; ctx.font = `10.5px Inter, sans-serif`;
-    ctx.fillText(locked ? '🔒 Vaincre l\'Abomination Cosmique' : maxed ? 'Niveau maximum atteint' : `+${xpGain.toLocaleString('fr-FR')} XP par amélioration`, card.x + 18, cy + 2);
+    ctx.fillStyle = '#8d99ae'; ctx.font = `11.5px Inter, sans-serif`;
+    ctx.fillText(locked ? '🔒 Vaincre l\'Abomination Cosmique' : maxed ? 'Niveau maximum atteint' : `+${xpGain.toLocaleString('fr-FR')} XP par amélioration`, card.x + 20, cy + 8);
     // bouton
     const b = card.btn;
     const ok = !locked && !maxed && canPay;
@@ -460,8 +460,8 @@ function drawUpgradeTab(L) {
     roundRect(b.x, b.y, b.w, b.h, 8); ctx.fill();
     ctx.strokeStyle = ok ? '#81c784' : 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1.5;
     roundRect(b.x, b.y, b.w, b.h, 8); ctx.stroke();
-    ctx.fillStyle = ok ? '#fff' : '#777'; ctx.font = `bold 12px Inter, sans-serif`; ctx.textAlign = 'center';
-    ctx.fillText(locked ? '🔒 VERROUILLÉ' : maxed ? 'MAX' : ok ? '⬆ AMÉLIORER' : 'MATÉRIAUX', b.x + b.w / 2, b.y + b.h / 2 + 4);
+    ctx.fillStyle = ok ? '#fff' : '#777'; ctx.font = `bold 13.5px Inter, sans-serif`; ctx.textAlign = 'center';
+    ctx.fillText(locked ? '🔒 VERROUILLÉ' : maxed ? 'MAX' : ok ? '⬆ AMÉLIORER' : 'MATÉRIAUX', b.x + b.w / 2, b.y + b.h / 2 + 5);
     ctx.globalAlpha = 1;
   }
 }
@@ -478,12 +478,12 @@ function drawRepairTab(L) {
 
   // en-tête
   ctx.textAlign = 'left';
-  ctx.fillStyle = C_GOLD; ctx.font = `bold 13px ${UI}`;
-  ctx.fillText('🔧 RÉPARATION', L.cx + 30, L.cy + 142);
-  ctx.fillStyle = C_MUTED; ctx.font = `italic 11px ${UI}`;
-  ctx.fillText(all.length
+  ctx.fillStyle = C_GOLD; ctx.font = `bold 13.5px ${UI}`;
+  ctx.fillText('🔧 RÉPARATION', L.cx + 30, L.cy + 146);
+  ctx.fillStyle = C_MUTED; ctx.font = `italic 11.5px ${UI}`;
+  ctx.fillText(fitText(all.length
     ? `${all.length} équipement${all.length > 1 ? 's' : ''} endommagé${all.length > 1 ? 's' : ''} — le coût suit l'usure (~50 % du prix de forge au total)`
-    : 'Tous tes équipements sont en parfait état', L.cx + 30, L.cy + 160);
+    : 'Tous tes équipements sont en parfait état', L.cw - 420), L.cx + 30, L.cy + 164);
 
   // coût total à gauche du bouton « tout réparer »
   const ab = repairAllBtn(L);
@@ -510,7 +510,7 @@ function drawRepairTab(L) {
   }
 
   // liste scrollable (clip)
-  const vy0 = L.cy + 174, vy1 = L.cy + L.ch - 10;
+  const vy0 = L.cy + 188, vy1 = L.cy + L.ch - 16;
   ctx.save();
   ctx.beginPath(); ctx.rect(L.cx + 16, vy0, L.cw - 32, vy1 - vy0); ctx.clip();
   for (const row of rows) {
@@ -529,20 +529,20 @@ function drawRepairTab(L) {
     roundRect(row.x, row.y, row.w, row.h, 9); ctx.stroke();
     const cy = row.y + row.h / 2;
     // icône
-    drawItemIcon(it, row.x + 30, cy, 17);
+    drawItemIcon(it, row.x + 34, cy, 19);
     // nom + emplacement
     ctx.textAlign = 'left';
-    ctx.fillStyle = st === 'broken' ? '#ff8a80' : '#ffe9a3'; ctx.font = `bold 13px ${UI}`;
-    ctx.fillText(fitText(it.name + (st === 'broken' ? ' 💥' : ''), 240), row.x + 52, cy - 6);
-    ctx.fillStyle = '#90a4ae'; ctx.font = `10px ${UI}`;
-    ctx.fillText(SLOT_LABEL[it.slot] || it.slot.toUpperCase(), row.x + 52, cy + 12);
+    ctx.fillStyle = st === 'broken' ? '#ff8a80' : '#ffe9a3'; ctx.font = `bold 13.5px ${UI}`;
+    ctx.fillText(fitText(it.name + (st === 'broken' ? ' 💥' : ''), 260), row.x + 58, cy - 9);
+    ctx.fillStyle = '#90a4ae'; ctx.font = `10.5px ${UI}`;
+    ctx.fillText(SLOT_LABEL[it.slot] || it.slot.toUpperCase(), row.x + 58, cy + 9);
     // barre de durabilité + valeurs
-    const bx = row.x + 300, bw = 190, by = cy - 7;
+    const bx = row.x + 330, bw = 230, by = cy - 9;
     ctx.fillStyle = 'rgba(0,0,0,0.4)'; roundRect(bx - 1, by - 1, bw + 2, 12, 6); ctx.fill();
     ctx.fillStyle = col;
     if (dur > 0) roundRect(bx, by, bw * dur / dmax, 10, 5), ctx.fill();
-    ctx.fillStyle = '#fff'; ctx.font = `bold 10px Consolas, monospace`; ctx.textAlign = 'center';
-    ctx.fillText(`${Math.round(dur)} / ${dmax}`, bx + bw / 2, by + 9);
+    ctx.fillStyle = '#fff'; ctx.font = `bold 10.5px Consolas, monospace`; ctx.textAlign = 'center';
+    ctx.fillText(`${Math.round(dur)} / ${dmax}`, bx + bw / 2, by + 10);
     // coût en matériaux
     const rc = repairCost(G.inv, row.id);
     const okR = canRepair(G.inv, row.id);
@@ -564,7 +564,7 @@ function drawRepairTab(L) {
     roundRect(rb.x, rb.y, rb.w, rb.h, 8); ctx.fill();
     ctx.strokeStyle = okR ? '#81c784' : 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1.4;
     roundRect(rb.x, rb.y, rb.w, rb.h, 8); ctx.stroke();
-    ctx.fillStyle = okR ? '#fff' : '#78909c'; ctx.font = `bold 11.5px ${UI}`; ctx.textAlign = 'center';
+    ctx.fillStyle = okR ? '#fff' : '#78909c'; ctx.font = `bold 12px ${UI}`; ctx.textAlign = 'center';
     ctx.fillText(okR ? '🔧 RÉPARER' : 'MANQUE MATS', rb.x + rb.w / 2, rb.y + rb.h / 2 + 4);
   }
   ctx.restore();

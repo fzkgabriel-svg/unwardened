@@ -51,8 +51,8 @@ export function drawForgeView() {
     roundRect(mb.x, mb.y, mb.w, mb.h, 8); ctx.fill();
     ctx.strokeStyle = '#ef5350'; ctx.lineWidth = mhov ? 2 : 1.2;
     roundRect(mb.x, mb.y, mb.w, mb.h, 8); ctx.stroke();
-    ctx.fillStyle = '#ffcdd2'; ctx.font = 'bold 12px Inter, sans-serif';
-    ctx.fillText('🛠 +10 MATÉRIAUX', mb.x + mb.w / 2, mb.y + 20);
+    ctx.fillStyle = '#ffcdd2'; ctx.font = 'bold 11.5px Inter, sans-serif';
+    ctx.fillText('🛠 +10 MATÉRIAUX', mb.x + mb.w / 2, mb.y + 17);
   }
 
   // contenu de l'onglet : apparition en fondu + léger glissement vers le haut
