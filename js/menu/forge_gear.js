@@ -230,16 +230,17 @@ function drawSkillCard(x, y, w, h, sd, locked, z1, z2) {
   ctx.fillText(sd.label, x + 44, y + 24);
   ctx.fillStyle = locked ? '#5a5470' : '#ffe9a3'; ctx.font = `bold 15px Consolas, monospace`; ctx.textAlign = 'right';
   ctx.fillText(locked ? '???' : `NIV. ${info.lvl}`, x + w - 12, y + 25);
-  // ligne stats : bonus dégâts à gauche, badge d'emplacement à droite
+  // ligne stats (gauche) — le badge d'emplacement est en haut à droite
+  // pour ne plus chevaucher le texte
   ctx.fillStyle = locked ? '#5a5470' : '#8d99ae'; ctx.font = `10px ${UI}`; ctx.textAlign = 'left';
   ctx.fillText(locked ? sd.rarity + ' · non découverte' : `+${Math.round((modeMult(G.inv, sd.key) - 1) * 100)} % dégâts · ${sd.rarity}`, x + 44, y + 40);
-  ctx.font = `bold 9px ${UI}`; ctx.textAlign = 'right';
+  ctx.font = `bold 8px ${UI}`; ctx.textAlign = 'right';
   if (equipped) {
     ctx.fillStyle = sd.color;
-    ctx.fillText(in1 && in2 ? 'S1+S2' : in1 ? 'EMPLACEMENT 1' : 'EMPLACEMENT 2', x + w - 12, y + 40);
+    ctx.fillText(in1 && in2 ? 'S1+S2' : in1 ? 'EMPLACEMENT 1' : 'EMPLACEMENT 2', x + w - 10, y + 13);
   } else {
     ctx.fillStyle = '#546e7a';
-    ctx.fillText('NON ÉQUIPÉE', x + w - 12, y + 40);
+    ctx.fillText('NON ÉQUIPÉE', x + w - 10, y + 13);
   }
   if (locked) {
     ctx.fillStyle = 'rgba(0,0,0,0.4)';
