@@ -2,7 +2,7 @@ import { G, ctx, W, H, TAU, saveStats, finalWave } from '../state.js';
 import { roundRect, drawMatIcon, drawItemIcon, itemTier } from '../utils.js';
 import { regenerateDecor } from '../graphics.js';
 import { ACHIEVEMENTS, unlocked, achievementCount, checkAchievements, achInfo, isClaimed, claimReward, achTabList, unclaimedInTab, adminUnlockAll } from '../achievements.js';
-import { ITEMS, MATS, canCraft, craft, toggleEquip, equipBonuses, getDur, canRepair, repairItem, repairCost, loadInv, addMaterial, modeInfo, addWmodeXp, modeMult, MODE_MAX_LVL, setInvNoSave, modeKey, WEAPON_MODES, DUR_MAX, durMaxOf } from '../inventory.js';
+import { ITEMS, MATS, canCraft, craft, toggleEquip, equipBonuses, getDur, canRepair, repairItem, repairCost, loadInv, addMaterial, modeInfo, addWmodeXp, modeMult, MODE_MAX_LVL, setInvNoSave, modeKey, WEAPON_MODES, loadoutKeys, DUR_MAX, durMaxOf } from '../inventory.js';
 import { spawnEnemy, spawnFinalBoss } from '../enemies.js';
 import { gainXp } from '../player.js';
 import { curWorld, syncCamera, regenerateWorld, reloadWorlds, campaignStart, campaignEnd } from '../world.js';
@@ -205,19 +205,20 @@ export function resetToMenu() {
     spinDamage: 70, spinRadius: 110, spinCooldown: 0, spinDuration: 0,
     ultCharge: 0, ultRadius: 400, ultActive: 0, ultAnim: 0,
     xp: 0, level: 1, xpNext: 50, attackMode: 1,
-    shieldT: 0, shieldCd: 0, switchLock: 0, hitSlowT: 0,
+    shieldT: 0, shieldCd: 0, sentenceCd: 0, sentenceT: 0, sentenceAng: 0, switchLock: 0, hitSlowT: 0,
     alive: true, lastHurt: -99, potions: 0, maxPotions: 3, slowT: 0, potionCooldown: 0,
     poisonT: 0, poisonDps: 0, _titanMax: 0, handCd: 0, handUsed: false
   });
   // chargement d'armes (menu Personnage) : la partie démarre avec la 1re arme choisie
   {
-    const wl = (G.inv && G.inv.weapons && G.inv.weapons.length) ? G.inv.weapons : ['epee', 'lance'];
+    const wl = loadoutKeys(G.inv);
     p.attackMode = WEAPON_MODES[wl[0]] || 1;
   }
   G.enemies.length = 0; G.drops.length = 0; G.fireZones.length = 0; G.craters.length = 0; G.portals.length = 0;
   G.lightnings.length = 0; G.projectiles.length = 0;
   G.particles.length = 0; G.damageTexts.length = 0; G.rings.length = 0;
-  G.attackQueued = false; G.attackHeld = false; G.spinQueued = false; G.ultQueued = false; G.shieldQueued = false; G.handQueued = false; G.singQueued = false;
+  G.attackQueued = false; G.attackHeld = false; G.spinQueued = false; G.ultQueued = false; G.shieldQueued = false; G.handQueued = false; G.singQueued = false; G.judgQueued = false;
+  G.sentenceWaves.length = 0;
   G.bowShots.length = 0; G.singZones.length = 0; G.bow = null; // arc cinétique : état propre
   G.spawnTimer = 0; G.wave = 1; G.waveKills = 0; G.waveTarget = 8; G.kills = 0;
   G.gameOver = false; G.resumeTimer = 0; G.cloudT = 0; G.screenFlash = 0; G.screenShake = 0;

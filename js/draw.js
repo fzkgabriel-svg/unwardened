@@ -2,7 +2,7 @@ import { G, ctx, W, H, TAU, VERSION, finalWave, saveStats } from './state.js';
 import { spawnEnemy, spawnMinibossWave, spawnBossWave, spawnFinalBoss, damageEnemy, enemyTypes } from './enemies.js';
 import { doSlash, doSpin, doThrust, doUlt, doShield, doFireLaser, doFireHand, updateNuke, updateIceUlt, updateLasers, updateHands, updateVolcanoes, updateSewerUlt, updateSpaceUlt } from './attacks.js';
 import { updateEffects, addDamageText, spawnParticles } from './effects.js';
-import { drawBackground, drawEnemy, drawDrops, drawPlayer, drawSlashArc, drawUltFlash, drawMushroom, drawBomber, drawEffects, drawFireZones, drawCraters, drawPortals, drawProjectiles, drawLightnings, drawGrain, drawClouds, dayNight, drawTerrain, drawBuildings, drawWorldPortals, drawObstacle, drawIceStorm, drawLasers, drawHands, drawVolcanoes, drawAcidZones, drawBlackHoles, drawVoidHole, drawWindZones, drawStormTornado, drawBowShots, drawSingZones, drawBowReveal, drawAmbient, drawFalls, drawBiomeGrade, drawCloudShadows, drawSnowCover } from './graphics.js';
+import { drawBackground, drawEnemy, drawDrops, drawPlayer, drawSlashArc, drawUltFlash, drawMushroom, drawBomber, drawEffects, drawFireZones, drawCraters, drawPortals, drawProjectiles, drawLightnings, drawGrain, drawClouds, dayNight, drawTerrain, drawBuildings, drawWorldPortals, drawObstacle, drawIceStorm, drawLasers, drawHands, drawVolcanoes, drawAcidZones, drawBlackHoles, drawVoidHole, drawWindZones, drawStormTornado, drawBowShots, drawSingZones, drawBowReveal, drawGardienAura, drawSentenceCharge, drawSentenceWaves, drawGardienReveal, drawAmbient, drawFalls, drawBiomeGrade, drawCloudShadows, drawSnowCover } from './graphics.js';
 import { checkAchievements } from './achievements.js';
 import { wearEquipment, addMaterial } from './inventory.js';
 import { drawHUD, drawAchToast, drawWarnToast } from './hud.js';
@@ -60,8 +60,11 @@ export function draw() {
     drawProjectiles();
     drawBowShots();  // flèches d'énergie de l'arc cinétique
     drawSingZones(); // zones de distorsion de la singularité
+    drawSentenceWaves(); // ondes runiques du Jugement du Gardien (sous les entités)
     drawSlashArc();
+    drawGardienAura(); // halo discret de l'arme équipée
     drawPlayer();
+    drawSentenceCharge(); // cercle de runes pendant la concentration
     drawLightnings(); // télégraphes + bolts par-dessus les entités
     drawEffects();
     drawUltFlash();
@@ -105,6 +108,7 @@ export function draw() {
   if (G.state === 'victory') {
     drawVictory();
     drawBowReveal(); // cinématique de découverte de l'arc (premières secondes)
+    drawGardienReveal(); // cinématique de découverte du Jugement du Gardien
     ctx.font = '11px Consolas, monospace';
     ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(232,217,176,0.45)';
     ctx.fillText(`v${VERSION}`, W - 14, H - 12);

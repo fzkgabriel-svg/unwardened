@@ -12,7 +12,7 @@ export const ctx = canvas.getContext('2d');
 ctx.scale(SS, SS);
 export const W = 1200, H = 640;
 export const TAU = Math.PI * 2;
-export const VERSION = '4.12.0';
+export const VERSION = '4.13.0';
 export const FINAL_WAVE = 20; // vague du boss final (campagne 1) // incrémenter à chaque mise à jour du jeu
 // vagues finales : campagne 2 -> 25, 3 -> 30, 4 (Égouts) -> 35, 5 (Espace) -> 40
 export function finalWave() {
@@ -49,6 +49,9 @@ export const G = {
     xp: 0, level: 1, xpNext: 50,
     attackMode: 1, // 1 = épée + rotation, 3 = bouclier + lance (tank)
     shieldT: 0, shieldCd: 0, // dôme de bouclier : -85% dégâts pendant 3s, recharge 10s
+    sentenceCd: 0,          // Jugement du Gardien : recharge de « Sentence ancestrale » (10 s)
+    sentenceT: 0,           // >0 = concentration de Sentence ancestrale en cours (s)
+    sentenceAng: 0,         // direction figée au lancement de la concentration
     handCd: 0,               // main de feu du titan : recharge 2,6 s
     handUsed: false,         // la main de feu n'est utilisable qu'UNE fois par transformation
     switchLock: 0, // 2s sans attaque après un changement d'arme
@@ -87,6 +90,7 @@ export const G = {
   blackHoles: [],  // trous noirs de l'ultime spatiale {x, y, r, life, maxLife, tick}
   iceWalls: [],    // murs de glace du Souverain {x, y, r, life} : obstacles temporaires
   shockwaves: [],  // ondes de choc au sol {x, y, r, maxR, speed, dmg, hit, color, slow}
+  sentenceWaves: [], // ondes runiques du Jugement du Gardien {x,y,angle,t,dur,speed,r,hit}
 
   // progression / vague
   spawnTimer: 0,
@@ -108,6 +112,7 @@ export const G = {
   deathInfo: null,  // snapshot des infos de mort {killer, killerType, killerColor, world, campaign, wave}
   goT: 0,           // temps écoulé depuis l'apparition de l'écran de mort (animations)
   vicT: 0,          // temps écoulé depuis l'apparition de l'écran de victoire (révélation)
+  gardienReveal: null, // cinématique de découverte du Jugement du Gardien (timestamp)
   resumeTimer: 0, // compte à rebours avant reprise (pause)
   cloudT: 0,      // animation d'ouverture par les nuages au lancement
   screenFlash: 0,

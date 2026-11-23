@@ -4,7 +4,7 @@ import { roundRect } from '../utils.js';
 import { adminUnlocked, inR, drawMenuButton } from './common.js';
 import { forgeLayout, forgeTabs, adminMatsBtn, forgeTab, itemDetail, drawItemDetail } from './forge_state.js';
 import { drawForgeCraft, drawForgeAnim } from './forge_craft.js';
-import { drawForgeInv, drawHeroPaperdoll } from './forge_gear.js';
+import { drawForgeInv, drawHeroPaperdoll, drawWeaponDetail } from './forge_gear.js';
 import { drawForgeScene, drawMiniFlame } from './forge_fx.js';
 export { forgeClickAt, forgeWheel } from './forge_state.js';
 
@@ -64,6 +64,7 @@ export function drawForgeView() {
   else drawHeroPaperdoll(L);
   ctx.restore();
   if (itemDetail) drawItemDetail(); // fiche équipement par-dessus tout
+  drawWeaponDetail(); // fiche arme (personnage > compétences) par-dessus tout
 
   drawMenuButton(T.back, '← RETOUR', '#455a64', '#90a4ae', false);
   drawForgeAnim(L);

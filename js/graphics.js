@@ -8,3 +8,4 @@ export * from './gfx/worldfx.js';     // portails, fioles, projectiles, feux, ef
 export * from './gfx/entities.js';    // héros, monstres, armes, ataques spéciales
 export * from './gfx/cinematic.js';   // nuages d'intro, B-2, bombe atomique, champignon
 export * from './gfx/bow_draw.js';    // arc cinétique cosmique : arme, projectiles, révélation
+export * from './gfx/gardien_draw.js'; // Jugement du Gardien : aura, Sentence ancestrale, révélation

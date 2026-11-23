@@ -9,7 +9,7 @@ import { HPAL, crisp } from './frame.js';
 
 const SLOTS = ['weapon', 'armor', 'helm', 'gloves', 'charm', 'boots'];
 // couleur de l'anneau de sélection selon le mode d'attaque actif
-const MODE_COL = { 1: '#e8c96a', 3: '#7cc4f7', 5: '#b388ff' };
+const MODE_COL = { 1: '#e8c96a', 3: '#7cc4f7', 5: '#b388ff', 7: '#a7ffeb' };
 
 export function drawEquipPanel() {
   const inv = G.inv;

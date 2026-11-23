@@ -1,6 +1,6 @@
 import { G, ctx, W, H, TAU } from '../state.js';
 import { roundRect, shade, drawFlaskIcon, hexA } from '../utils.js';
-import { playerAngle } from '../attacks.js';
+import { playerAngle, SENT_CHARGE } from '../attacks.js';
 import { curWorld, CONFIG, RARITY_COLOR } from '../world.js';
 import { drawShadow } from './enemies_draw.js';
 import { drawCosmicBow } from './bow_draw.js';
@@ -586,9 +586,15 @@ export function drawPlayer() {
   // (absente pendant l'intro céleste et pour le titan : il frappe au laser)
   if (!intro && !titan) {
   let swordAngle = angle;
-  if (p.attackMode === 1 && p.attackCooldown > 0.25) {
-    const t = 1 - (p.attackCooldown - 0.25) / 0.15; // 0->1
-    swordAngle = angle - p.attackArc / 2 + p.attackArc * Math.min(1, t);
+  if ((p.attackMode === 1 || p.attackMode === 7) && p.attackCooldown > 0) {
+    // animation de frappe : l'épée balaie son arc, le Jugement un arc plus large
+    const thresh = p.attackMode === 7 ? 0.2 : 0.25;
+    if (p.attackCooldown > thresh) {
+      const span = p.attackMode === 7 ? 0.3 : 0.15;
+      const t = 1 - (p.attackCooldown - thresh) / span; // 0->1
+      const arc = p.attackMode === 7 ? 1.7 : p.attackArc;
+      swordAngle = angle - arc / 2 + arc * Math.min(1, t);
+    }
   }
   ctx.rotate(swordAngle);
   if (p.attackMode === 5) {
@@ -633,6 +639,69 @@ export function drawPlayer() {
     ctx.beginPath(); ctx.moveTo(p.r + 14, 0); ctx.lineTo(p.r + 14, -15); ctx.stroke();
     ctx.fillStyle = '#e53935';
     ctx.beginPath(); ctx.moveTo(p.r + 14, -15); ctx.lineTo(p.r + 29, -11.5); ctx.lineTo(p.r + 14, -8); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  } else if (p.attackMode === 7) {
+    // JUGEMENT DU GARDIEN : grande lame sombre à gravures runiques,
+    // garde dorée angulaire et cristal flottant qui s'embrase en charge
+    const chg = Math.min(1, p.sentenceT / SENT_CHARGE);
+    ctx.save();
+    ctx.translate(-chg * 4, 0); // léger recul pendant la concentration
+    const bladeLen = 62;
+    const bg = ctx.createLinearGradient(p.r - 4, -6, p.r + bladeLen, 6);
+    bg.addColorStop(0, '#141b26'); bg.addColorStop(0.35, '#37474f');
+    bg.addColorStop(0.7, '#455a64'); bg.addColorStop(1, '#263238');
+    ctx.fillStyle = bg;
+    ctx.beginPath();
+    ctx.moveTo(p.r - 2, -5.5); ctx.lineTo(p.r + bladeLen, -4);
+    ctx.lineTo(p.r + bladeLen + 14, 0); ctx.lineTo(p.r + bladeLen, 4);
+    ctx.lineTo(p.r - 2, 5.5); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#0f1419'; ctx.lineWidth = 1.6; ctx.stroke();
+    // tranchant doré sur le fil de la lame
+    ctx.strokeStyle = 'rgba(255,215,64,0.85)'; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.moveTo(p.r - 1, -5); ctx.lineTo(p.r + bladeLen + 11, -0.5); ctx.stroke();
+    // gravures runiques : chevrons dorés le long du fuller
+    ctx.strokeStyle = 'rgba(255,215,64,0.5)'; ctx.lineWidth = 1;
+    for (let i = 0; i < 4; i++) {
+      const rx = p.r + 10 + i * 12;
+      ctx.beginPath(); ctx.moveTo(rx, -3.5); ctx.lineTo(rx + 3, 0); ctx.lineTo(rx, 3.5); ctx.stroke();
+    }
+    // fuller central sombre
+    ctx.strokeStyle = 'rgba(10,14,20,0.6)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(p.r + 4, 0); ctx.lineTo(p.r + bladeLen + 8, 0); ctx.stroke();
+    // garde : deux ailettes dorées massives
+    ctx.fillStyle = '#d4af37';
+    ctx.beginPath();
+    ctx.moveTo(p.r - 10, -9); ctx.lineTo(p.r - 3, -9); ctx.lineTo(p.r - 3, -6);
+    ctx.lineTo(p.r - 8, -5); ctx.lineTo(p.r - 8, 5); ctx.lineTo(p.r - 3, 6);
+    ctx.lineTo(p.r - 3, 9); ctx.lineTo(p.r - 10, 9);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#8a6d1f'; ctx.lineWidth = 1; ctx.stroke();
+    // poignée sombre + pommeau orbe cerclé d'or
+    ctx.fillStyle = '#3e2723'; ctx.fillRect(p.r - 20, -3.4, 11, 6.8);
+    ctx.fillStyle = '#ffd740';
+    ctx.beginPath(); ctx.arc(p.r - 22, 0, 3.4, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#0f1419';
+    ctx.beginPath(); ctx.arc(p.r - 22, 0, 1.8, 0, TAU); ctx.fill();
+    // cristal flottant au-dessus de la garde : pulse au repos,
+    // s'embrase (teinte chaude + halo élargi) pendant Sentence ancestrale
+    const pulse = 0.75 + 0.25 * Math.sin(G.time * 2.4);
+    const glowR = 5 + chg * 6 + pulse * 2;
+    const charging = chg > 0.25;
+    const cg = ctx.createRadialGradient(p.r - 5, -11, 0.5, p.r - 5, -11, glowR + 4);
+    cg.addColorStop(0, charging ? 'rgba(255,240,180,0.95)' : 'rgba(167,255,235,0.9)');
+    cg.addColorStop(0.4, 'rgba(167,255,235,0.35)');
+    cg.addColorStop(1, 'rgba(167,255,235,0)');
+    ctx.fillStyle = cg;
+    ctx.beginPath(); ctx.arc(p.r - 5, -11, glowR + 4, 0, TAU); ctx.fill();
+    ctx.save();
+    ctx.translate(p.r - 5, -11 + Math.sin(G.time * 1.8) * 1.2);
+    ctx.rotate(Math.PI / 4 + Math.sin(G.time * 1.2) * 0.15);
+    const cs = 4.5 + chg * 3;
+    ctx.fillStyle = charging ? '#fff3c4' : '#a7ffeb';
+    ctx.fillRect(-cs / 2, -cs / 2, cs, cs);
+    ctx.strokeStyle = '#ffd740'; ctx.lineWidth = 1;
+    ctx.strokeRect(-cs / 2, -cs / 2, cs, cs);
+    ctx.restore();
     ctx.restore();
   } else {
   // lame : fuller central + liseré doré

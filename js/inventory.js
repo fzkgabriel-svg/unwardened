@@ -385,7 +385,7 @@ export const MODE_MAX_LVL = 100;
 export const MODE_DMG_MAX = 3.0;   // multiplicateur max de dégâts au niveau 100 (+200 %)
 const MODE_DMG_EXPO = 2.6;         // exponentielle : la progression s'accélère avec le niveau
 export function modeNeed(lvl) { return Math.round(400 + 350 * Math.pow(lvl, 1.5)); }
-export function modeKey(attackMode) { return attackMode === 3 ? 'lance' : attackMode === 5 ? 'arc' : 'epee'; }
+export function modeKey(attackMode) { return attackMode === 3 ? 'lance' : attackMode === 5 ? 'arc' : attackMode === 7 ? 'gardien' : 'epee'; }
 export function modeInfo(inv, key) {
   inv.wmode = inv.wmode || {};
   const total = (inv.wmode[key] && inv.wmode[key].xp) || 0;
@@ -411,20 +411,61 @@ export function modeMult(inv, key) {
   return 1 + (MODE_DMG_MAX - 1) * (Math.exp(MODE_DMG_EXPO * t) - 1) / (Math.exp(MODE_DMG_EXPO) - 1);
 }
 
-// ---------- chargement d'armes : 2 armes max par personnage ----------
-export const WEAPON_MODES = { epee: 1, lance: 3, arc: 5 };
-export function weaponAllowed(inv, key) {
-  if (!inv || !inv.weapons || !inv.weapons.length) return true; // pas de choix enregistré : tout permis
-  return inv.weapons.includes(key);
+// ---------- chargement d'armes : 2 emplacements (s1 = arme principale, s2 = secondaire) ----------
+export const WEAPON_MODES = { epee: 1, lance: 3, arc: 5, gardien: 7 };
+// loadout paresseux : migre l'ancien format tableau inv.weapons -> { s1, s2 }
+// (les anciennes sauvegardes n'ont que inv.weapons = ['epee','lance'])
+export function loadoutOf(inv) {
+  if (inv && !inv.loadout) {
+    const w = (inv.weapons && inv.weapons.length ? inv.weapons : ['epee', 'lance']).slice(0, 2);
+    inv.loadout = { s1: w[0] || null, s2: w[1] || null };
+  }
+  return inv && inv.loadout ? inv.loadout : { s1: null, s2: null };
 }
-// sélection/désélection d'une arme pour les prochaines parties (2 max, 1 min)
-export function toggleLoadoutWeapon(inv, key) {
-  inv.weapons = (inv.weapons || ['epee', 'lance']).slice();
-  const i = inv.weapons.indexOf(key);
-  if (i >= 0) { if (inv.weapons.length > 1) inv.weapons.splice(i, 1); }
-  else if (inv.weapons.length < 2) inv.weapons.push(key);
+// clés d'armes équipées, dans l'ordre des emplacements
+export function loadoutKeys(inv) {
+  const l = loadoutOf(inv);
+  return [l.s1, l.s2].filter(Boolean);
+}
+export function weaponAllowed(inv, key) {
+  const keys = loadoutKeys(inv);
+  if (!keys.length) return key === 'epee' || key === 'lance'; // jamais zéro arme : repli sur les de base
+  return keys.includes(key);
+}
+// place `key` dans l'emplacement `slot` ('s1'|'s2') ; null = déséquiper.
+// - une arme déjà dans l'autre emplacement est échangée (swap)
+// - cliquer la zone d'une arme déjà en place la retire (si l'autre slot est occupé)
+// - une arme déséquipée reste possédée : elle réapparaît dans la liste
+// - au moins une arme doit rester équipée
+export function setLoadoutSlot(inv, slot, key) {
+  const l = loadoutOf(inv);
+  const other = slot === 's1' ? 's2' : 's1';
+  if (key != null && l[other] === key) {
+    const tmp = l[slot]; l[slot] = key; l[other] = tmp; // échange les deux emplacements
+  } else if (key != null) {
+    if (l[slot] === key) { // déjà en place : second clic = retirer
+      if (!l[other]) return false;
+      l[slot] = null;
+    } else {
+      l[slot] = key; // remplace l'arme de l'emplacement (elle reste possédée)
+    }
+  } else { // déséquiper explicite
+    if (!l[other]) return false;
+    l[slot] = null;
+  }
+  if (!l.s1 && !l.s2) { l.s1 = 'epee'; return false; } // garde-fou : jamais zéro arme
+  inv.weapons = [l.s1, l.s2].filter(Boolean); // synchro rétro-compatible
   saveInv(inv);
-  return inv.weapons.slice();
+  return true;
+}
+// compat : ancien toggle binaire (utilisé par les anciens tests/exports)
+export function toggleLoadoutWeapon(inv, key) {
+  const l = loadoutOf(inv);
+  if (l.s1 === key) return setLoadoutSlot(inv, 's1', null) && inv.weapons.slice();
+  if (l.s2 === key) return setLoadoutSlot(inv, 's2', null) && inv.weapons.slice();
+  if (!l.s1) { setLoadoutSlot(inv, 's1', key); return inv.weapons.slice(); }
+  if (!l.s2) { setLoadoutSlot(inv, 's2', key); return inv.weapons.slice(); }
+  return inv.weapons.slice(); // les deux emplacements sont pleins : pas d'action
 }
 
 // bonus dérivés de l'équipement actuel (level = niveau du personnage pour l'enchantement)

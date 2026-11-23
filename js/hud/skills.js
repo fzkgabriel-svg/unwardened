@@ -5,6 +5,7 @@ import { G, ctx, W, H, TAU } from '../state.js';
 import { roundRect, drawFlaskIcon } from '../utils.js';
 import { ITEMS, modeInfo, modeKey, modeMult, weaponAllowed } from '../inventory.js';
 import { drawBowIcon } from '../gfx/bow_draw.js';
+import { SENT_CD } from '../attacks.js';
 import { HPAL, parchment, engraved, gem, crisp, HUD_CINZEL } from './frame.js';
 
 // icônes détaillées des modes d'attaque (déplacées depuis hud.js)
@@ -74,6 +75,46 @@ function drawAttackIcon(kind, x, y, color) {
     ctx.strokeStyle = '#b8860b'; ctx.lineWidth = 1; ctx.stroke();
   } else if (kind === 'bow') {
     drawBowIcon(0, 0, 1.05);
+  } else if (kind === 'judgment') {
+    // JUGEMENT DU GARDIEN : grande lame sombre + cristal cyan flottant
+    ctx.rotate(-Math.PI / 4);
+    ctx.strokeStyle = 'rgba(167,255,235,0.4)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(0, 0, 15, 0.6, 2.2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, 0, 15, Math.PI + 0.6, Math.PI + 2.2); ctx.stroke();
+    const jg = ctx.createLinearGradient(0, 8, 0, -14);
+    jg.addColorStop(0, '#263238'); jg.addColorStop(0.6, '#455a64'); jg.addColorStop(1, '#78909c');
+    ctx.fillStyle = jg;
+    ctx.strokeStyle = '#0f1419'; ctx.lineWidth = 1.3;
+    ctx.beginPath();
+    ctx.moveTo(-2.4, 6); ctx.lineTo(2.4, 6); ctx.lineTo(1.5, -9); ctx.lineTo(0, -15); ctx.lineTo(-1.5, -9);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,215,64,0.8)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(-2.1, 4); ctx.lineTo(-1.3, -10); ctx.stroke();
+    ctx.strokeStyle = 'rgba(10,14,20,0.7)'; ctx.lineWidth = 1.8;
+    ctx.beginPath(); ctx.moveTo(0, 5); ctx.lineTo(0, -10); ctx.stroke();
+    // gravures runiques
+    ctx.strokeStyle = 'rgba(255,215,64,0.55)'; ctx.lineWidth = 0.9;
+    for (const rx of [-5, 0, 5]) {
+      ctx.beginPath(); ctx.moveTo(rx - 1.5, -2); ctx.lineTo(rx, 0); ctx.lineTo(rx - 1.5, 2); ctx.stroke();
+    }
+    // garde ailée dorée
+    ctx.fillStyle = '#d4af37'; ctx.strokeStyle = '#8a6d1f'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(-9, -2); ctx.lineTo(-3, -2); ctx.lineTo(-3, -4.5); ctx.lineTo(-7, -3.5);
+    ctx.lineTo(-7, 3.5); ctx.lineTo(-3, 4.5); ctx.lineTo(-3, 2); ctx.lineTo(-9, 2);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#3e2723'; ctx.fillRect(-4.5, 6, 3.6, 6);
+    ctx.fillStyle = '#ffd740';
+    ctx.beginPath(); ctx.arc(-2.6, 13, 2.2, 0, TAU); ctx.fill();
+    // cristal flottant au-dessus de la garde
+    const cg = ctx.createRadialGradient(-6, -8, 0.5, -6, -8, 6);
+    cg.addColorStop(0, 'rgba(255,243,196,0.95)'); cg.addColorStop(0.5, 'rgba(167,255,235,0.4)'); cg.addColorStop(1, 'rgba(167,255,235,0)');
+    ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(-6, -8, 6, 0, TAU); ctx.fill();
+    ctx.save();
+    ctx.translate(-6, -8); ctx.rotate(Math.PI / 4);
+    ctx.fillStyle = '#a7ffeb'; ctx.fillRect(-3, -3, 6, 6);
+    ctx.strokeStyle = '#ffd740'; ctx.lineWidth = 0.9; ctx.strokeRect(-3, -3, 6, 6);
+    ctx.restore();
   } else {
     ctx.strokeStyle = '#8d6e63'; ctx.lineWidth = 3.5;
     ctx.beginPath(); ctx.moveTo(-12, 13); ctx.lineTo(11, -12); ctx.stroke();
@@ -103,6 +144,7 @@ const MODE_STYLE = {
   sword: { name: 'Épée',       col: '#e8c96a', glow: 'rgba(232,201,106,0.55)' },
   lance: { name: 'Lance',      col: '#7cc4f0', glow: 'rgba(124,196,240,0.55)' },
   bow:   { name: 'Arc Cinétique', col: '#b388ff', glow: 'rgba(179,136,255,0.6)' },
+  judgment: { name: 'Jugement', col: '#a7ffeb', glow: 'rgba(167,255,235,0.55)' },
   laser: { name: 'Laser',      col: '#ffab66', glow: 'rgba(255,171,102,0.55)' },
   volcano:{ name: 'Volcan',    col: '#ff7043', glow: 'rgba(255,112,67,0.55)' }
 };
@@ -176,6 +218,9 @@ export function drawSkillBar() {
   ] : [
     ...(weaponAllowed(G.inv, 'epee') ? [{ icon: 'sword', key: '&', mode: 1, cd: p.attackCooldown, cdMax: CD_MAX.atk, cd2: p.spinCooldown, cd2Max: CD_MAX.spin, sub: 'D', subColor: '#ff9100' }] : []),
     ...(weaponAllowed(G.inv, 'lance') ? [{ icon: 'lance', key: 'é', mode: 3, cd: p.attackCooldown, cdMax: CD_MAX.atk, cd2: p.shieldCd, cd2Max: CD_MAX.shield, sub: 'D', subColor: '#4fc3f7' }] : []),
+    ...(G.stats && G.stats.gardienUnlocked && weaponAllowed(G.inv, 'gardien') ? [{
+      icon: 'judgment', key: '7', mode: 7, cd: p.attackCooldown, cdMax: CD_MAX.atk, cd2: (p.sentenceT > 0 ? SENT_CD : p.sentenceCd), cd2Max: SENT_CD, sub: 'D', subColor: '#a7ffeb'
+    }] : []),
     ...(G.stats && G.stats.bowUnlocked && weaponAllowed(G.inv, 'arc') ? [{
       icon: 'bow', key: 'X', mode: 5, cd: p.attackCooldown, cdMax: CD_MAX.atk, cd2: (G.bow ? G.bow.singCd : 0), cd2Max: CD_MAX.sing, sub: 'D', subColor: '#b388ff'
     }] : []),
@@ -193,7 +238,7 @@ export function drawSkillBar() {
     const spent = isPotion ? p.potions <= 0 : !!s.used;
     const cdFrac = s.cd > 0 ? Math.min(1, s.cd / s.cdMax) : 0;
     const subFrac = s.cd2Max ? (s.cd2 > 0 ? Math.min(1, s.cd2 / s.cd2Max) : 0) : undefined;
-    const mkey = s.icon === 'sword' ? 'sword' : s.icon === 'lance' ? 'lance' : s.icon === 'bow' ? 'bow' : s.icon;
+    const mkey = s.icon === 'sword' ? 'sword' : s.icon === 'lance' ? 'lance' : s.icon === 'bow' ? 'bow' : s.icon === 'judgment' ? 'judgment' : s.icon;
     const st = isPotion ? { name: 'Fioles', col: '#ff8fb3', glow: 'rgba(255,143,179,0.6)' } : (MODE_STYLE[mkey] || MODE_STYLE.sword);
     // verrou de changement d'arme (2 s sans attaque) — ne concerne pas les fioles
     const locked = !isPotion && p.switchLock > 0;
@@ -251,7 +296,7 @@ export function drawWeaponPanel() {
   const titan = p.ultActive > 0;
   const key = modeKey(p.attackMode);
   const st = titan ? { name: 'Titan de Feu', col: '#ff8a50' }
-    : MODE_STYLE[p.attackMode === 5 ? 'bow' : p.attackMode === 3 ? 'lance' : 'sword'];
+    : MODE_STYLE[p.attackMode === 5 ? 'bow' : p.attackMode === 3 ? 'lance' : p.attackMode === 7 ? 'judgment' : 'sword'];
   const wMult = G.equip ? G.equip.weaponMult : 1;
   const mMult = titan ? 1 : modeMult(G.inv, key);
   // dégâts totaux infligés par cette arme pendant la partie (runWmode accumulé par damageEnemy)

@@ -410,6 +410,7 @@ function drawUpgradeTab(L) {
   const defs = [
     { key: 'epee', icon: '⚔️', label: 'ÉPÉE', color: '#ffb74d' },
     { key: 'lance', icon: '🔱', label: 'LANCE', color: '#4fc3f7' },
+    { key: 'gardien', icon: '⚖️', label: 'JUGEMENT', color: '#a7ffeb' },
     { key: 'arc', icon: '🏹', label: 'ARC CINÉTIQUE', color: '#b388ff' }
   ];
   const y0 = L.cy + 186;
@@ -418,7 +419,8 @@ function drawUpgradeTab(L) {
   for (const card of upgradeCards(L)) {
     const def = defs.find(d => d.key === card.key);
     const info = modeInfo(G.inv, card.key);
-    const locked = card.key === 'arc' && !(G.stats && G.stats.bowUnlocked);
+    const locked = (card.key === 'arc' && !(G.stats && G.stats.bowUnlocked))
+      || (card.key === 'gardien' && !(G.stats && G.stats.gardienUnlocked));
     const xpGain = upgradeXpGain(G.inv, card.key);
     const cost = upgradeCost(info.lvl, card.key);
     const canPay = Object.keys(cost).every(m => (G.inv.mats[m] || 0) >= cost[m]);
@@ -452,7 +454,7 @@ function drawUpgradeTab(L) {
       cy += 22;
     }
     ctx.fillStyle = '#8d99ae'; ctx.font = `11.5px Inter, sans-serif`;
-    ctx.fillText(locked ? '🔒 Vaincre l\'Abomination Cosmique' : maxed ? 'Niveau maximum atteint' : `+${xpGain.toLocaleString('fr-FR')} XP par amélioration`, card.x + 20, cy + 8);
+    ctx.fillText(locked ? (card.key === 'gardien' ? '🔒 Vaincre le Seigneur des Terres Oubliées' : '🔒 Vaincre l\'Abomination Cosmique') : maxed ? 'Niveau maximum atteint' : `+${xpGain.toLocaleString('fr-FR')} XP par amélioration`, card.x + 20, cy + 8);
     // bouton
     const b = card.btn;
     const ok = !locked && !maxed && canPay;

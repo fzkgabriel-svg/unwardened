@@ -393,6 +393,7 @@ export function adminUnlockAll() {
   G.stats.iceUlt = true;
   G.stats.hellUlt = true;
   G.stats.bowUnlocked = true; // arc cinétique cosmique
+  G.stats.gardienUnlocked = true; // jugement du gardien
   saveStats();
   // inventaire : chaque bloc est isolé pour qu'un échec n'annule pas le reste
   if (!G.inv) { try { G.inv = loadInv(); } catch (e) {} }

@@ -108,6 +108,12 @@ export function initInput() {
         G.player.switchLock = 1.25;
       }
     }
+    // jugement du gardien (arme légendaire) : touche 7 / è (même touche physique sur AZERTY)
+    if ((k === '7' || k === 'è') && G.state === 'playing' && G.player.ultActive <= 0
+        && G.player.attackMode !== 7 && G.stats.gardienUnlocked && weaponAllowed(G.inv, 'gardien')) {
+      G.player.attackMode = 7;
+      G.player.switchLock = 1.25;
+    }
     // X : module actif équipé (prioritaire — plus de changement d'arme)
     if (k === 'x' && G.state === 'playing') activateModule();
     if (k === 'w' && G.state === 'playing') usePotion();
@@ -269,6 +275,7 @@ export function initInput() {
       if (G.player.ultActive > 0) G.handQueued = true;
       else if (G.player.attackMode === 5) G.singQueued = true;
       else if (G.player.attackMode === 3) G.shieldQueued = true;
+      else if (G.player.attackMode === 7) G.judgQueued = true; // Sentence ancestrale
       else G.spinQueued = true;
     }
   });

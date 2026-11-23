@@ -2,7 +2,7 @@ import { G, W, H, TAU } from './state.js';
 import { spawnParticles, addDamageText } from './effects.js';
 import { damageEnemy } from './enemies.js';
 import { worldW, worldH } from './world.js';
-import { sfxSlash, sfxThrust, sfxSpin, sfxShield, sfxNuke, sfxBossAtk, sfxFireLaser, sfxFireHand, sfxVolcano } from './audio.js';
+import { sfxSlash, sfxThrust, sfxSpin, sfxShield, sfxNuke, sfxBossAtk, sfxFireLaser, sfxFireHand, sfxVolcano, sfxJudgment, sfxSentenceCharge, sfxSentenceRelease } from './audio.js';
 import { waveBonus, clampW, clampH, playerAngle, inMeleeArc } from './attacks_util.js';
 import { doIceUlt, doHellUlt } from './attacks_ult.js';
 import { wearWeaponUse } from './inventory.js';
@@ -107,6 +107,137 @@ export function doThrust() {
       x: p.x + Math.cos(angle) * maxD * 0.7, y: p.y + Math.sin(angle) * maxD * 0.7,
       r: 6, maxR: 46, life: 14, maxLife: 14, color: '#ffd740'
     });
+  }
+}
+
+// ---------- JUGEMENT DU GARDIEN (arme légendaire, mode 7) ----------
+// Attaque principale : frappe lourde en large arc, cadence plus lente que
+// l'épée mais coup plus tranchant — avec un léger recul et des éclats de cristal.
+export function doJudgment() {
+  sfxJudgment();
+  const p = G.player, angle = playerAngle();
+  const maxD = p.attackRange * 1.25; // ~75 px : un peu plus longue que l'épée
+  let hit = false;
+  for (let i = G.enemies.length - 1; i >= 0; i--) {
+    const e = G.enemies[i];
+    if (inMeleeArc(p, e, angle, 0.85, maxD)) { // secteur ~97°
+      const dist = Math.hypot(e.x - p.x, e.y - p.y);
+      // jugement : les dégâts montent doucement avec la distance (1,35x proche → 0,9x au bord)
+      const mult = 1.35 - 0.45 * Math.min(1, dist / maxD);
+      damageEnemy(e, p.attackDamage * mult * waveBonus(), angle);
+      e.x += Math.cos(angle) * 9; e.y += Math.sin(angle) * 9; // léger recul
+      spawnParticles(e.x, e.y, '#a7ffeb', 7, 5); // éclats de cristal
+      hit = true;
+    }
+  }
+  p.attackCooldown = 0.5; // plus lent que l'épée (0,4 s), plus rapide que la lance n'est pas (0,32)
+  weaponWear(0.26); // arme lourde : usure un peu supérieure
+  if (hit) {
+    spawnParticles(p.x + Math.cos(angle) * maxD * 0.55, p.y + Math.sin(angle) * maxD * 0.55, '#ffd740', 10, 6);
+    spawnParticles(p.x + Math.cos(angle) * maxD * 0.55, p.y + Math.sin(angle) * maxD * 0.55, '#a7ffeb', 6, 4);
+    G.screenShake = Math.max(G.screenShake, 5);
+    G.rings.push({
+      x: p.x + Math.cos(angle) * maxD * 0.6, y: p.y + Math.sin(angle) * maxD * 0.6,
+      r: 8, maxR: 60, life: 16, maxLife: 16, color: '#a7ffeb'
+    });
+  }
+}
+
+// ---------- SENTENCE ANCESTRALE (attaque secondaire, clic droit) ----------
+// Concentration (~0,85 s) : le cristal s'embrase et les runes orbitent le héros.
+// Puis une onde runique traverse le sol devant lui et blesse chaque ennemi une fois.
+export const SENT_CHARGE = 0.85, SENT_CD = 10, SENT_SPEED = 780, SENT_RANGE = 0.5, SENT_DUR = 0.42;
+export function doSentence() {
+  const p = G.player;
+  p.sentenceCd = SENT_CD;   // la recharge démarre à la concentration
+  p.sentenceT = SENT_CHARGE;
+  p.sentenceAng = playerAngle();
+  sfxSentenceCharge(); // montée cristallinegrave
+}
+
+// appelé chaque frame : fait descendre la concentration, émet les runes
+// ambiantes, puis libère l'onde à la fin du délai
+export function updateSentence(dt) {
+  const p = G.player;
+  // sentenceCd est décrémenté par la boucle principale (comme les autres cooldowns)
+  if (p.sentenceT <= 0) { updateSentenceWaves(dt); return; }
+  if (p.attackMode !== 7 || p.ultActive > 0) { p.sentenceT = 0; return; } // changement d'arme / titan : concentration interrompue
+  p.sentenceT -= dt;
+  p.sentenceAng = playerAngle(); // le joueur peut ajuster sa visée pendant la concentration
+  // runes orbitant + étincelles du cristal pendant la charge
+  if (Math.random() < dt * 40) {
+    const a = Math.random() * TAU, rr = 26 + Math.random() * 26;
+    G.particles.push({
+      x: p.x + Math.cos(a) * rr, y: p.y + Math.sin(a) * rr * 0.7,
+      vx: -Math.sin(a) * 1.6, vy: Math.cos(a) * 1.1 - 0.6,
+      life: 26, maxLife: 26,
+      color: Math.random() < 0.6 ? '#a7ffeb' : '#ffd740',
+      r: 1.4 + Math.random() * 1.6
+    });
+  }
+  if (p.sentenceT <= 0) releaseSentence();
+}
+
+function releaseSentence() {
+  const p = G.player, a = p.sentenceAng;
+  G.sentenceWaves.push({
+    x: p.x, y: p.y, angle: a, t: 0, dur: SENT_DUR,
+    speed: SENT_SPEED, halfW: 52, hit: new Set(), dmgDone: false
+  });
+  sfxSentenceRelease(); // onde runique : gong + balayage montant + impact
+  G.screenShake = Math.max(G.screenShake, 9);
+  G.screenFlash = Math.max(G.screenFlash, 0.12);
+  G.rings.push({ x: p.x, y: p.y, r: p.r, maxR: 120, life: 22, maxLife: 22, color: '#a7ffeb' });
+  G.rings.push({ x: p.x, y: p.y, r: p.r, maxR: 80, life: 16, maxLife: 16, color: '#ffd740' });
+  // gerbe de runes à la libération
+  for (let i = 0; i < 18; i++) {
+    const ra = a + (Math.random() - 0.5) * 1.1;
+    G.particles.push({
+      x: p.x + Math.cos(ra) * 18, y: p.y + Math.sin(ra) * 18,
+      vx: Math.cos(ra) * (3 + Math.random() * 4), vy: Math.sin(ra) * (3 + Math.random() * 4) - 1,
+      life: 30, maxLife: 30,
+      color: Math.random() < 0.6 ? '#a7ffeb' : '#ffd740',
+      r: 1.6 + Math.random() * 1.8
+    });
+  }
+}
+
+// les ondes runiques : avancent droit devant le héros et frappent chaque
+// ennemi croisé une seule fois (≈1,8× une attaque normale, toutes les 10 s)
+function updateSentenceWaves(dt) {
+  const p = G.player;
+  for (let i = G.sentenceWaves.length - 1; i >= 0; i--) {
+    const w = G.sentenceWaves[i];
+    w.t += dt;
+    const front = w.t * w.speed;
+    const ex = Math.cos(w.angle), ey = Math.sin(w.angle);
+    const dmg = p.attackDamage * 1.8 * waveBonus();
+    for (const e of G.enemies) {
+      if (w.hit.has(e)) continue;
+      const rx = e.x - w.x, ry = e.y - w.y;
+      const along = rx * ex + ry * ey;
+      if (along < -e.r || along > front + e.r) continue;   // pas encore atteint / déjà dépassé
+      const perp = Math.abs(rx * ey - ry * ex);
+      if (perp < w.halfW + e.r * 0.6) {
+        w.hit.add(e);
+        damageEnemy(e, dmg, w.angle);
+        spawnParticles(e.x, e.y, '#a7ffeb', 8, 6);
+        spawnParticles(e.x, e.y, '#ffd740', 4, 4);
+      }
+    }
+    // traînée de poussière runique le long du front d'onde
+    if (Math.random() < dt * 30) {
+      const d = front * (0.4 + Math.random() * 0.6);
+      const side = (Math.random() - 0.5) * w.halfW * 1.6;
+      G.particles.push({
+        x: w.x + ex * d - ey * side, y: w.y + ey * d + ex * side,
+        vx: -ex * 1.2 + (Math.random() - 0.5), vy: -ey * 1.2 + (Math.random() - 0.5),
+        life: 20, maxLife: 20,
+        color: Math.random() < 0.5 ? '#a7ffeb' : '#ffd740',
+        r: 1.5 + Math.random() * 1.5
+      });
+    }
+    if (w.t >= w.dur || front > SENT_RANGE * 1000) G.sentenceWaves.splice(i, 1);
   }
 }
 

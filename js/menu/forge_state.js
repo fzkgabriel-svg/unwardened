@@ -2,11 +2,11 @@ import { G, ctx, W, H, TAU, saveStats, finalWave } from '../state.js';
 import { roundRect, drawMatIcon, drawItemIcon, itemTier } from '../utils.js';
 import { regenerateDecor } from '../graphics.js';
 import { ACHIEVEMENTS, unlocked, achievementCount, checkAchievements, achInfo, isClaimed, claimReward, achTabList, unclaimedInTab, adminUnlockAll } from '../achievements.js';
-import { ITEMS, MATS, ITEM_RARITY, canCraft, craft, toggleEquip, useConsumable, equipBonuses, getDur, canRepair, repairItem, repairCost, loadInv, addMaterial, modeInfo, addWmodeXp, modeMult, MODE_MAX_LVL, setInvNoSave, toggleLoadoutWeapon, damagedItems, repairAll, repairAllCost, DUR_MAX, durState, durMaxOf } from '../inventory.js';
+import { ITEMS, MATS, ITEM_RARITY, canCraft, craft, toggleEquip, useConsumable, equipBonuses, getDur, canRepair, repairItem, repairCost, loadInv, addMaterial, modeInfo, addWmodeXp, modeMult, MODE_MAX_LVL, setInvNoSave, setLoadoutSlot, loadoutOf, damagedItems, repairAll, repairAllCost, DUR_MAX, durState, durMaxOf } from '../inventory.js';
 import { spawnEnemy, spawnFinalBoss } from '../enemies.js';
 import { gainXp } from '../player.js';
 import { curWorld, syncCamera, regenerateWorld, reloadWorlds, campaignStart } from '../world.js';
-import { sfxCraft, sfxRepair, sfxEquip, sfxConfirm, sfxClick } from '../audio.js';
+import { sfxCraft, sfxRepair, sfxEquip, sfxConfirm, sfxClick, sfxDeny } from '../audio.js';
 import { MAX_SLOTS, activeSlot, allSlots, slotMeta, slotSummary, createChar, selectChar, deselectChar, resetChar, fmtPlaytime, fmtDate, checkAdminPass, adminOK as _adminOK, adminList, adminWipeAll, adminLock } from '../chars.js';
 import { inR, fitText, wrapLines, hexA, fmtTime, overline, panel, overlineCentered, drawMenuButton, drawAdminPwInput, menuButtons, menuButtonAt, adminUnlocked, campaignUnlocked, UI, SERIF, C_TEXT, C_MUTED, C_GOLD, MENU_X, MENU_W, MENU_ITEMS } from './common.js';
 
@@ -214,7 +214,7 @@ export function craftZones(L) {
 // coût d'une amélioration d'arme : XP = 10 % du niveau requis, payé en ÉMERAUDES.
 // Le prix croît avec le niveau ET la puissance de l'arme
 // (épée = base, lance = +25 %, arc cinétique légendaire = +60 %).
-const UPGRADE_WF = { epee: 1, lance: 1.25, arc: 1.6 };
+const UPGRADE_WF = { epee: 1, lance: 1.25, gardien: 1.4, arc: 1.6 };
 export function upgradeCost(lvl, key = 'epee') {
   const wf = UPGRADE_WF[key] || 1;
   return { emeraude: Math.max(1, Math.ceil((3 + Math.floor(lvl / 5)) * wf)) };
@@ -223,11 +223,11 @@ export function upgradeXpGain(inv, key) {
   const info = modeInfo(inv, key);
   return info.lvl >= MODE_MAX_LVL ? 0 : Math.max(1, Math.round(info.need * 0.10));
 }
-// rects des 3 cartes d'amélioration d'armes
+// rects des 4 cartes d'amélioration d'armes
 export function upgradeCards(L) {
   const y0 = L.cy + 186, ch = 270, gap = 20;
-  const cw = (L.cw - 60 - 2 * gap) / 3, x0 = L.cx + 30;
-  return ['epee', 'lance', 'arc'].map((key, i) => ({
+  const cw = (L.cw - 60 - 3 * gap) / 4, x0 = L.cx + 30;
+  return ['epee', 'lance', 'gardien', 'arc'].map((key, i) => ({
     key, x: x0 + i * (cw + gap), y: y0, w: cw, h: ch,
     btn: { x: x0 + i * (cw + gap) + 20, y: y0 + ch - 56, w: cw - 40, h: 38 }
   }));
@@ -417,21 +417,40 @@ export function forgeClickAt(x, y) {
     if (inR(D.equip, x, y)) { toggleEquip(G.inv, id); sfxEquip(); return 'equip'; }
     return 'noop';
   }
+  // fiche arme ouverte : intercepte tous les clics (comme la fiche équipement)
+  if (weaponDetail) {
+    const D = weaponDetailLayout();
+    if (inR(D.close, x, y)) { weaponDetail = null; return 'wclose'; }
+    const key = weaponDetail;
+    const locked = (key === 'arc' && !(G.stats && G.stats.bowUnlocked))
+      || (key === 'gardien' && !(G.stats && G.stats.gardienUnlocked));
+    if (!locked) {
+      if (inR(D.eq1, x, y)) { setLoadoutSlot(G.inv, 's1', key); sfxClick(); return 'wequip'; }
+      if (inR(D.eq2, x, y)) { setLoadoutSlot(G.inv, 's2', key); sfxClick(); return 'wequip'; }
+      if (inR(D.uneq, x, y)) {
+        const l = loadoutOf(G.inv);
+        const slot = l.s1 === key ? 's1' : l.s2 === key ? 's2' : null;
+        if (slot && setLoadoutSlot(G.inv, slot, null)) sfxClick(); else sfxDeny();
+        return 'wequip';
+      }
+    }
+    return 'noop';
+  }
   // clic hors champ de recherche -> quitter la saisie
   if (G.invQueryFocus && forgeTab === 'inv') {
     const g0 = invCells(L);
     if (!inR(g0.search, x, y)) { G.invQueryFocus = false; }
   }
-  if (inR(T.back, x, y)) { itemDetail = null; G.invQueryFocus = false; return 'back'; }
+  if (inR(T.back, x, y)) { itemDetail = null; weaponDetail = null; G.invQueryFocus = false; return 'back'; }
   // don de matériaux : réservé à la forge + mode admin débloqué
   if (adminUnlocked() && inR(adminMatsBtn(L), x, y)) {
     for (const m in MATS) addMaterial(G.inv, m, 10);
     sfxCraft();
     return 'adminmats';
   }
-  if (inR(T.craft, x, y)) { forgeTab = 'craft'; forgeScroll = 0; itemDetail = null; G.invQueryFocus = false; return 'tab'; }
-  if (inR(T.inv, x, y)) { forgeTab = 'inv'; itemDetail = null; G.invQueryFocus = false; return 'tab'; }
-  if (inR(T.hero, x, y)) { forgeTab = 'hero'; itemDetail = null; G.invQueryFocus = false; return 'tab'; }
+  if (inR(T.craft, x, y)) { forgeTab = 'craft'; forgeScroll = 0; itemDetail = null; weaponDetail = null; G.invQueryFocus = false; return 'tab'; }
+  if (inR(T.inv, x, y)) { forgeTab = 'inv'; itemDetail = null; weaponDetail = null; G.invQueryFocus = false; return 'tab'; }
+  if (inR(T.hero, x, y)) { forgeTab = 'hero'; itemDetail = null; weaponDetail = null; G.invQueryFocus = false; return 'tab'; }
 
   // ---------- onglet PERSONNAGE ----------
   if (forgeTab === 'hero') {
@@ -439,13 +458,17 @@ export function forgeClickAt(x, y) {
     if (inR(ht.apercu, x, y)) { heroUI.tab = 'apercu'; return 'htab'; }
     if (inR(ht.stats, x, y)) { heroUI.tab = 'stats'; return 'htab'; }
     if (heroUI.tab === 'stats') return null; // l'onglet caractéristiques est en lecture seule
-    // choix des 2 armes emportées en partie (carte d'arme cliquable)
+    // armes : zones 1/2 des cartes = emplacements, corps de carte = fiche détaillée
     for (const card of heroSkillCards(L)) {
-      if (!inR(card, x, y)) continue;
-      if (card.key === 'arc' && !(G.stats && G.stats.bowUnlocked)) return null; // verrouillée
-      toggleLoadoutWeapon(G.inv, card.key);
-      sfxClick();
-      return 'wsel';
+      const locked = (card.key === 'arc' && !(G.stats && G.stats.bowUnlocked))
+        || (card.key === 'gardien' && !(G.stats && G.stats.gardienUnlocked));
+      if (!locked) {
+        if (inR(card.z1, x, y)) { setLoadoutSlot(G.inv, 's1', card.key); sfxClick(); return 'wsel'; }
+        if (inR(card.z2, x, y)) { setLoadoutSlot(G.inv, 's2', card.key); sfxClick(); return 'wsel'; }
+      } else if (inR(card.z1, x, y) || inR(card.z2, x, y)) {
+        sfxDeny(); return 'wsel';
+      }
+      if (inR(card, x, y)) { weaponDetail = card.key; return 'wopen'; }
     }
     // choix de l'ultime
     const ub = ultBtns(L);
@@ -496,7 +519,8 @@ export function forgeClickAt(x, y) {
       const canPay = (cost) => Object.keys(cost).every(m => (G.inv.mats[m] || 0) >= cost[m]);
       for (const card of upgradeCards(L)) {
         const info = modeInfo(G.inv, card.key);
-        const locked = card.key === 'arc' && !(G.stats && G.stats.bowUnlocked);
+        const locked = (card.key === 'arc' && !(G.stats && G.stats.bowUnlocked))
+          || (card.key === 'gardien' && !(G.stats && G.stats.gardienUnlocked));
         const xpGain = upgradeXpGain(G.inv, card.key);
         const cost = upgradeCost(info.lvl, card.key);
         if (locked || info.lvl >= MODE_MAX_LVL || !canPay(cost)) continue;
@@ -582,12 +606,35 @@ export function heroTabs(L) {
 }
 
 // cartes d'armes de la colonne COMPÉTENCES (personnage) : ordre = SKILL_DEF de forge_gear.js
+// chaque carte porte deux zones cliquables (z1/z2) = les emplacements d'armes
 export function heroSkillCards(L) {
   const col = heroColLayout(L).right;
-  const x = col.x + 14, w = col.w - 28, ch = 96, gap = 14, y0 = col.y + 56;
-  return ['epee', 'arc', 'lance'].map((key, i) => ({
-    key, x, y: y0 + i * (ch + gap), w, h: ch
-  }));
+  const x = col.x + 14, w = col.w - 28, ch = 74, gap = 10, y0 = col.y + 50;
+  const zw = (w - 28) / 2, zh = 20;
+  return ['epee', 'lance', 'gardien', 'arc'].map((key, i) => {
+    const y = y0 + i * (ch + gap);
+    return {
+      key, x, y, w, h: ch,
+      z1: { x: x + 14, y: y + ch - 26, w: zw, h: zh },
+      z2: { x: x + 14 + zw + 12, y: y + ch - 26, w: zw, h: zh }
+    };
+  });
+}
+
+// ---------- fiche détaillée d'une arme (arme sélectionnée dans COMPÉTENCES) ----------
+export let weaponDetail = null;
+export function setWeaponDetail(k) { weaponDetail = k; }
+export function weaponDetailLayout() {
+  const pw = Math.min(560, W - 80), ph = 420;
+  const px = W / 2 - pw / 2, py = H / 2 - ph / 2;
+  const bw = 170, bx = px + pw - bw - 26;
+  return {
+    x: px, y: py, w: pw, h: ph,
+    close: { x: px + pw - 40, y: py + 10, w: 30, h: 30 },
+    eq1: { x: bx, y: py + ph - 76, w: bw, h: 30 },
+    eq2: { x: bx, y: py + ph - 42, w: bw, h: 30 },
+    uneq: { x: px + 26, y: py + ph - 76, w: bw, h: 30 }
+  };
 }
 
 // lignes cliquables de la liste d'équipement (colonne gauche) : 6 emplacements

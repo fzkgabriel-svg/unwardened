@@ -54,6 +54,44 @@ export function drawSlashArc() {
     ctx.restore();
     return;
   }
+  if (p.attackMode === 7) {
+    // Jugement du Gardien : arc de lame sombre cerclé d'or et de cristaux
+    if (p.attackCooldown < 0.2) return;
+    const t = (0.5 - p.attackCooldown) / 0.3; // 0 -> 1 pendant le cooldown
+    const life = 1 - t;
+    const sweep = 1.7 * Math.min(1, t * 1.4); // secteur ~97° comme le hitbox
+    const a0 = angle - 0.85;
+    const rIn = p.r - 4, rOut = p.r + 80, R = p.r + 52;
+    ctx.save();
+    // éventail rempli teal sombre
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, rOut, a0, a0 + sweep);
+    ctx.arc(p.x, p.y, rIn, a0 + sweep, a0, true);
+    ctx.closePath();
+    const fg = ctx.createRadialGradient(p.x, p.y, rIn, p.x, p.y, rOut);
+    fg.addColorStop(0, `rgba(167,255,235,${0.22 * life})`);
+    fg.addColorStop(0.6, `rgba(255,215,64,${0.10 * life})`);
+    fg.addColorStop(1, 'rgba(167,255,235,0)');
+    ctx.fillStyle = fg; ctx.fill();
+    ctx.restore();
+    // tranches cyan -> or -> blanc
+    const cols = ['rgba(167,255,235,', 'rgba(255,243,196,', 'rgba(255,255,255,'];
+    const widths = [4, 8, 12];
+    const radii = [p.r + 20, p.r + 46, p.r + 70];
+    ctx.lineCap = 'round';
+    for (let i = 0; i < cols.length; i++) {
+      const back = sweep * i * 0.1;
+      const aS = a0 + back, aE = a0 + sweep - back * 0.5;
+      if (aE <= aS) continue;
+      ctx.strokeStyle = cols[i] + `${(0.8 - i * 0.2) * life})`;
+      ctx.lineWidth = widths[i] * (0.6 + 0.4 * life);
+      ctx.beginPath(); ctx.arc(p.x, p.y, radii[i], aS, aE); ctx.stroke();
+    }
+    // liseré de runes sur le bord d'attaque
+    ctx.strokeStyle = `rgba(255,215,64,${0.85 * life})`; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.arc(p.x, p.y, rOut, a0 + sweep - 0.04, a0 + sweep); ctx.stroke();
+    return;
+  }
   if (p.attackCooldown < 0.25) return;
   // épée : progression du balayage — le flash épouse la lame (du pommeau à la pointe)
   const t = (0.4 - p.attackCooldown) / 0.15;

@@ -1,6 +1,6 @@
 import { G, ctx, W, H, TAU, VERSION, finalWave, saveStats } from './state.js';
 import { spawnEnemy, spawnMinibossWave, spawnBossWave, spawnFinalBoss, damageEnemy, enemyTypes } from './enemies.js';
-import { doSlash, doSpin, doThrust, doUlt, doShield, doFireLaser, doFireHand, updateNuke, updateIceUlt, updateLasers, updateHands, updateVolcanoes, updateSewerUlt, updateSpaceUlt } from './attacks.js';
+import { doSlash, doSpin, doThrust, doUlt, doShield, doFireLaser, doFireHand, doJudgment, doSentence, updateSentence, updateNuke, updateIceUlt, updateLasers, updateHands, updateVolcanoes, updateSewerUlt, updateSpaceUlt } from './attacks.js';
 import { updateEffects, addDamageText, spawnParticles } from './effects.js';
 import { drawBackground, drawEnemy, drawDrops, drawPlayer, drawSlashArc, drawUltFlash, drawMushroom, drawBomber, drawEffects, drawFireZones, drawCraters, drawPortals, drawProjectiles, drawLightnings, drawGrain, drawClouds, dayNight, drawTerrain, drawBuildings, drawWorldPortals, drawObstacle, drawIceStorm, drawLasers, drawHands, drawVolcanoes, drawAcidZones, drawBlackHoles, drawVoidHole } from './graphics.js';
 import { checkAchievements } from './achievements.js';
@@ -159,7 +159,7 @@ function update(dt) {
   if (keys['d'] || keys['arrowright']) dx += 1;
   if (p.slowT > 0) p.slowT = Math.max(0, p.slowT - dt);
   if (p.hitSlowT > 0) p.hitSlowT = Math.max(0, p.hitSlowT - dt);
-  const pSpeed = p.speed * (p.slowT > 0 ? 0.8 : 1) * (p.hitSlowT > 0 ? 0.88 : 1) * (p.attackMode === 3 ? 0.7 : p.attackMode === 5 ? 0.9 : 0.93) * modSpeedMult(); // lance tank / arc très légèrement plus lent que l'épée / module Impulsion
+  const pSpeed = p.speed * (p.slowT > 0 ? 0.8 : 1) * (p.hitSlowT > 0 ? 0.88 : 1) * (p.attackMode === 3 ? 0.7 : p.attackMode === 5 ? 0.9 : p.attackMode === 7 ? 0.95 : 0.93) * modSpeedMult(); // lance tank / arc très légèrement plus lent que l'épée / jugement légèrement lesté / module Impulsion
   if (dx || dy) {
     const len = Math.hypot(dx, dy);
     p.lastDx = dx / len; p.lastDy = dy / len; // direction pour la Ruée dimensionnelle
@@ -202,14 +202,16 @@ function update(dt) {
   // arc cinétique : le clic gauche est géré par la charge (updateBow),
   // les files épée/lance/rotation sont ignorées dans ce mode
   if (p.attackMode === 5) { G.attackQueued = false; G.spinQueued = false; }
-  if (G.attackQueued && p.switchLock <= 0) {
+  if (p.attackMode === 7) G.spinQueued = false; // le Jugement n'a pas de rotation
+  if (G.attackQueued && p.switchLock <= 0 && p.sentenceT <= 0) {
     if (p.attackCooldown <= 0 && p.spinDuration <= 0) {
       G.attackQueued = false;
       if (p.ultActive > 0) doFireLaser(); // titan de feu : le clic lance le laser
+      else if (p.attackMode === 7) doJudgment();
       else if (p.attackMode === 3) doThrust(); else doSlash();
     }
   }
-  if (G.spinQueued && p.switchLock <= 0 && p.spinCooldown <= 0 && p.attackMode !== 3 && p.ultActive <= 0) {
+  if (G.spinQueued && p.switchLock <= 0 && p.spinCooldown <= 0 && p.attackMode !== 3 && p.attackMode !== 7 && p.ultActive <= 0) {
     G.spinQueued = false;
     doSpin();
   }
@@ -228,6 +230,12 @@ function update(dt) {
     G.singQueued = false;
     if (p.attackMode === 5) doSingularity();
   }
+  // Sentence ancestrale (clic droit en mode jugement)
+  if (G.judgQueued) {
+    G.judgQueued = false;
+    if (p.attackMode === 7 && p.sentenceCd <= 0 && p.sentenceT <= 0 && p.switchLock <= 0 && p.ultActive <= 0) doSentence();
+  }
+  updateSentence(dt); // concentration + ondes runiques du Jugement
   updateBow(dt); // charge + projectiles + zones de distorsion de l'arc
   p.handCd = Math.max(0, p.handCd - dt);
   if (G.ultQueued) {
@@ -254,11 +262,13 @@ function update(dt) {
   p.potionCooldown = Math.max(0, p.potionCooldown - dt);
   p.shieldT = Math.max(0, p.shieldT - dt);
   p.shieldCd = Math.max(0, p.shieldCd - dt);
+  p.sentenceCd = Math.max(0, p.sentenceCd - dt);
   p.switchLock = Math.max(0, p.switchLock - dt);
   // admin : pas de cooldowns — toutes les actions sont immédiatement disponibles
   if (G.adminNoCd) {
     p.attackCooldown = 0; p.spinCooldown = 0; p.shieldCd = 0;
     p.handCd = 0; p.potionCooldown = 0; p.switchLock = 0;
+    p.sentenceCd = 0; p.sentenceT = 0;
   }
   G.cloudT = Math.max(0, G.cloudT - dt);
   G.screenFlash = Math.max(0, G.screenFlash - dt);
@@ -737,6 +747,8 @@ function update(dt) {
     if (G.campaign === 1) G.stats.iceUlt = true; // coffre : débloque la Pluie de Glace
     if (G.campaign === 2) G.stats.hellUlt = true; // trône : débloque la Colère Infernale
     if (G.campaign === 4) { G.stats.bowUnlocked = true; G.bowReveal = G.time; } // ARC CINÉTIQUE COSMIQUE
+    // LE JUGEMENT DU GARDIEN : arme légendaire gagnée en finissant les Terres Oubliées
+    if (G.campaign === 0) { G.stats.gardienUnlocked = true; G.gardienReveal = G.time; G._gardienSfxDone = false; }
     if (G.campaign === 5) { grantPass2(); G.stats.ngPlus = (G.stats.ngPlus || 0) + 1; } // 2ᵉ slot passif + boucle NG+
     saveStats();
     G.enemies.length = 0; G.drops.length = 0; G.fireZones.length = 0;

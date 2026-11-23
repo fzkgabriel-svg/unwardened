@@ -1324,6 +1324,69 @@ export function sfxVictory() {
   duck(0.2, 0.5);
 }
 
+// ---------- JUGEMENT DU GARDIEN ----------
+// frappe du Jugement : whoosh métallique grave + tranchant cristallin + impact sourd
+export function sfxJudgment() {
+  if (!sfxReady()) return; const t = ST();
+  nzSweep(t, 0.16, 0.14, 'bandpass', 900, jit(2600, 0.2), 2.2, 0.01);   // whoosh montant
+  nz(t, 0.05, 0.10, 'highpass', 3800, 1);                              // claquement de lame
+  oscA('triangle', jit(220, 0.06), 90, t, 0.14, 0.12, 0.004);          // corps grave de l'impact
+  partial(t + 0.02, jit(1567, 0.04), 0.3, 0.045, 'sine');              // cristallin du fuller
+  nzSweep(t + 0.03, 0.09, 0.07, 'lowpass', 900, 300, 1, 0.002);        // masse sourde
+  duck(0.12, 0.18);
+}
+// concentration de Sentence ancestrale : montée cristalline grave qui s'épaissit
+export function sfxSentenceCharge() {
+  if (!sfxReady()) return; const t = ST();
+  const DUR = 0.85;
+  oscA('sine', 196, 784, t, DUR, 0.055, DUR * 0.55);                   // fondamentale montante
+  oscA('triangle', 392, 1175, t, DUR, 0.03, DUR * 0.6);                // quinte au-dessus
+  nzSweep(t, DUR, 0.045, 'bandpass', 800, 4200, 3, DUR * 0.5);         // souffle runique montant
+  // runes qui s'allument : carillons échelonnés
+  [523, 659, 784, 988].forEach((f, i) => {
+    const tt = t + 0.12 + i * 0.16;
+    partial(tt, f, 0.4, 0.035, 'sine');
+    partial(tt, f * 2.01, 0.22, 0.014, 'sine');
+  });
+  // battement grave de la charge (comme un cœur qui s'accélère)
+  for (let i = 0; i < 5; i++) {
+    const tt = t + i * (0.12 + i * 0.015);
+    oscA('sine', jit(98, 0.04), 60, tt, 0.1, 0.08 - i * 0.008, 0.003);
+  }
+}
+// libération : gong ancestral + balayage d'onde + impact de choc runique
+export function sfxSentenceRelease() {
+  if (!sfxReady()) return; const t = ST();
+  gong(t, jit(147, 0.03), 1.8, 0.14);                                  // gong grave du verdict
+  nzSweep(t, 0.4, 0.16, 'bandpass', 500, 5200, 1.4, 0.02);             // onde qui balaie
+  nzSweep(t + 0.05, 0.25, 0.11, 'highpass', 2500, 7000, 1, 0.01);      // éclats cristallins
+  oscA('sine', jit(98, 0.04), 40, t, 0.5, 0.18, 0.005);                // sub grave de l'impact
+  [587, 740, 880, 1175].forEach((f, i) => {
+    const tt = t + 0.1 + i * 0.07;
+    partial(tt, f, 0.7, 0.05, 'sine');
+    partial(tt, f * 1.5, 0.4, 0.02, 'sine');
+  });
+  crackle(t + 0.08, 0.3, 12, 0.05, 3000, 9000);                        // crépitements de runes
+  duck(0.28, 0.4);
+}
+// obtention du Jugement : révélation mémorable — grondement, arpège ascendant, halo
+export function sfxGardienUnlock() {
+  if (!sfxReady()) return; const t = ST();
+  gong(t, jit(98, 0.03), 2.6, 0.16);                                   // gong ancestral grave
+  oscA('sine', jit(65, 0.03), 130, t, 1.4, 0.10, 0.4);                 // montée sourde
+  [262, 330, 392, 523, 659, 784, 1047].forEach((f, i) => {             // arpège montant
+    const tt = t + 0.5 + i * 0.13;
+    partial(tt, f, 0.9, 0.05, 'sine');
+    partial(tt, f * 2, 0.5, 0.02, 'triangle');
+  });
+  nzSweep(t + 0.4, 1.8, 0.04, 'highpass', 4000, 9000, 1, 0.8);         // voile lumineux
+  for (let i = 0; i < 8; i++) {                                        // cristaux qui se forment
+    const tt = t + 1.2 + Math.random() * 1.2;
+    partial(tt, jit(1200 + Math.random() * 2400, 0.08), 0.4, 0.03, 'sine');
+  }
+  duck(0.3, 0.9);
+}
+
 // debug/test : contexte musical courant + intensité
 export function audioDebug() {
   return { key: themeKey(), inten: +musicIntensity().toFixed(2), boss: bossActive(),

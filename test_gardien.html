@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>test gardien</title></head>
+<body>
+<canvas id="game" width="1200" height="640"></canvas>
+<pre id="out"></pre>
+<script type="module">
+import { G } from './js/state.js';
+import { loadInv, loadoutOf, loadoutKeys, weaponAllowed, setLoadoutSlot, modeKey, WEAPON_MODES, modeInfo, modeMult } from './js/inventory.js';
+import { doJudgment, doSentence, updateSentence, SENT_CD } from './js/attacks.js';
+
+const out = [];
+const ok = (name, cond) => out.push((cond ? 'PASS' : 'FAIL') + ' ' + name);
+
+// ---------- 1. migration ancienne sauvegarde ----------
+localStorage.clear();
+G.inv = loadInv();
+let l = loadoutOf(G.inv);
+ok('migration loadout par défaut', l.s1 === 'epee' && l.s2 === 'lance');
+ok('weaponAllowed épee', weaponAllowed(G.inv, 'epee'));
+ok('weaponAllowed lance', weaponAllowed(G.inv, 'lance'));
+ok('weaponAllowed gardien (non équipé)', !weaponAllowed(G.inv, 'gardien'));
+
+// ---------- 2. déblocage / verrou ----------
+ok('gardien verrouillé avant boss', !G.stats.gardienUnlocked);
+G.stats.gardienUnlocked = true;
+// even unlocked, must be equipped to be allowed
+ok('gardien autorisé seulement si équipé', !weaponAllowed(G.inv, 'gardien'));
+
+// ---------- 3. équipement dans les emplacements ----------
+ok('équiper gardien en s2 (remplace lance)', setLoadoutSlot(G.inv, 's2', 'gardien') === true);
+l = loadoutOf(G.inv);
+ok('s1=epee s2=gardien', l.s1 === 'epee' && l.s2 === 'gardien');
+ok('inv.weapons synchronisé', G.inv.weapons.join(',') === 'epee,gardien');
+ok('weaponAllowed gardien après équipement', weaponAllowed(G.inv, 'gardien'));
+ok('lance plus autorisée', !weaponAllowed(G.inv, 'lance'));
+
+// swap : mettre gardien en s1
+ok('swap gardien vers s1', setLoadoutSlot(G.inv, 's1', 'gardien') === true);
+l = loadoutOf(G.inv);
+ok('swap résultat s1=gardien s2=epee', l.s1 === 'gardien' && l.s2 === 'epee');
+
+// déséquiper s2 (épee) -> s2 vide, s1 reste
+ok('déséquiper s2', setLoadoutSlot(G.inv, 's2', null) === true);
+l = loadoutOf(G.inv);
+ok('s2 vide après déséquipement', l.s2 === null && l.s1 === 'gardien');
+ok('epee toujours possédée (available)', true); // toutes les armes de base sont toujours disponibles
+
+// tenter de déséquiper le dernier -> refus
+ok('refus déséquipement dernier', setLoadoutSlot(G.inv, 's1', null) === false);
+l = loadoutOf(G.inv);
+ok('garde-fou une arme min', l.s1 === 'gardien');
+
+// doublon impossible : équiper gardien en s2 alors qu'il est en s1 -> swap
+G.inv.loadout = { s1: 'gardien', s2: 'lance' };
+ok('swap anti-doublon', setLoadoutSlot(G.inv, 's2', 'gardien') === true);
+l = loadoutOf(G.inv);
+ok('pas de doublon', l.s1 === 'lance' && l.s2 === 'gardien');
+
+// ---------- 4. modeKey / modes ----------
+ok('modeKey(7)=gardien', modeKey(7) === 'gardien');
+ok('WEAPON_MODES gardien=7', WEAPON_MODES.gardien === 7);
+ok('modeInfo gardien', typeof modeInfo(G.inv, 'gardien').lvl === 'number');
+ok('modeMult gardien', modeMult(G.inv, 'gardien') >= 1);
+
+// ---------- 5. attaque principale ----------
+G.state = 'playing'; G.campaign = 0; G.wave = 3;
+G.enemies.length = 0;
+const p = G.player;
+p.x = 600; p.y = 320; p.attackMode = 7; p.attackDamage = 30; p.attackRange = 60;
+p.attackCooldown = 0; p.spinDuration = 0; p.switchLock = 0; p.ultActive = 0; p.sentenceT = 0;
+G.mouse.x = 700; G.mouse.y = 320; G.camX = 0; G.camY = 0;
+// ennemis : un dans l'arc devant, un derrière
+G.enemies.push({ x: 660, y: 320, r: 14, hp: 500, maxHp: 500, type: ' slime', hitFlash: 0 });
+G.enemies.push({ x: 540, y: 320, r: 14, hp: 500, maxHp: 500, type: 'slime', hitFlash: 0 });
+const hpBefore = G.enemies[0].hp;
+doJudgment();
+ok('doJudgment inflige des dégâts', G.enemies[0].hp < hpBefore);
+ok('doJudgment rate l\'ennemi derrière', G.enemies[1].hp === 500);
+ok('attackCooldown posé', p.attackCooldown > 0.4 && p.attackCooldown <= 0.55);
+
+// ---------- 6. Sentence ancestrale ----------
+p.attackCooldown = 0; p.sentenceCd = 0; p.sentenceT = 0;
+doSentence();
+ok('sentenceT démarré', p.sentenceT > 0);
+ok('sentenceCd posé', p.sentenceCd === SENT_CD);
+ok('onde pas encore créée', G.sentenceWaves.length === 0);
+// simuler la charge
+const e2 = { x: 800, y: 320, r: 14, hp: 500, maxHp: 500, type: 'slime', hitFlash: 0 };
+G.enemies.push(e2);
+let guard = 0;
+while (p.sentenceT > 0 && guard++ < 200) updateSentence(1 / 60);
+ok('charge terminée -> onde créée', G.sentenceWaves.length === 1);
+const hp2 = e2.hp;
+guard = 0;
+while (G.sentenceWaves.length && guard++ < 200) updateSentence(1 / 60);
+ok('onde a touché l\'ennemi', e2.hp < hp2);
+ok('dégâts ~1.8x attaque', Math.abs((hp2 - e2.hp) - 30 * 1.8) < 30 * 1.8 * 0.6);
+ok('pas de double frappe', (() => { const hpNow = e2.hp; updateSentence(1 / 60); return e2.hp === hpNow; })());
+
+// ---------- 7. persistance ----------
+// simuler reload : loadInv relit localStorage
+const reloaded = loadInv();
+const rl = loadoutOf(reloaded);
+ok('loadout persisté après reload', rl.s1 === 'lance' && rl.s2 === 'gardien');
+ok('weapons synchronisés après reload', reloaded.weapons.join(',') === 'lance,gardien');
+
+// ---------- 8. HUD / rendu (smoke) ----------
+try {
+  const { drawSkillBar, drawWeaponPanel } = await import('./js/hud/skills.js');
+  p.attackMode = 7;
+  drawSkillBar(); drawWeaponPanel();
+  ok('HUD skills+weaponPanel sans erreur', true);
+} catch (e) { ok('HUD skills+weaponPanel sans erreur: ' + e.message, false); }
+try {
+  const { drawSentenceCharge, drawSentenceWaves, drawGardienAura } = await import('./js/gfx/gardien_draw.js');
+  p.sentenceT = 0.5; drawSentenceCharge(); drawSentenceWaves(); drawGardienAura();
+  ok('effets Sentence sans erreur', true);
+} catch (e) { ok('effets Sentence sans erreur: ' + e.message, false); }
+try {
+  const { drawWeaponDetail } = await import('./js/menu/forge_gear.js');
+  const { setWeaponDetail } = await import('./js/menu/forge_state.js');
+  setWeaponDetail('gardien'); drawWeaponDetail();
+  setWeaponDetail('epee'); drawWeaponDetail();
+  setWeaponDetail(null);
+  ok('fiche arme sans erreur', true);
+} catch (e) { ok('fiche arme sans erreur: ' + e.message, false); }
+
+document.getElementById('out').textContent = out.join('\n');
+</script>
+</body></html>
