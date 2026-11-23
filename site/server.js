@@ -142,18 +142,25 @@ function smtpSend({ to, subject, html }) {
       }
     });
     // attend une réponse définitive "CODE " (les lignes "CODE-" d'un multiline sont ignorées)
-    const wait = code => new Promise(ok => { waiter = { re: new RegExp('^' + code + ' '), ok }; });
-    const cmd = (line, code) => { sock.write(line + '\r\n'); return wait(code); };
+    const waitAny = () => new Promise(ok => { waiter = { re: /^[0-9]{3} /, ok }; });
+    const cmd = async (line, code) => {
+      sock.write(line + '\r\n');
+      const r = await waitAny();
+      if (r.slice(0, 3) !== code) throw new Error(`SMTP ${code} attendu après « ${line.slice(0, 60)} », reçu : ${r.slice(0, 140)}`);
+      return r;
+    };
     const b64 = s => Buffer.from(s, 'utf8').toString('base64');
     (async () => {
-      await wait('220');
+      const greet = await waitAny();
+      if (!greet.startsWith('220')) throw new Error('SMTP : ' + greet.slice(0, 140));
       await cmd('EHLO kaeloryn.studio', '250');
       if (smtpCfg.user) {
         await cmd('AUTH LOGIN', '334');
         await cmd(b64(smtpCfg.user), '334');
         await cmd(b64(smtpCfg.pass), '235');
       }
-      await cmd(`MAIL FROM:<${MAIL_FROM.match(/<([^>]+)>/)?.[1] || 'no-reply@kaeloryn.studio'}>'`, '250');
+      const mailFrom = MAIL_FROM.match(/<([^>]+)>/)?.[1] || (MAIL_FROM.includes('@') ? MAIL_FROM.trim() : 'no-reply@kaeloryn.studio');
+      await cmd(`MAIL FROM:<${mailFrom}>`, '250');
       await cmd(`RCPT TO:<${to}>`, '250');
       await cmd('DATA', '354');
       const enc = s => '=?UTF-8?B?' + Buffer.from(s, 'utf8').toString('base64') + '?=';
@@ -163,7 +170,8 @@ function smtpSend({ to, subject, html }) {
         'Content-Transfer-Encoding: base64', '', Buffer.from(html, 'utf8').toString('base64'), '.',
       ].join('\r\n');
       sock.write(msg + '\r\n');
-      await wait('250');
+      const r = await waitAny();
+      if (r.slice(0, 3) !== '250') throw new Error('SMTP DATA refusé : ' + r.slice(0, 140));
       try { sock.write('QUIT\r\n'); } catch (e) {}
       finish(null, true);
     })().catch(finish);
@@ -260,8 +268,9 @@ route('POST', '/api/forgot', async (req, res, b) => {
   const ip = clientIp(req);
   if (!rateLimit('forgot:' + ip, 5, 3600e3)) return json(res, 429, { error: 'Trop de demandes' });
   const u = q.userByEmail.get(clean(b.email).toLowerCase());
+  let tok;
   if (u) {
-    const tok = makeToken(u.id, 'reset', 1);
+    tok = makeToken(u.id, 'reset', 1);
     mailNote('reset', u.email, `http://localhost:${PORT}/account.html?reset=${tok}`);
   }
   await new Promise(r => setTimeout(r, 100));
