@@ -4,9 +4,13 @@
 import { G, VERSION } from './state.js';
 import { storeKey, activeSlot } from './chars.js';
 
-const API = (typeof location !== 'undefined' && location.port === '8080')
-  ? '' // le jeu est servi par le site lui-même
-  : 'http://localhost:8080';
+// Backend Node.js (site + API) — local : site/server.js sur :8080,
+// en ligne : service Render (le site statique Netlify ne peut pas
+// héberger l'API Node/SQLite).
+const IS_LOCAL = typeof location !== 'undefined' &&
+  (location.hostname === 'localhost' || location.hostname === '127.0.0.1');
+const PROD_API = 'https://kaeloryn-studio.onrender.com';
+const API = location.port === '8080' ? '' : (IS_LOCAL ? 'http://localhost:8080' : PROD_API);
 export const SITE_URL = API || (typeof location !== 'undefined' ? location.origin : 'http://localhost:8080');
 const ACC_KEY = 'rpg2d_account';
 

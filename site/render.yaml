@@ -16,3 +16,12 @@ services:
         sync: false
       - key: ADMIN_PASS
         sync: false
+      # --- e-mails (vérification / reset mdp) : SMTP obligatoire en prod ---
+      # ex : smtps://USER:PASS@smtp.gmail.com:465  (Gmail : mot de passe d'application)
+      - key: SMTP_URL
+        sync: false
+      - key: MAIL_FROM
+        value: "Kaeloryn Studio <no-reply@kaeloryn.studio>"
+      # --- origines du jeu autorisées à appeler l'API (CORS) ---
+      - key: GAME_ORIGINS
+        value: "http://localhost:8000,https://unwardened.netlify.app"

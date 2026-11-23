@@ -396,12 +396,18 @@ route('GET', '/download/:file', (req, res) => {
 // ---------- JEU : authentification par token + sauvegarde cloud + classement ----------
 // Le jeu tourne sur une autre origine (localhost:8000) : authentification par
 // Authorization: Bearer <session token> et CORS restreint à cette origine.
-const GAME_ORIGIN = process.env.GAME_ORIGIN || 'http://localhost:8000';
-function gameCors(res) {
-  res.setHeader('Access-Control-Allow-Origin', GAME_ORIGIN);
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS');
-  res.setHeader('Vary', 'Origin');
+// origines du jeu autorisées à appeler l'API : local (python http.server)
+// et version en ligne (Netlify). Séparées par des virgules via GAME_ORIGINS.
+const GAME_ORIGINS = (process.env.GAME_ORIGINS ||
+  'http://localhost:8000,https://unwardened.netlify.app').split(',').map(s => s.trim());
+function gameCors(res, origin) {
+  // sans Origin (curl, même site) ou origine connue → on répond ; sinon on bloque
+  if (!origin || GAME_ORIGINS.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin || GAME_ORIGINS[0]);
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS');
+    res.setHeader('Vary', 'Origin');
+  }
 }
 function getGameSession(req) {
   const m = /^Bearer ([a-f0-9]{64})$/.exec(req.headers.authorization || '');
@@ -531,7 +537,7 @@ const server = http.createServer(async (req, res) => {
     const isGameApi = pathname.startsWith('/api/game/') || pathname === '/api/leaderboard'
       || pathname.startsWith('/api/player/');
     if (isGameApi) {
-      gameCors(res);
+      gameCors(res, req.headers.origin);
       if (req.method === 'OPTIONS') { res.writeHead(204); return res.end(); }
     }
     if (pathname.startsWith('/api/') || pathname.startsWith('/download/')) {
