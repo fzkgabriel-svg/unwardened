@@ -610,7 +610,7 @@ export function heroDoll(L) {
 // la bande commence à stripY = cy+ch-54 : les boutons restent EN DESSOUS
 // pour ne jamais chevaucher la liste d'équipement du PERSONNAGE
 export function ultBtns(L) {
-  const y = L.cy + L.ch - 50, h = 30;
+  const y = L.cy + L.ch - 42, h = 28;
   const w = 196, gap = 10, x0 = L.cx + 24;
   return {
     nuke:  { x: x0, y, w, h },
