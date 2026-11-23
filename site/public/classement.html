@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Classement Général — Tesseract Studio</title>
+<meta name="description" content="Le classement mondial des aventuriers de Tesseract : scores, niveaux et mondes conquis.">
+<link rel="stylesheet" href="/css/site.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><path d='M32 4 54 18v28L32 60 10 46V18Z' fill='none' stroke='%23d4b062' stroke-width='4'/></svg>">
+<style>
+/* ---------- classement ---------- */
+.podium { display: flex; justify-content: center; align-items: flex-end; gap: 18px; margin: 30px 0 40px; flex-wrap: wrap; }
+.pod {
+  width: 220px; padding: 26px 18px 20px; border-radius: 14px; text-align: center; position: relative;
+  background: var(--panel); border: 1px solid var(--line);
+}
+.pod .rk { font-family: var(--serif); font-size: 40px; line-height: 1; }
+.pod .nm { font-family: var(--serif); font-size: 18px; color: var(--gold-hi); margin: 10px 0 4px;
+  text-decoration: none; letter-spacing: 1px; }
+.pod .nm:hover { text-decoration: underline; }
+.pod .sc { font-family: var(--serif); font-size: 22px; color: var(--gold); }
+.pod .mt { font-size: 11px; color: var(--ink-dim); letter-spacing: 1px; margin-top: 6px; }
+.pod.p1 { border-color: rgba(240,212,146,.7); box-shadow: 0 0 40px rgba(212,176,98,.25), inset 0 0 30px rgba(212,176,98,.06); }
+.pod.p1 .rk { color: #f0d492; text-shadow: 0 0 18px rgba(240,212,146,.7); }
+.pod.p2 { border-color: rgba(192,192,200,.55); box-shadow: 0 0 30px rgba(192,192,200,.15); }
+.pod.p2 .rk { color: #d8d8e0; }
+.pod.p3 { border-color: rgba(220,160,100,.55); box-shadow: 0 0 26px rgba(220,160,100,.12); }
+.pod.p3 .rk { color: #e0aa70; }
+.pod.p1 { order: 2; transform: translateY(-14px); }
+.pod.p2 { order: 1; } .pod.p3 { order: 3; }
+
+.lb-tools { display: flex; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; align-items: center; }
+.lb-tools input { flex: 1; min-width: 220px; padding: 11px 16px; border-radius: 8px;
+  border: 1px solid var(--line); background: rgba(7,8,13,.7); color: var(--ink);
+  font-family: var(--sans); font-size: 14px; outline: none; }
+.lb-tools input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(212,176,98,.15); }
+.lb-pager { display: flex; gap: 10px; align-items: center; justify-content: center; margin-top: 20px; }
+.lb-pager button { padding: 8px 18px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--panel2); color: var(--gold-hi); font-family: var(--sans); font-size: 12px;
+  letter-spacing: 1px; cursor: pointer; }
+.lb-pager button:hover:not([disabled]) { border-color: var(--gold); }
+.lb-pager button[disabled] { opacity: .35; cursor: default; }
+
+table.lb { width: 100%; border-collapse: collapse; font-size: 14px; }
+table.lb th { font-size: 10px; letter-spacing: 2px; color: var(--ink-dim); text-transform: uppercase;
+  padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--line); }
+table.lb td { padding: 11px 12px; border-bottom: 1px solid rgba(212,176,98,.08); color: var(--ink); }
+table.lb tr:hover td { background: rgba(212,176,98,.04); }
+table.lb td.rk { color: var(--gold); font-family: var(--serif); width: 60px; }
+table.lb td.sc { color: var(--gold-hi); font-family: var(--serif); text-align: right; white-space: nowrap; }
+table.lb td.nm a { color: var(--ink); text-decoration: none; font-weight: 600; }
+table.lb td.nm a:hover { color: var(--gold); }
+tr.me td { background: rgba(212,176,98,.08); }
+tr.me td.nm a { color: var(--gold); }
+.badge.pos { border-color: rgba(212,176,98,.5); }
+.empty-lb { text-align: center; padding: 60px 20px; color: var(--ink-dim); }
+.empty-lb h3 { font-family: var(--serif); color: var(--gold-hi); font-size: 22px; margin-bottom: 10px; }
+.empty-lb p { line-height: 1.7; max-width: 480px; margin: 0 auto; }
+.upd { text-align: center; font-size: 11px; color: var(--ink-dim); letter-spacing: 1px; margin-top: 14px; }
+</style>
+</head>
+<body>
+<header class="site"><nav class="top">
+  <a class="brand" href="/"><span id="logo"></span>
+    <span class="t">TESSERACT<small>STUDIO</small></span></a>
+  <div class="links" id="navlinks"></div>
+  <div id="navauth" style="display:flex;gap:8px"></div>
+</nav></header>
+
+<div class="wrap" style="padding-top:50px;padding-bottom:80px">
+  <div class="sec-head">
+    <div class="orn">✦ ✦ ✦</div>
+    <h2>CLASSEMENT GÉNÉRAL</h2>
+    <p>Les plus grands aventuriers des Terres Oubliées. Scores calculés côté serveur,
+       synchronisés depuis les sauvegardes officielles des joueurs.</p>
+  </div>
+
+  <div id="podium"></div>
+
+  <div class="card" style="padding:22px 26px">
+    <div class="lb-tools">
+      <input id="q" type="text" placeholder="Rechercher un joueur par son pseudo…" maxlength="20">
+      <span id="total" style="font-size:12px;color:var(--ink-dim);white-space:nowrap"></span>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="lb">
+        <thead><tr><th>#</th><th>Joueur</th><th>Niveau</th><th>Mondes</th><th>Boss</th><th>Succès</th><th style="text-align:right">Score</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <div id="empty" class="empty-lb" style="display:none">
+      <h3>Aucun explorateur classé pour l'instant</h3>
+      <p>Les Terres Oubliées attendent leurs premiers héros. Crée ton compte,
+         connecte-toi dans le jeu et synchronise ta progression pour inscrire
+         ton nom dans les annales.</p>
+      <p style="margin-top:18px"><a class="btn" href="/account.html">CRÉER UN COMPTE</a></p>
+    </div>
+    <div class="lb-pager">
+      <button id="prev">← PRÉCÉDENT</button>
+      <span id="pageinfo" style="font-size:12px;color:var(--ink-dim)"></span>
+      <button id="next">SUIVANT →</button>
+    </div>
+    <div id="me" style="text-align:center;margin-top:16px"></div>
+    <div class="upd" id="upd"></div>
+  </div>
+</div>
+
+<footer class="site"><div class="wrap">
+  <div class="fl">TESSERACT STUDIO</div>
+  <p>Forge Your Own Legend — © <span id="yr"></span> Tesseract Studio. Tous droits réservés.</p>
+</div></footer>
+
+<script type="module">
+import { mountChrome, LOGO_SVG, esc, me, api } from '/js/site.js';
+document.getElementById('logo').innerHTML = LOGO_SVG;
+const PAGE = 50;
+let offset = 0, timer = null;
+
+const fmt = n => (n || 0).toLocaleString('fr-FR');
+const medaltime = iso => iso ? new Date(iso.replace(' ', 'T') + 'Z').toLocaleDateString('fr-FR',
+  { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+
+function podHtml(p, i, cls) {
+  return `<div class="pod ${cls}">
+    <div class="rk">${i + 1}</div>
+    <a class="nm" href="/joueur/${encodeURIComponent(p.pseudo)}">${esc(p.pseudo)}</a>
+    <div class="sc">${fmt(p.score)}</div>
+    <div class="mt">Nv ${p.level} · ${p.worlds_done}/6 mondes</div>
+  </div>`;
+}
+async function load() {
+  document.getElementById('rows').innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--ink-dim);padding:30px">Chargement…</td></tr>';
+  const q = document.getElementById('q').value.trim();
+  try {
+    const d = await api('/api/leaderboard' + (q ? `?q=${encodeURIComponent(q)}` : `?limit=${PAGE}&offset=${offset}`));
+    const ps = d.players || [];
+    document.getElementById('total').textContent = `${d.total ?? ps.length} joueurs classés`;
+    // podium : uniquement sur la première page sans recherche
+    document.getElementById('podium').innerHTML = (!q && offset === 0 && ps.length >= 3)
+      ? ps.slice(0, 3).map((p, i) => podHtml(p, i, 'p' + (i + 1))).join('') : '';
+    document.getElementById('empty').style.display = ps.length ? 'none' : 'block';
+    const u = await me();
+    document.getElementById('rows').innerHTML = ps.map((p, i) => {
+      const rank = q ? '—' : offset + i + 1;
+      const isMe = u && p.pseudo.toLowerCase() === u.pseudo.toLowerCase();
+      return `<tr class="${isMe ? 'me' : ''}" data-p="${esc(p.pseudo)}">
+        <td class="rk">${rank}</td>
+        <td class="nm"><a href="/joueur/${encodeURIComponent(p.pseudo)}">${esc(p.pseudo)}</a></td>
+        <td>${p.level}</td><td>${p.worlds_done}/6</td>
+        <td>${p.bosses ?? '—'}</td><td>${p.achievements ?? '—'}</td>
+        <td class="sc">${fmt(p.score)}</td></tr>`;
+    }).join('');
+    document.getElementById('pageinfo').textContent = q ? 'recherche' : `page ${Math.floor(offset / PAGE) + 1}`;
+    document.getElementById('prev').disabled = !!q || offset <= 0;
+    document.getElementById('next').disabled = !!q || offset + PAGE >= (d.total || 0);
+    // position du joueur connecté
+    const meEl = document.getElementById('me');
+    if (d.me && u) meEl.innerHTML = `<span class="badge pos">★ ${esc(u.pseudo)} : #${d.me.rank} — ${fmt(d.me.score)} pts</span>`;
+    else meEl.innerHTML = '';
+    const latest = ps.map(p => p.updated_at).filter(Boolean).sort().pop();
+    document.getElementById('upd').textContent = latest ? `Dernière synchronisation : ${medaltime(latest)}` : '';
+  } catch (e) {
+    document.getElementById('rows').innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--danger);padding:30px">Serveur injoignable' + (e && e.message ? ' — ' + esc(e.message) : '') + '</td></tr>';
+  }
+}
+document.getElementById('q').addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => { offset = 0; load(); }, 350); });
+document.getElementById('prev').onclick = () => { offset = Math.max(0, offset - PAGE); load(); };
+document.getElementById('next').onclick = () => { offset += PAGE; load(); };
+mountChrome('classement'); load();
+</script>
+</body>
+</html>

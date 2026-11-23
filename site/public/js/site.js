@@ -11,7 +11,7 @@ export const LOGO_SVG = `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.
 
 export const NAV = [
   ['/', 'Accueil'], ['/game.html', 'Le Jeu'], ['/news.html', 'Actualités'],
-  ['/community.html', 'Communauté'], ['/account.html', 'Mon Compte']
+  ['/classement.html', 'Classement'], ['/community.html', 'Communauté'], ['/account.html', 'Mon Compte']
 ];
 
 // ---------- particules magiques ----------

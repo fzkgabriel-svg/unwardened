@@ -462,14 +462,17 @@ const server = http.createServer(async (req, res) => {
     }
     if (pathname === '/sitemap.xml') {
       const host = req.headers.host || 'localhost';
-      const pages = ['/', '/game.html', '/news.html', '/community.html', '/account.html'];
+      const pages = ['/', '/game.html', '/news.html', '/classement.html', '/community.html', '/account.html'];
       const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
         pages.map((p, i) => `  <url><loc>https://${host}${p}</loc><priority>${(1 - i * 0.1).toFixed(1)}</priority></url>`).join('\n') +
         `\n</urlset>\n`;
       return send(res, 200, xml, 'application/xml; charset=utf-8');
     }
-    // fichiers statiques
-    let fp = pathname === '/' ? '/index.html' : pathname;
+    // URLs propres : /classement et /joueur/<pseudo> → pages statiques
+    let fp;
+    if (pathname === '/classement') fp = '/classement.html';
+    else if (/^\/joueur\/[^/]+\/?$/.test(pathname)) fp = '/joueur.html';
+    else fp = pathname === '/' ? '/index.html' : pathname;
     fp = normalize(fp).replace(/\\/g, '/');
     if (fp.startsWith('/avatar/')) fp = join('/data/avatars', fp.slice(8));
     else if (fp.startsWith('/newsimg/')) fp = join('/data/news', fp.slice(9));

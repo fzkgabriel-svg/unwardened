@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Profil d'Aventurier — Tesseract Studio</title>
+<meta name="description" content="Fiche publique d'un aventurier des Terres Oubliées.">
+<link rel="stylesheet" href="/css/site.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><path d='M32 4 54 18v28L32 60 10 46V18Z' fill='none' stroke='%23d4b062' stroke-width='4'/></svg>">
+<style>
+/* ---------- fiche joueur ---------- */
+.jhero { text-align: center; padding: 40px 20px 10px; }
+.jhero .ava { width: 110px; height: 110px; border-radius: 50%; margin: 0 auto 16px;
+  border: 3px solid var(--gold); object-fit: cover;
+  box-shadow: 0 0 34px rgba(212,176,98,.35); }
+.jhero .ava.ph { display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #1a1e2c, #0d0f16); font-family: var(--serif);
+  font-size: 44px; color: var(--gold); }
+.jhero h1 { font-family: var(--serif); color: var(--gold-hi); font-size: 34px;
+  letter-spacing: 3px; margin-bottom: 6px; }
+.jhero .title { color: var(--ink-dim); font-size: 13px; letter-spacing: 2px; text-transform: uppercase; }
+.jstats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px; margin: 34px 0; }
+.jstat { background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+  padding: 18px 12px; text-align: center; }
+.jstat b { display: block; font-family: var(--serif); font-size: 26px; color: var(--gold); }
+.jstat span { font-size: 10px; letter-spacing: 1.5px; color: var(--ink-dim); text-transform: uppercase; }
+.jscore { text-align: center; margin: 10px 0 30px; }
+.jscore .big { font-family: var(--serif); font-size: 46px; color: var(--gold-hi);
+  text-shadow: 0 0 30px rgba(212,176,98,.35); }
+.jscore .lbl { font-size: 11px; letter-spacing: 3px; color: var(--ink-dim); text-transform: uppercase; }
+.jnote { text-align: center; color: var(--ink-dim); font-size: 12px; margin-top: 26px; letter-spacing: 1px; }
+</style>
+</head>
+<body>
+<header class="site"><nav class="top">
+  <a class="brand" href="/"><span id="logo"></span>
+    <span class="t">TESSERACT<small>STUDIO</small></span></a>
+  <div class="links" id="navlinks"></div>
+  <div id="navauth" style="display:flex;gap:8px"></div>
+</nav></header>
+
+<div class="wrap" style="padding-top:40px;padding-bottom:80px;max-width:760px">
+  <div id="content"><div class="jhero"><p style="color:var(--ink-dim)">Chargement de la fiche…</p></div></div>
+</div>
+
+<footer class="site"><div class="wrap">
+  <div class="fl">TESSERACT STUDIO</div>
+  <p>Forge Your Own Legend — © <span id="yr"></span> Tesseract Studio. Tous droits réservés.</p>
+</div></footer>
+
+<script type="module">
+import { mountChrome, LOGO_SVG, esc, api, fmtDate } from '/js/site.js';
+document.getElementById('logo').innerHTML = LOGO_SVG;
+const pseudo = decodeURIComponent(location.pathname.replace(/^\/joueur\//, '').replace(/\/$/, ''));
+const fmt = n => (n || 0).toLocaleString('fr-FR');
+const h = s => Math.floor(s / 3600), m = s => Math.floor((s % 3600) / 60);
+const playtime = s => s >= 3600 ? `${h(s)}h ${String(m(s)).padStart(2, '0')}` : `${m(s)} min`;
+
+try {
+  const d = await api('/api/player/' + encodeURIComponent(pseudo));
+  const p = d.player;
+  const ava = p.avatar
+    ? `<img class="ava" src="${p.avatar}" alt="">`
+    : `<div class="ava ph">${esc(p.pseudo[0].toUpperCase())}</div>`;
+  document.getElementById('content').innerHTML = `
+    <div class="panel" style="padding:40px 30px">
+      <div class="jhero" style="padding:0">
+        ${ava}
+        <h1>${esc(p.pseudo)}</h1>
+        <div class="title">Aventurier des Terres Oubliées</div>
+      </div>
+      <div class="jscore">
+        <div class="big">${fmt(p.score)}</div>
+        <div class="lbl">Score Général</div>
+      </div>
+      <div class="jstats">
+        <div class="jstat"><b>${p.level}</b><span>Niveau</span></div>
+        <div class="jstat"><b>${p.worlds_done}/6</b><span>Mondes conquis</span></div>
+        <div class="jstat"><b>${p.bosses}</b><span>Boss vaincus</span></div>
+        <div class="jstat"><b>${p.achievements}</b><span>Succès débloqués</span></div>
+        <div class="jstat"><b>${playtime(p.playtime)}</b><span>Temps de jeu</span></div>
+        <div class="jstat"><b>${fmtDate(p.member_since)}</b><span>Membre depuis</span></div>
+      </div>
+      <p class="jnote">Progression synchronisée le ${p.updated_at ? fmtDate(p.updated_at) : '—'}.<br>
+      Fiche publique — aucune donnée personnelle n'est affichée.</p>
+      <p style="text-align:center;margin-top:20px">
+        <a class="btn ghost" href="/classement.html">VOIR LE CLASSEMENT</a></p>
+    </div>`;
+  document.title = `${p.pseudo} — Aventurier — Tesseract Studio`;
+} catch (e) {
+  document.getElementById('content').innerHTML = `
+    <div class="panel"><h2>JOUEUR INTRouvable</h2>
+    <p class="sub">Ce pseudo n'existe pas ou n'a pas encore de progression synchronisée.</p>
+    <p style="text-align:center"><a class="btn ghost" href="/classement.html">CLASSEMENT</a></p></div>`;
+}
+mountChrome('classement');
+</script>
+</body>
+</html>
