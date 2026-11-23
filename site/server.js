@@ -193,6 +193,17 @@ route('GET', '/api/verify', (req, res) => {
   send(res, 200, '<h1 style="font-family:sans-serif">E-mail vérifié ! Vous pouvez fermer cette page.</h1>', 'text/html; charset=utf-8');
 });
 
+// renvoi de l'e-mail de vérification (réservé aux comptes non vérifiés)
+route('POST', '/api/resend-verify', needAuth(async (req, res, b, s) => {
+  const ip = clientIp(req);
+  if (!rateLimit('rverify:' + s.id, 3, 3600e3)) return json(res, 429, { error: 'Trop de renvois — réessayez plus tard' });
+  const u = q.userById.get(s.id);
+  if (u.verified) return json(res, 400, { error: 'E-mail déjà vérifié' });
+  const tok = makeToken(s.id, 'verify', 24);
+  mailNote('verify', u.email, `http://localhost:${PORT}/account.html?verify=${tok}`);
+  json(res, 200, { ok: true, devToken: DEV ? tok : undefined });
+}));
+
 route('GET', '/api/news', (req, res) => {
   const list = q.allNews.all().map(n => ({ ...n, image: n.image || null }));
   json(res, 200, { news: list });

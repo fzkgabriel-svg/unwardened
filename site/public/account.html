@@ -66,6 +66,7 @@
       </div>
       <div class="card mt">
         <h3>ACTIONS</h3>
+        <button class="btn ghost small" id="btnVerify" style="width:100%;margin-bottom:10px;display:none">RENVOYER L'E-MAIL DE VÉRIFICATION</button>
         <button class="btn ghost small" id="btnLogout" style="width:100%;margin-bottom:10px">SE DÉCONNECTER</button>
         <button class="btn danger small" id="btnReset" style="width:100%">RÉINITIALISER LE MOT DE PASSE</button>
       </div>
@@ -164,7 +165,10 @@ $('authform').addEventListener('submit', async e => {
   try {
     const d = await api('/api/' + mode, { method: 'POST', body });
     setMe(d.user);
-    if (mode === 'register') toast('Compte créé ! Vérifiez votre e-mail.');
+    if (mode === 'register') {
+      toast('Compte créé ! Vérifiez votre e-mail.');
+      if (d.verifyToken) toast('dev: /account.html?verify=' + d.verifyToken, 12000);
+    }
     location.reload();
   } catch (err) { $('autherr').textContent = err.message; }
 });
@@ -195,6 +199,7 @@ async function loadDash(u) {
   if (!u.avatar) { $('dAvatar').className = 'avatar ph'; $('dAvatar').textContent = u.pseudo[0].toUpperCase(); }
   $('dVerified').textContent = u.verified ? '✔ E-MAIL VÉRIFIÉ' : 'E-MAIL NON VÉRIFIÉ';
   $('dVerified').className = 'badge ' + (u.verified ? 'green' : 'red');
+  $('btnVerify').style.display = u.verified ? 'none' : 'block';
   $('dSince').textContent = fmtDate(u.created_at);
   $('dRole').textContent = u.role === 'admin' ? '👑 Administrateur' : 'Aventurier';
   $('pPseudo').value = u.pseudo;
@@ -230,6 +235,13 @@ $('pSave').addEventListener('click', async () => {
     setTimeout(() => location.reload(), 800);
   } catch (err) { $('pMsg').textContent = err.message; $('pMsg').style.color = 'var(--danger)'; }
 });
+$('btnVerify').addEventListener('click', async () => {
+  try {
+    const d = await api('/api/resend-verify', { method: 'POST', body: {} });
+    toast('E-mail de vérification renvoyé ✔');
+    if (d.devToken) toast('dev: /account.html?verify=' + d.devToken, 8000);
+  } catch (e) { toast(e.message); }
+});
 $('btnLogout').addEventListener('click', async () => { await api('/api/logout', { method: 'POST' }); setMe(null); location.href = '/'; });
 $('btnReset').addEventListener('click', async () => {
   const email = prompt('Votre e-mail de compte :'); if (!email) return;
@@ -238,6 +250,13 @@ $('btnReset').addEventListener('click', async () => {
 });
 
 // ---------- route ----------
+// le lien ?verify= fonctionne connecté OU non connecté
+if (qs.get('verify')) {
+  try { await api('/api/verify?token=' + qs.get('verify')); toast('E-mail vérifié ✔'); }
+  catch (e) { toast('Lien de vérification invalide ou expiré'); }
+  history.replaceState({}, '', '/account.html');
+  qs.delete('verify');
+}
 const u = await me();
 if (qs.get('reset')) {
   $('rToken').value = qs.get('reset'); show('resetview');
@@ -245,10 +264,6 @@ if (qs.get('reset')) {
   show('dashview'); loadDash(u);
 } else {
   show('authview');
-  if (qs.get('verify')) {
-    try { await api('/api/verify?token=' + qs.get('verify')); toast('E-mail vérifié ✔'); } catch (e) {}
-    history.replaceState({}, '', '/account.html');
-  }
   authMode('login');
 }
 mountChrome('/account.html');
