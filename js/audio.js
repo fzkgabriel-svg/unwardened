@@ -578,7 +578,7 @@ export function drawMusicButton() {
 }
 
 // ---------- panneau de réglages audio ----------
-const AP_W = 400, AP_H = 268;
+const AP_W = 480, AP_H = 340;
 const apRect = () => ({ x: W / 2 - AP_W / 2, y: H / 2 - AP_H / 2, w: AP_W, h: AP_H });
 // une ligne = { key, label, icon, color, getVol, setVol, getOn, toggle }
 const AP_ROWS = [
@@ -589,23 +589,29 @@ const AP_ROWS = [
   { key: 'amb', label: 'AMBIANCES', icon: '≋', color: '#8fd0a0',
     vol: () => ambVol, set: setAmbVol, on: () => ambOn, tog: toggleAmb }
 ];
+// géométrie d'une ligne : label en haut, pastille ON/OFF à droite,
+// curseur pleine largeur en dessous — aucune superposition possible
 function apRowRect(i) {
   const r = apRect();
-  return { x: r.x + 22, y: r.y + 66 + i * 62, w: r.w - 44, h: 50 };
+  return { x: r.x + 26, y: r.y + 76 + i * 74, w: r.w - 52, h: 62 };
+}
+function apSliderRect(rr) {
+  return { x: rr.x + 12, y: rr.y + 40, w: rr.w - 24 };
+}
+function apTogRect(rr) {
+  return { x: rr.x + rr.w - 62, y: rr.y + 6, w: 56, h: 26 };
 }
 export function audioPanelAt(x, y) {
   const r = apRect();
   if (x < r.x || x > r.x + r.w || y < r.y || y > r.y + r.h) return 'outside';
-  // croix de fermeture
   const cx = r.x + r.w - 26, cy = r.y + 18;
   if (x >= cx - 9 && x <= cx + 9 && y >= cy - 9 && y <= cy + 9) return 'close';
   for (let i = 0; i < AP_ROWS.length; i++) {
     const rr = apRowRect(i);
-    // pastille ON/OFF à gauche
-    if (x >= rr.x && x <= rr.x + 52 && y >= rr.y + 8 && y <= rr.y + 34) return 'tog' + i;
-    // curseur de volume
-    const sx = rr.x + 62, sw = rr.w - 62;
-    if (x >= sx && x <= sx + sw && y >= rr.y + 14 && y <= rr.y + 34) return 'vol' + i;
+    const tg = apTogRect(rr);
+    if (x >= tg.x && x <= tg.x + tg.w && y >= tg.y && y <= tg.y + tg.h) return 'tog' + i;
+    const sl = apSliderRect(rr);
+    if (x >= sl.x - 4 && x <= sl.x + sl.w + 4 && y >= sl.y - 10 && y <= sl.y + 22) return 'vol' + i;
   }
   return 'inside';
 }
@@ -617,9 +623,8 @@ export function audioPanelClickAt(x, y) {
     AP_ROWS[+hit[4]].tog(); sfxClick(); return hit;
   }
   if (hit && hit[0] === 'v' && hit[3] >= '0') {
-    const i = +hit[3], rr = apRowRect(i);
-    const sx = rr.x + 62, sw = rr.w - 62;
-    const v = Math.max(0, Math.min(100, Math.round(((x - sx) / sw) * 100)));
+    const i = +hit[3], rr = apRowRect(i), sl = apSliderRect(rr);
+    const v = Math.max(0, Math.min(100, Math.round(((x - sl.x) / sl.w) * 100)));
     AP_ROWS[i].set(v); sfxClick(); return hit;
   }
   return hit;
@@ -628,7 +633,7 @@ export function drawAudioPanel() {
   if (!G.audioOpen) return;
   const r = apRect();
   ctx.save();
-  ctx.fillStyle = 'rgba(6,8,12,0.82)'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = 'rgba(6,8,12,0.85)'; ctx.fillRect(0, 0, W, H);
   // panneau
   const g = ctx.createLinearGradient(r.x, r.y, r.x, r.y + r.h);
   g.addColorStop(0, '#171a22'); g.addColorStop(1, '#0d0f16');
@@ -637,48 +642,49 @@ export function drawAudioPanel() {
   roundRect(r.x + 0.75, r.y + 0.75, r.w - 1.5, r.h - 1.5, 14); ctx.stroke();
   // titre
   ctx.textAlign = 'center';
-  ctx.font = '700 17px Georgia, serif'; ctx.fillStyle = '#e8d9a8';
-  ctx.fillText('⚙ RÉGLAGES AUDIO', W / 2, r.y + 32);
-  ctx.font = 'italic 11px Georgia, serif'; ctx.fillStyle = 'rgba(232,217,176,0.5)';
-  ctx.fillText('volume et activation de chaque catégorie — sauvegardé automatiquement', W / 2, r.y + 50);
+  ctx.font = '700 19px Georgia, serif'; ctx.fillStyle = '#e8d9a8';
+  ctx.fillText('⚙ RÉGLAGES AUDIO', W / 2, r.y + 36);
+  ctx.font = 'italic 12px Georgia, serif'; ctx.fillStyle = 'rgba(232,217,176,0.55)';
+  ctx.fillText('volume et activation de chaque catégorie — sauvegardé automatiquement', W / 2, r.y + 56);
   // lignes
   for (let i = 0; i < AP_ROWS.length; i++) {
     const row = AP_ROWS[i], rr = apRowRect(i);
     const hovRow = G.mouse.x >= rr.x && G.mouse.x <= rr.x + rr.w &&
                    G.mouse.y >= rr.y && G.mouse.y <= rr.y + rr.h;
-    if (hovRow) { ctx.fillStyle = 'rgba(255,255,255,0.04)'; roundRect(rr.x, rr.y, rr.w, rr.h, 9); ctx.fill(); }
-    // icône + label
+    if (hovRow) { ctx.fillStyle = 'rgba(255,255,255,0.04)'; roundRect(rr.x, rr.y, rr.w, rr.h, 10); ctx.fill(); }
+    // icône + label (zone gauche, libre)
     ctx.textAlign = 'left';
-    ctx.font = '16px sans-serif'; ctx.fillStyle = row.color;
-    ctx.fillText(row.icon, rr.x + 6, rr.y + 30);
-    ctx.font = '700 12px Inter, sans-serif'; ctx.fillStyle = '#e8e2d2';
-    ctx.fillText(row.label, rr.x + 30, rr.y + 30);
-    // pastille ON/OFF
-    const onv = row.on();
+    ctx.font = '18px sans-serif'; ctx.fillStyle = row.color;
+    ctx.fillText(row.icon, rr.x + 12, rr.y + 28);
+    ctx.font = '700 13px Inter, sans-serif'; ctx.fillStyle = '#e8e2d2';
+    ctx.fillText(row.label, rr.x + 42, rr.y + 28);
+    // pastille ON/OFF à droite
+    const tg = apTogRect(rr), onv = row.on();
     ctx.fillStyle = onv ? 'rgba(60,140,90,0.35)' : 'rgba(90,40,40,0.3)';
-    roundRect(rr.x, rr.y + 8, 52, 26, 7); ctx.fill();
+    roundRect(tg.x, tg.y, tg.w, tg.h, 7); ctx.fill();
     ctx.strokeStyle = onv ? 'rgba(140,230,170,0.6)' : 'rgba(230,140,140,0.4)'; ctx.lineWidth = 1;
-    roundRect(rr.x + 0.5, rr.y + 8.5, 51, 25, 7); ctx.stroke();
-    ctx.textAlign = 'center'; ctx.font = '700 10px Inter, sans-serif';
+    roundRect(tg.x + 0.5, tg.y + 0.5, tg.w - 1, tg.h - 1, 7); ctx.stroke();
+    ctx.textAlign = 'center'; ctx.font = '700 11px Inter, sans-serif';
     ctx.fillStyle = onv ? '#9fe8b8' : '#e89a9a';
-    ctx.fillText(onv ? 'ON' : 'OFF', rr.x + 26, rr.y + 26);
-    // curseur
-    const sx = rr.x + 62, sw = rr.w - 62, v = row.vol() / 100;
+    ctx.fillText(onv ? 'ON' : 'OFF', tg.x + tg.w / 2, tg.y + 17);
+    // curseur pleine largeur
+    const sl = apSliderRect(rr), v = row.vol() / 100;
     ctx.fillStyle = 'rgba(255,255,255,0.12)';
-    roundRect(sx, rr.y + 20, sw, 8, 4); ctx.fill();
+    roundRect(sl.x, sl.y, sl.w, 10, 5); ctx.fill();
     if (v > 0.01) {
-      const fg = ctx.createLinearGradient(sx, 0, sx + sw * v, 0);
+      const fg = ctx.createLinearGradient(sl.x, 0, sl.x + sl.w * v, 0);
       fg.addColorStop(0, row.color); fg.addColorStop(1, '#ffffff');
       ctx.fillStyle = fg;
-      roundRect(sx, rr.y + 20, Math.max(8, sw * v), 8, 4); ctx.fill();
+      roundRect(sl.x, sl.y, Math.max(10, sl.w * v), 10, 5); ctx.fill();
     }
     ctx.fillStyle = '#fff';
-    ctx.beginPath(); ctx.arc(sx + sw * v, rr.y + 24, 6, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = row.color; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(sx + sw * v, rr.y + 24, 6, 0, Math.PI * 2); ctx.stroke();
-    ctx.textAlign = 'right'; ctx.font = '600 10px Inter, sans-serif';
-    ctx.fillStyle = 'rgba(232,226,210,0.7)';
-    ctx.fillText(row.vol() + '%', rr.x + rr.w, rr.y + 44);
+    ctx.beginPath(); ctx.arc(sl.x + sl.w * v, sl.y + 5, 8, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = row.color; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.arc(sl.x + sl.w * v, sl.y + 5, 8, 0, Math.PI * 2); ctx.stroke();
+    // pourcentage sous le curseur, aligné à droite
+    ctx.textAlign = 'right'; ctx.font = '600 11px Inter, sans-serif';
+    ctx.fillStyle = 'rgba(232,226,210,0.75)';
+    ctx.fillText(row.vol() + '%', rr.x + rr.w, rr.y + 60);
   }
   // croix
   const cx = r.x + r.w - 26, cy = r.y + 18;
