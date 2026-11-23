@@ -88,7 +88,7 @@ export function doIceUlt() {
   p.ultCharge = 0;
   G.ultsUsed++;
   G.iceUlts = (G.iceUlts || 0) + 1;
-  const stormR = (p.ultRadius * (G.equip ? G.equip.ultR : 1) + 190) * 0.85;
+  const stormR = (p.ultRadius * (G.equip ? G.equip.ultR : 1) + 190) * 0.7;
   G.iceStorm = { t: 12.5, x: p.x, y: p.y, r: stormR, spawnT: 0, friendly: true, tick: 0, iceT: 0, age: 0, megaT: 0, boomed: false, phase: 'charge', gustT: 0 };
   G.iceSpikes = [];
   G.iceShards = [];
