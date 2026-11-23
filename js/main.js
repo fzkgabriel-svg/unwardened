@@ -694,7 +694,7 @@ function update(dt) {
     if (G.campaign === 1) G.stats.iceUlt = true; // coffre : débloque la Pluie de Glace
     if (G.campaign === 2) G.stats.hellUlt = true; // trône : débloque la Colère Infernale
     if (G.campaign === 4) { G.stats.bowUnlocked = true; G.bowReveal = G.time; } // ARC CINÉTIQUE COSMIQUE
-    if (G.campaign === 5) grantPass2(); // 2ᵉ emplacement passif (Souverain des Ouragans)
+    if (G.campaign === 5) { grantPass2(); G.stats.ngPlus = (G.stats.ngPlus || 0) + 1; } // 2ᵉ slot passif + boucle NG+
     saveStats();
     G.enemies.length = 0; G.drops.length = 0; G.fireZones.length = 0;
     G.portals.length = 0; G.projectiles.length = 0; G.lightnings.length = 0;

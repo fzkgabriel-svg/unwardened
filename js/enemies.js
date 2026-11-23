@@ -154,6 +154,8 @@ export function spawnEnemy(forceType = null, bigPortal = false, px = null, py = 
 
   const extraScale = t.isBoss ? 1 + Math.floor(G.wave / 5) * 0.5
                    : (type === 'miniboss' || type === 'alpha' || type === 'priest' || type === 'matriarche' || type === 'overlord' || type === 'colosse') ? 1 + Math.floor(G.wave / 3) * 0.3 : 1;
+  // NG+ / défi du jour : multiplicateurs de la partie (G.mods, voir challenge.js)
+  const md = (G.mods && G.mods.enemyMult) || 1;
   // Les Enfers et au-delà : dégâts de base encore plus majorés
   const dmgMult = G.campaign === 5 ? 4.2 : G.campaign === 4 ? 3.4 : G.campaign === 3 ? 2.8 : G.campaign === 2 ? 2.3 : G.campaign === 1 ? 1.5 : 1;
 
@@ -168,9 +170,10 @@ export function spawnEnemy(forceType = null, bigPortal = false, px = null, py = 
 
   G.enemies.push({
     ...t, type,
-    hp: t.hp * scale * extraScale, maxHp: t.hp * scale * extraScale,
-    speed: t.speed * (1 + (G.wave - 1) * 0.08),
-    damage: t.damage * (1 + (G.wave - 1) * 0.25) * extraScale * dmgMult,
+    hp: t.hp * scale * extraScale * md, maxHp: t.hp * scale * extraScale * md,
+    speed: t.speed * (1 + (G.wave - 1) * 0.08) * ((G.mods && G.mods.speedMult) || 1),
+    damage: t.damage * (1 + (G.wave - 1) * 0.25) * extraScale * dmgMult * md,
+    xp: Math.round(t.xp * ((G.mods && G.mods.xpMult) || 1)),
     x, y, attackCooldown: 0, wobble: Math.random() * TAU, slow: 0, spawnT: portalLife, spawnMax: portalLife,
     specialCd: 1.5 + Math.random() * 2.5, // timer des attaques spéciales de boss
     graceT: portalTime || 0, // invulnérable et immobile pendant le portail (événement)
@@ -250,8 +253,9 @@ export function damageEnemy(e, dmg, angle) {
     // drop de fiole au sol : monstre 3%, mini-boss 8%, boss 15%,
     // le taux augmente avec la vague (+6 %/vague, plafonné à 50 %)
     const waveBoost = 1 + G.wave * 0.06;
-    const dropChance = Math.min(0.5, (e.isBoss ? 0.15 : e.isMini ? 0.08 : 0.03) * waveBoost);
-    if (Math.random() < dropChance) {
+    const lootBoost = (G.mods && G.mods.lootMult) || 1;
+    const dropChance = Math.min(0.5, (e.isBoss ? 0.15 : e.isMini ? 0.08 : 0.03) * waveBoost) * lootBoost;
+    if (!(G.mods && G.mods.noPotions) && Math.random() < dropChance) {
       G.drops.push({ x: e.x + (Math.random() - 0.5) * 20, y: e.y + (Math.random() - 0.5) * 20, r: 12, life: 12 }); // disparaît après 12s
     }
     if (e.isBoss) G.bossesKilled++;
@@ -265,7 +269,7 @@ export function damageEnemy(e, dmg, angle) {
       if (Math.random() < table[m] * matMult) {
         // l'émeraude est précieuse : les boss en lâchent une petite poignée
         const qty = m === 'emeraude'
-          ? (e.type.startsWith('finalBoss') ? 8 : e.isBoss ? 5 : e.isMini ? 3 : 1)
+          ? Math.round(((e.type.startsWith('finalBoss') ? 8 : e.isBoss ? 5 : e.isMini ? 3 : 1)) * ((G.mods && G.mods.lootMult) || 1))
           : 1;
         addMaterial(G.inv, m, qty);
         G.runMats[m] = (G.runMats[m] || 0) + qty; // résumé de fin de partie

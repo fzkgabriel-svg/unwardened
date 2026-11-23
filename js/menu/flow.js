@@ -6,6 +6,7 @@ import { ITEMS, MATS, canCraft, craft, toggleEquip, equipBonuses, getDur, canRep
 import { spawnEnemy, spawnFinalBoss } from '../enemies.js';
 import { gainXp } from '../player.js';
 import { curWorld, syncCamera, regenerateWorld, reloadWorlds, campaignStart, campaignEnd } from '../world.js';
+import { buildMods, todayChallenge } from '../challenge.js';
 import { sfxCraft, sfxRepair, sfxEquip, sfxConfirm, sfxClick } from '../audio.js';
 import { MAX_SLOTS, activeSlot, allSlots, slotMeta, slotSummary, createChar, selectChar, deselectChar, resetChar, fmtPlaytime, fmtDate, checkAdminPass, adminOK as _adminOK, adminList, adminWipeAll, adminLock } from '../chars.js';
 import { inR, fitText, wrapLines, hexA, fmtTime, overline, panel, overlineCentered, drawMenuButton, drawAdminPwInput, menuButtons, menuButtonAt, adminUnlocked, campaignUnlocked, UI, SERIF, C_TEXT, C_MUTED, C_GOLD, MENU_X, MENU_W, MENU_ITEMS } from './common.js';
@@ -75,11 +76,18 @@ export function startGame() {
   G.wavePause = 0;
   // applique les bonus de l'équipement (forge)
   G.equip = equipBonuses(G.inv, G.stats.bestLevel || 1);
+  // NG+ + défi quotidien : multiplicateurs de la partie
+  const mods = buildMods();
+  const ch = todayChallenge();
+  G.warnToast = mods.ng > 0
+    ? { name: `♾ NG+${mods.ng} — ${ch.icon} ${ch.name} : ${ch.desc}`, t: 8 }
+    : { name: `${ch.icon} DÉFI DU JOUR — ${ch.name} : ${ch.desc}`, t: 8 };
   // PV de départ selon la campagne : 100 / 200 / 300 / 400 / 500 / 600 (Tempêtes)
   G.player.maxHp = (G.campaign === 5 ? 600 : G.campaign === 4 ? 500 : G.campaign === 3 ? 400 : G.campaign === 2 ? 300 : G.campaign === 1 ? 200 : 100) + G.equip.hp + ((G.inv.buffs && G.inv.buffs.hp) || 0);
   G.player.hp = G.player.maxHp;
   G.player.speed += G.equip.speed;
   G.player.maxPotions = 3 + G.equip.potions + ((G.inv.buffs && G.inv.buffs.potions) || 0); // base 3 + gourde équipée + consommables (pas d'accumulation entre parties)
+  if (mods.noPotions) { G.player.maxPotions = 0; G.player.potions = 0; } // défi JOUR DE FAMINE : aucun soin
   // avertissement : équipement à moins de 20 % de durabilité = risque de casse en jeu
   G.achToast = null; G.warnToast = null;
   for (const slot in G.inv.equip) {

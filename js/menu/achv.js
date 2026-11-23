@@ -107,16 +107,17 @@ function drawAchDetail() {
   ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1;
   roundRect(L.cx + 5, L.cy + 5, L.cw - 10, L.ch - 10, 14); ctx.stroke();
 
-  // icône géante + nom + rareté
+  // icône géante + nom + rareté (succès caché non débloqué : tout masqué)
+  const hidD = a.hidden && !ok;
   ctx.textAlign = 'center';
   ctx.font = '54px serif';
-  ctx.fillText(a.icon, W / 2, L.cy + 88);
+  ctx.fillText(hidD ? '❓' : a.icon, W / 2, L.cy + 88);
   ctx.font = 'bold 26px Inter, sans-serif';
   ctx.fillStyle = ok ? '#ffe9a3' : '#78909c';
-  ctx.fillText(fitText(a.name, L.cw - 80), W / 2, L.cy + 132);
+  ctx.fillText(fitText(hidD ? 'Succès mystère' : a.name, L.cw - 80), W / 2, L.cy + 132);
   ctx.font = 'bold 13px Inter, sans-serif';
   ctx.fillStyle = rarity.color;
-  ctx.fillText('★ ' + rarity.label.toUpperCase(), W / 2, L.cy + 158);
+  ctx.fillText(hidD ? '???' : '★ ' + rarity.label.toUpperCase(), W / 2, L.cy + 158);
   ctx.font = 'italic 14px Inter, sans-serif';
   ctx.fillStyle = ok ? (claimed ? '#69f0ae' : '#ffd740') : '#90a4ae';
   ctx.fillText(ok ? (claimed ? '✓ Récompense récoltée' : '✓ Débloqué — réclame ta récompense !') : '🔒 Pas encore débloqué', W / 2, L.cy + 184);
@@ -127,7 +128,7 @@ function drawAchDetail() {
   ctx.fillText('🎯 COMMENT L\'OBTENIR', L.cx + 42, L.cy + 224);
   ctx.font = '15px Inter, sans-serif';
   ctx.fillStyle = '#e8e0c8';
-  const lines = wrapLines(a.desc, L.cw - 84);
+  const lines = wrapLines(hidD ? 'Ce succès reste caché jusqu\'à son déblocage. Explore, bats-toi et reviens plus fort…' : a.desc, L.cw - 84);
   const descTop = L.cy + 248;
   lines.forEach((ln, i) => ctx.fillText(ln, L.cx + 42, descTop + i * 21));
 
@@ -220,22 +221,23 @@ export function drawAchievementsCard() {
     ctx.strokeStyle = claimable ? 'rgba(105,240,174,0.6)' : claimed ? 'rgba(255,215,64,0.45)' : 'rgba(255,255,255,0.12)';
     ctx.lineWidth = claimable || claimed ? 1.5 : 1;
     roundRect(c.x, c.y, c.w, c.h, 9); ctx.stroke();
-    // icône
+    // icône (succès caché non débloqué : point d'interrogation)
+    const hid = a.hidden && !ok;
     ctx.font = '18px serif'; ctx.textAlign = 'center';
-    ctx.fillText(a.icon, c.x + 20, c.y + 29);
+    ctx.fillText(hid ? '❓' : a.icon, c.x + 20, c.y + 29);
     // nom + rareté
     ctx.textAlign = 'left';
     ctx.font = 'bold 11px Inter, sans-serif';
     ctx.fillStyle = claimable ? '#a5d6a7' : claimed ? '#ffe9a3' : '#78909c';
-    const name = fitText(a.name, c.w - 150);
+    const name = fitText(hid ? 'Succès mystère' : a.name, c.w - 150);
     ctx.fillText(name, c.x + 38, c.y + 16);
     const nameW = ctx.measureText(name).width;
-    ctx.font = '9px Inter, sans-serif'; ctx.fillStyle = rarity.color;
-    ctx.fillText(rarity.label, c.x + 38 + nameW + 6, c.y + 16);
+    ctx.font = '9px Inter, sans-serif'; ctx.fillStyle = hid ? '#546e7a' : rarity.color;
+    ctx.fillText(hid ? '???' : rarity.label, c.x + 38 + nameW + 6, c.y + 16);
     // description
     ctx.font = '9px Inter, sans-serif';
     ctx.fillStyle = ok ? '#bdbdbd' : '#546e7a';
-    ctx.fillText(fitText(a.desc, c.w - 120), c.x + 38, c.y + 28);
+    ctx.fillText(fitText(hid ? 'Ce succès reste caché jusqu\'à son déblocage…' : a.desc, c.w - 120), c.x + 38, c.y + 28);
     // récompense / statut de récolte
     ctx.font = '9px Consolas, monospace';
     if (claimed) {
