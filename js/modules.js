@@ -35,6 +35,14 @@ export const MODULES = {
     desc: '+60 % de vitesse de déplacement pendant 4 s. Recharge 14 s.' },
   rempart:     { name: 'Dernier rempart',      type: 'passif', rar: 'Épique',      col: '#ffd54f', icon: '◆', price: 300, cd: 0,
     desc: 'Quand les PV passent sous 30 %, gagne un bouclier de 60 pendant 6 s (recharge 30 s).' },
+  rage:        { name: 'Fureur du berserk',    type: 'passif', rar: 'Épique',      col: '#ff1744', icon: '♛', price: 320, cd: 0,
+    desc: 'Sous 50 % de PV, +20 % de dégâts infligés (nourrit la rage du combat).' },
+  carapace:    { name: 'Carapace abyssale',    type: 'passif', rar: 'Épique',      col: '#7c4dff', icon: '⬢', price: 280, cd: 0,
+    desc: 'Réduit de 8 % tous les dégâts subis. Se cumule avec la Résistance.' },
+  supernova:   { name: 'Supernova',            type: 'actif',  rar: 'Légendaire',  col: '#ffea00', icon: '✺', price: 480, cd: 22,
+    desc: 'Implosion stellaire : attire tous les ennemis à moins de 480 px et inflige 160 + 10×niv dégâts. Recharge 22 s.' },
+  meteorite:   { name: 'Pluie de météores',    type: 'actif',  rar: 'Légendaire',  col: '#ff6e40', icon: '☄', price: 520, cd: 26,
+    desc: 'Fait tomber 6 météores sur les ennemis : 70 + 6×niv dégâts chacun. Recharge 26 s.' },
 };
 export const MOD_IDS = Object.keys(MODULES);
 
@@ -182,9 +190,11 @@ function has(id) { return equippedMods().some(m => m && MODULES[id] === m); }
 function mlvl(id) { return modLevel(id); }
 export function modDmgMult() {
   const b = G.modBuffs || {};
-  return (b.surcharge > 0 ? 1.5 + 0.15 * (mlvl('surcharge') - 1) : 1) * (b.ultBuff > 0 ? 1.2 : 1);
+  const p = G.player;
+  const berserk = has('rage') && p && p.alive && p.hp > 0 && p.hp < p.maxHp * 0.5 ? 1.2 + 0.05 * (mlvl('rage') - 1) : 1;
+  return (b.surcharge > 0 ? 1.5 + 0.15 * (mlvl('surcharge') - 1) : 1) * (b.ultBuff > 0 ? 1.2 : 1) * berserk;
 }
-export function modDmgReduce() { return has('resistance') ? 0.12 + 0.04 * (mlvl('resistance') - 1) : 0; }
+export function modDmgReduce() { return (has('resistance') ? 0.12 + 0.04 * (mlvl('resistance') - 1) : 0) + (has('carapace') ? 0.08 + 0.02 * (mlvl('carapace') - 1) : 0); }
 export function modCritBonus() { return has('instinct') ? 0.12 + 0.05 * (mlvl('instinct') - 1) : 0; }
 export function modLifesteal() { return has('absorption') ? 0.08 + 0.02 * (mlvl('absorption') - 1) : 0; }
 export function modRegen() { return has('regeneration') ? 4 + 2 * (mlvl('regeneration') - 1) : 0; }
@@ -263,6 +273,40 @@ export function activateModule() {
       addDamageText(p.x, p.y - 34, 'IMPULSION !', m.col);
       spawnParticles(p.x, p.y, m.col, 22, 6);
       break;
+    case 'supernova': {
+      // implosion : attire puis déchire tout ce qui est proche
+      const R = 480 * (1 + 0.08 * (ml - 1));
+      const dmg = (160 + lvl * 10) * (1 + 0.25 * (ml - 1));
+      for (const e of [...G.enemies]) {
+        const d = Math.hypot(e.x - p.x, e.y - p.y);
+        if (d < R + e.r) {
+          const pull = Math.min(d, 260) * 0.85;
+          if (d > 1) { e.x -= ((e.x - p.x) / d) * pull; e.y -= ((e.y - p.y) / d) * pull; }
+          damageEnemy(e, dmg, Math.atan2(e.y - p.y, e.x - p.x));
+        }
+      }
+      G.rings.push({ x: p.x, y: p.y, r: 20, maxR: R, life: 40, maxLife: 40, color: m.col });
+      spawnParticles(p.x, p.y, '#fff59d', 50, 9);
+      spawnParticles(p.x, p.y, m.col, 30, 7);
+      G.screenShake = Math.max(G.screenShake, 14);
+      addDamageText(p.x, p.y - 60, 'SUPERNOVA !', m.col);
+      break;
+    }
+    case 'meteorite': {
+      const dmg = (70 + lvl * 6) * (1 + 0.2 * (ml - 1));
+      // 6 cibles : ennemis les plus proches d'abord, sinon aléatoires autour du joueur
+      const targets = [...G.enemies]
+        .sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y))
+        .slice(0, 6);
+      for (const e of targets) {
+        G.rings.push({ x: e.x, y: e.y, r: 8, maxR: 70, life: 26, maxLife: 26, color: '#ff6e40' });
+        spawnParticles(e.x, e.y, '#ffab40', 20, 7);
+        damageEnemy(e, dmg, Math.atan2(e.y - p.y, e.x - p.x));
+      }
+      if (targets.length) G.screenShake = Math.max(G.screenShake, 9);
+      else addDamageText(p.x, p.y - 34, 'AUCUNE CIBLE', '#90a4ae');
+      break;
+    }
   }
   sfxPickup();
   return true;

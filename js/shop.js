@@ -67,21 +67,26 @@ export function shopCountdown() {
 
 // ---------- MODULES À VENTE (émeraudes, une seule fois chacun) ----------
 export const MODSHOP = MOD_IDS.filter(id => MODULES[id].price > 0);
-// stock quotidien par rareté : quota de modules achetables par jour.
-// Persisté dans inv.shop.bought['pool:<rareté>'] -> réinitialisé à minuit,
-// impossible à contourner en relançant le jeu (sauvegarde locale).
+// stock quotidien : quotas par rareté + plafond global de 4 modules par jour.
+// Persisté dans inv.shop.bought -> réinitialisé à minuit, impossible à
+// contourner en relançant le jeu (sauvegarde locale).
 export const MOD_RAR_STOCK = { 'Commun': 4, 'Rare': 3, 'Épique': 2, 'Légendaire': 1, 'Mythique': 1 };
+export const MOD_DAY_CAP = 4; // au maximum 4 modules achetés par jour, toutes raretés confondues
 export const RAR_COL = { 'Commun': '#b0bec5', 'Rare': '#4fc3f7', 'Épique': '#ce93d8', 'Légendaire': '#ffd740', 'Mythique': '#ff5252' };
+export function modDayBought(inv) { return (shopDay(inv).bought['pool:total']) || 0; }
+export function modDayLeft(inv) { return Math.max(0, MOD_DAY_CAP - modDayBought(inv)); }
 export function modStockLeft(inv, rar) {
   const max = MOD_RAR_STOCK[rar] ?? 1;
   const bought = (shopDay(inv).bought['pool:' + rar]) || 0;
-  return Math.max(0, max - bought);
+  // le stock affiché est limité par le quota de rareté ET le plafond journalier
+  return Math.max(0, Math.min(max - bought, modDayLeft(inv)));
 }
 export function buyModule(inv, id) {
   const m = MODULES[id];
   if (!m || m.price <= 0) return { ok: false, msg: 'Module indisponible' };
   const ms = modState(inv);
   if (ms.owned.includes(id)) return { ok: false, msg: 'Déjà possédé' };
+  if (modDayLeft(inv) <= 0) return { ok: false, msg: `Limite de ${MOD_DAY_CAP} modules par jour atteinte` };
   const left = modStockLeft(inv, m.rar);
   if (left <= 0) return { ok: false, msg: `Stock ${m.rar} épuisé aujourd'hui` };
   if ((inv.mats.emeraude || 0) < m.price) return { ok: false, msg: `Il faut ${m.price} émeraudes` };
@@ -89,6 +94,7 @@ export function buyModule(inv, id) {
   ownModule(inv, id);
   const sd = shopDay(inv);
   sd.bought['pool:' + m.rar] = (sd.bought['pool:' + m.rar] || 0) + 1;
+  sd.bought['pool:total'] = (sd.bought['pool:total'] || 0) + 1;
   saveInv(inv);
   return { ok: true, msg: `MODULE ${m.name.toUpperCase()} DÉBLOQUÉ !` };
 }
@@ -257,10 +263,11 @@ export function shopLayout() {
       mats: { x: W / 2 - 212, y: 80, w: 200, h: 32 },
       mods: { x: W / 2 + 12,  y: 80, w: 200, h: 32 },
     },
-    // grille des modules (onglet MODULES) : 5 colonnes × 2 lignes
+    // grille des modules (onglet MODULES) : 7 colonnes — 2 lignes suffisent
+    // pour les 14 modules sans chevaucher le panneau de détail
     modCards: (() => {
-      const cols = 5, cw = 172, ch = 140, gap = 14;
-      const x0 = W / 2 - (cols * cw + (cols - 1) * gap) / 2, y0 = 128;
+      const cols = 7, cw = 158, ch = 140, gap = 10;
+      const x0 = W / 2 - (cols * cw + (cols - 1) * gap) / 2, y0 = 122;
       return MODSHOP.map((id, i) => ({
         id, x: x0 + (i % cols) * (cw + gap), y: y0 + Math.floor(i / cols) * (ch + gap), w: cw, h: ch,
       }));
@@ -328,7 +335,7 @@ export function drawShop() {
   ctx.fillText(tab === 'mods' ? '⚡ SANCTUAIRE DES MODULES' : '💰 BOUTIQUE DU MAÎTRE MARCHAND', W / 2, 44);
   ctx.fillStyle = C_MUT; ctx.font = 'italic 11.5px Inter, sans-serif';
   ctx.fillText(tab === 'mods'
-    ? 'Modules anciens en vente — stock par rareté renouvelé chaque jour'
+    ? `Modules anciens en vente — max ${MOD_DAY_CAP}/jour, stock renouvelé à minuit`
     : 'Matériaux contre émeraudes — les stocks rares se renouvellent chaque jour', W / 2, 66);
 
   // ===== ONGLETS =====
