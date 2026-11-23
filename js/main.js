@@ -125,6 +125,7 @@ function update(dt) {
   // victoire : les confettis continuent de danser derrière l'écran de fin,
   // et la secousse/flash de l'explosion finale s'estompent normalement
   if (G.state === 'victory') {
+    G.vicT = (G.vicT || 0) + dt; // horloge des animations de l'écran de victoire
     G.screenShake = Math.max(0, G.screenShake - dt * 45);
     G.screenFlash = Math.max(0, G.screenFlash - dt);
     updateEffects(dt);
@@ -375,17 +376,56 @@ function update(dt) {
         1, 2
       );
     }
-    // boss final en agonie : il s'effondre au ralenti, plus aucune action
+    // boss final en agonie : il s'effondre au ralenti, plus aucune action.
+    // Les débris émis suivent l'identité de l'univers du boss.
     if (e.bossDying) {
+      const dieK = Math.max(0, e.bossDying / 2.4); // 1 -> 0
       e.bossDying -= dt;
-      // gerbe d'âme qui s'élève du corps
+      const bt = e.type;
+      const isIce = bt === 'finalBossGlace', isHell = bt === 'finalBossEnfer',
+        isSewer = bt === 'finalBossEgout', isSpace = bt === 'finalBossSpace',
+        isStorm = bt === 'finalBossTempete';
+      // gerbe d'âme qui s'élève du corps (tous les boss)
       if (Math.random() < dt * 22) {
         spawnParticles(
           e.x + (Math.random() - 0.5) * e.r * 1.8,
           e.y - Math.random() * e.r * 1.2,
-          e.type === 'finalBossGlace' ? '#b3e5fc' : e.type === 'finalBossEnfer' ? '#ffab40' : '#ce93d8',
+          isIce ? '#b3e5fc' : isHell ? '#ffab40' : isSewer ? '#aeea00'
+            : isSpace ? '#b388ff' : isStorm ? '#4fc3f7' : '#ce93d8',
           3, 4
         );
+      }
+      // débris thématiques : cristaux / braises / pierres / vase / motes / vent
+      if (Math.random() < dt * (10 + (1 - dieK) * 14)) {
+        const bx = e.x + (Math.random() - 0.5) * e.r * 1.7;
+        const by = e.y - Math.random() * e.r * 1.4;
+        const out = Math.random() < 0.5 ? 1 : -1;
+        G.particles.push({
+          x: bx, y: by,
+          vx: (Math.random() - 0.5) * (isStorm ? 5 : 2.2) + (isStorm ? out * 3 : 0),
+          vy: isHell ? -1.4 - Math.random() * 1.6 : isStorm ? (Math.random() - 0.5) * 2 : -0.8 - Math.random() * 1.6,
+          life: 30 + Math.random() * 26, maxLife: 56,
+          color: isIce ? (Math.random() < 0.6 ? '#e1f5fe' : '#81d4fa')
+            : isHell ? (Math.random() < 0.6 ? '#ffab40' : '#ff7043')
+            : isSewer ? (Math.random() < 0.6 ? '#dce775' : '#9ccc65')
+            : isSpace ? (Math.random() < 0.6 ? '#ede7f6' : '#b388ff')
+            : isStorm ? (Math.random() < 0.6 ? '#e1f5fe' : '#80d8ff')
+            : (Math.random() < 0.5 ? '#a1887f' : '#8d6e63'),
+          r: (isIce || isSpace ? 2.2 : 1.8) + Math.random() * 2.6
+        });
+      }
+      // poussière au sol qui s'épaissit en fin d'effondrement
+      if (dieK < 0.45 && Math.random() < dt * 16) {
+        const a = Math.random() * TAU, d = e.r * (0.7 + Math.random() * 0.9);
+        G.particles.push({
+          x: e.x + Math.cos(a) * d, y: e.y + Math.sin(a) * d * 0.5 + e.r * 0.4,
+          vx: (Math.random() - 0.5) * 1.4, vy: -0.3 - Math.random() * 0.7,
+          life: 34 + Math.random() * 24, maxLife: 58,
+          color: isIce ? 'rgba(186,222,255,0.30)' : isHell ? 'rgba(255,171,64,0.28)'
+            : isSewer ? 'rgba(174,234,0,0.25)' : isSpace ? 'rgba(179,136,255,0.30)'
+            : isStorm ? 'rgba(129,212,250,0.30)' : 'rgba(160,140,120,0.28)',
+          r: 6 + Math.random() * 9
+        });
       }
       if (e.bossDying <= 0) {
         // mort effective : mêmes récompenses qu'une mort normale + victoire
@@ -687,6 +727,7 @@ function update(dt) {
   if (G.pendingVictory) {
     G.pendingVictory = false;
     G.state = 'victory';
+    G.vicT = 0; // horloge de la révélation de l'écran de victoire
     recordRun(); // la victoire compte comme une partie réussie dans les stats
     // campagne terminée : débloque la suite (campagne 1 -> Frozen Land)
     G.stats.campaignDone = G.stats.campaignDone || {};

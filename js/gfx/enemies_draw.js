@@ -453,6 +453,45 @@ export function drawEnemy(e) {
     ctx.globalAlpha = 1;
   }
 
+  // fissures d'effondrement : branches sombres qui se propagent sur le corps
+  if (e.bossDying) {
+    const k = Math.max(0, e.bossDying / 2.4); // 1 -> 0
+    const crackK = 1 - k; // 0 -> 1 : les fissures s'ouvrent
+    const seed = e.type.length * 7 + e.r;
+    ctx.save();
+    ctx.strokeStyle = `rgba(10,6,4,${0.35 + crackK * 0.5})`;
+    ctx.lineWidth = 1 + crackK * 2;
+    ctx.lineCap = 'round';
+    for (let i = 0; i < 7; i++) {
+      const h1 = Math.sin(seed + i * 12.9898) * 43758.5453 % 1;
+      const h2 = Math.sin(seed + i * 78.233) * 12543.123 % 1;
+      const a0 = (h1 < 0 ? h1 + 1 : h1) * TAU;
+      const len = e.r * (0.4 + crackK * (0.9 + ((h2 < 0 ? h2 + 1 : h2)) * 0.7));
+      let px = e.x + Math.cos(a0) * e.r * 0.9;
+      let py = e.y + Math.sin(a0) * e.r * 0.9;
+      ctx.beginPath(); ctx.moveTo(px, py);
+      const segs = 3;
+      for (let sgm = 1; sgm <= segs; sgm++) {
+        const prog = sgm / segs * crackK;
+        if (prog <= 0) break;
+        const nx = e.x + Math.cos(a0 + Math.sin(i * 3 + sgm) * 0.7) * e.r * 0.9 * (1 - prog * 0.55);
+        const ny = e.y + Math.sin(a0 + Math.cos(i * 5 + sgm) * 0.7) * e.r * 0.9 * (1 - prog * 0.55);
+        ctx.lineTo(nx + (sgm === segs ? Math.cos(a0) * len * 0.2 : 0), ny);
+        px = nx; py = ny;
+      }
+      ctx.stroke();
+      // fine lueur de feu/énergie dans la fissure pour les boss chauds
+      if (e.type === 'finalBossEnfer' || e.type === 'finalBossGlace') {
+        ctx.strokeStyle = e.type === 'finalBossEnfer' ? `rgba(255,140,50,${crackK * 0.5})` : `rgba(140,220,255,${crackK * 0.5})`;
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+      }
+      ctx.strokeStyle = `rgba(10,6,4,${0.35 + crackK * 0.5})`;
+      ctx.lineWidth = 1 + crackK * 2;
+    }
+    ctx.restore();
+  }
+
   // pilier d'âme : colonne d'énergie qui s'élève pendant l'agonie du boss final
   if (e.bossDying) {
     const k = Math.max(0, e.bossDying / 2.4);

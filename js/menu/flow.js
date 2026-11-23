@@ -232,6 +232,7 @@ export function resetToMenu() {
   G.acidZones.length = 0; G.blackHoles.length = 0;
   G.tutorial = null; G.lastInteract = null;
   G.deathT = 0; G.deathDir = 1;
+  G.vicT = 0;
   G.lastKiller = null; G.deathInfo = null; G.goT = 0;
   G.dmgDealt = 0; G.dmgTaken = 0; G.potionsUsed = 0; G.bossesKilled = 0; G.runTime = 0;
   G.nightTime = 0; G.typeKills = {}; G.ultsUsed = 0; G.nukeUlts = 0; G.iceUlts = 0; G.hellUlts = 0;
@@ -244,6 +245,14 @@ export function resetToMenu() {
 export function playAgain() {
   resetToMenu();
   startGame();
+}
+
+// écran de victoire : retour à la carte de campagne (sans relancer)
+export function toCampaign() {
+  resetToMenu();
+  G.menuView = 'campaign';
+  G.campaignSel = G.campaign || 0;
+  sfxClick();
 }
 
 // écran de victoire : enchaîne directement sur la campagne suivante

@@ -1,5 +1,5 @@
 import { G, canvas, W, H } from './state.js';
-import { startGame, menuButtonAt, gameOverButtonAt, pauseButtonAt, playAgain, nextWorld, resetToMenu, requestResume, forgeClickAt, forgeWheel, achClickAt, achWheel, charClickAt, adminClickAt, switchCharacter, reloadPersistence, durWarnClickAt, durWarnAction, campaignClickAt, campaignPlayBtn } from './menu.js';
+import { startGame, menuButtonAt, gameOverButtonAt, victoryButtonAt, pauseButtonAt, playAgain, nextWorld, resetToMenu, toCampaign, requestResume, forgeClickAt, forgeWheel, achClickAt, achWheel, charClickAt, adminClickAt, switchCharacter, reloadPersistence, durWarnClickAt, durWarnAction, campaignClickAt, campaignPlayBtn } from './menu.js';
 import { checkAdminPass, createChar } from './chars.js';
 import { adminMenuClickAt, adminButtonAt, adminUnlocked } from './menu.js';
 import { usePotion } from './player.js';
@@ -114,6 +114,7 @@ export function initInput() {
     if (k === 'e' && G.state === 'playing') tryInteract(); // fouiller un bâtiment / entrer dans un portail
     if ((k === 'r') && G.state === 'victory' && G.campaign < 5) nextWorld();
     else if ((k === 'r') && (G.state === 'gameover' || G.state === 'victory')) playAgain();
+    if ((k === 'c') && G.state === 'victory') toCampaign();
     if (k === 'escape') {
       if (G.adminMenu) { G.adminMenu = false; sfxClick(); return; }
       if (G.state === 'playing') G.state = 'paused';
@@ -241,13 +242,19 @@ export function initInput() {
       }
       return;
     }
-    if (G.state === 'gameover' || G.state === 'victory') {
-      const btn = gameOverButtonAt(G.mouse.x, G.mouse.y);
-      if (btn === 'replay') {
-        if (G.state === 'victory' && G.campaign < 5) nextWorld();
-        else playAgain();
+    if (G.state === 'victory') {
+      const btn = victoryButtonAt(G.mouse.x, G.mouse.y);
+      if (btn === 'next') {
+        if (G.campaign < 5) nextWorld(); else playAgain();
         sfxConfirm();
       }
+      else if (btn === 'campaign') toCampaign();
+      else if (btn === 'menu') { resetToMenu(); sfxClick(); }
+      return;
+    }
+    if (G.state === 'gameover') {
+      const btn = gameOverButtonAt(G.mouse.x, G.mouse.y);
+      if (btn === 'replay') { playAgain(); sfxConfirm(); }
       else if (btn === 'menu') { resetToMenu(); sfxClick(); }
       return;
     }

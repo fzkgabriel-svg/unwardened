@@ -113,112 +113,275 @@ export function gameOverButtonAt(x, y) {
   return null;
 }
 
-// écran de victoire : le boss final de la vague 20 a été vaincu
+// ---------- VICTOIRE DE CAMPAGNE ----------
+// Écran de fin de campagne : direction médiéval sombre et prestigieuse.
+// Révélation échelonnée pilotée par G.vicT (titre -> stats -> récompenses -> boutons).
+const VIC = [
+  { world: 'Les Terres Oubliées', boss: 'SEIGNEUR OUBLIÉ', bossCol: '#e040fb',
+    sub: 'La menace a été vaincue. Les Terres Oubliées respirent à nouveau.',
+    col: '#e040fb', glow: 'rgba(224,64,251,',
+    unlocks: [{ icon: '🌍', txt: 'Nouveau monde débloqué : The Frozen Land' }] },
+  { world: 'The Frozen Land', boss: 'SOUVERAIN DE GLACE', bossCol: '#4fc3f7',
+    sub: 'Le froid éternel se dissipe. La glace conserve votre nom.',
+    col: '#4fc3f7', glow: 'rgba(79,195,247,',
+    unlocks: [
+      { icon: '❄', txt: 'Ultime « Pluie de Glace » débloquée — forge > Héros' },
+      { icon: '🌍', txt: 'Nouveau monde débloqué : Les Enfers' }] },
+  { world: 'Les Enfers', boss: 'BARON DE L\'ENFER', bossCol: '#ff7043',
+    sub: 'Les braises s\'éteignent. Les Enfers ont perdu leur maître.',
+    col: '#ff7043', glow: 'rgba(255,112,67,',
+    unlocks: [
+      { icon: '🔥', txt: 'Ultime « Titan de Feu » débloquée — forge > Héros' },
+      { icon: '🌍', txt: 'Nouveau monde débloqué : Les Égouts' }] },
+  { world: 'Les Égouts', boss: 'TYRAN DES PROFONDEURS', bossCol: '#aeea00',
+    sub: 'La vase se calme. Les Égouts ne cacheront plus leurs secrets.',
+    col: '#aeea00', glow: 'rgba(174,234,0,',
+    unlocks: [{ icon: '🌍', txt: 'Nouveau monde débloqué : L\'Espace' }] },
+  { world: 'L\'Espace', boss: 'ABOMINATION COSMIQUE', bossCol: '#b388ff',
+    sub: 'Les étoiles sont sauvées. Le vide n\'a plus de maître.',
+    col: '#b388ff', glow: 'rgba(179,136,255,',
+    unlocks: [
+      { icon: '🏹', txt: 'Arc cinétique cosmique débloqué — forge > Héros' },
+      { icon: '🌍', txt: 'Nouveau monde débloqué : Royaume des Tempêtes' }] },
+  { world: 'Royaume des Tempêtes', boss: 'SOUVERAIN DES OURAGANS', bossCol: '#80d8ff',
+    sub: 'Les ouragans s\'apaisent. Le royaume des cieux est à vous.',
+    col: '#80d8ff', glow: 'rgba(128,216,255,',
+    unlocks: [
+      { icon: '✦', txt: '2ᵉ emplacement passif débloqué — menu Modules' },
+      { icon: '♾', txt: 'NG+ : la boucle recommence, plus forte que jamais' }] },
+];
+
+// boutons de l'écran de victoire : continuer / carte campagne / menu
+function vicButtons() {
+  const bw = 216, bh = 46, gap = 18, by = H - 66;
+  const total = bw * 3 + gap * 2;
+  const x0 = W / 2 - total / 2;
+  return {
+    next:     { x: x0,             y: by, w: bw, h: bh },
+    campaign: { x: x0 + bw + gap,  y: by, w: bw, h: bh },
+    menu:     { x: x0 + (bw + gap) * 2, y: by, w: bw, h: bh }
+  };
+}
+export function victoryButtonAt(x, y) {
+  const b = vicButtons();
+  for (const k of ['next', 'campaign', 'menu']) {
+    const r = b[k];
+    if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) return k;
+  }
+  return null;
+}
+
+// poussière dorée mystique qui dérive derrière l'écran (déterministe)
+function drawVicMotes(v, pal) {
+  for (let i = 0; i < 42; i++) {
+    const sp = 0.14 + (i % 6) * 0.04;
+    const tt = (G.vicT * sp + i * 0.618) % 1;
+    const mx = W / 2 + (((i * 0.7549) % 1) - 0.5) * W * 1.4 + Math.sin(G.vicT * 0.9 + i * 1.7) * 22 * tt;
+    const my = H + 20 - tt * (H + 60);
+    const a = Math.sin(tt * Math.PI) * (0.10 + 0.16 * v);
+    ctx.fillStyle = pal.mote.replace('A', a.toFixed(3));
+    ctx.beginPath(); ctx.arc(mx, my, 0.9 + (i % 3) * 0.7, 0, TAU); ctx.fill();
+  }
+}
+
 export function drawVictory() {
   const p = G.player;
-  // fond doré sombre + halo de fête
-  ctx.fillStyle = 'rgba(30,22,4,0.85)'; ctx.fillRect(0, 0, W, H);
-  const v = ctx.createRadialGradient(W / 2, H / 2 - 40, 60, W / 2, H / 2, H * 0.85);
-  v.addColorStop(0, 'rgba(255,215,64,0.18)'); v.addColorStop(1, 'rgba(60,40,0,0.4)');
-  ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+  const v = VIC[Math.min(5, Math.max(0, G.campaign || 0))];
+  const vicT = G.vicT || 0;
+  const eK = tt => 1 - Math.pow(1 - Math.min(1, Math.max(0, (vicT - tt) / 0.8)), 3); // easeOut par étape
+
+  // ---- fond : nuit profonde + halo de l'univers + vignette ----
+  ctx.fillStyle = 'rgba(5,4,8,0.94)'; ctx.fillRect(0, 0, W, H);
+  const vg = ctx.createRadialGradient(W / 2, H / 2 - 60, 60, W / 2, H / 2, H * 0.95);
+  vg.addColorStop(0, 'rgba(10,8,14,0.5)'); vg.addColorStop(1, 'rgba(0,0,0,0.6)');
+  ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+  // halo coloré du monde vaincu, révélé en fondu
+  const ha = 0.16 * eK(0.1);
+  const hg = ctx.createRadialGradient(W / 2, H / 2 - 90, 20, W / 2, H / 2 - 90, 460);
+  hg.addColorStop(0, v.glow + ha + ')'); hg.addColorStop(1, v.glow + '0)');
+  ctx.fillStyle = hg; ctx.fillRect(0, 0, W, H);
+  // motes de l'univers
+  const MOTES = [
+    { mote: 'rgba(255,213,79,A)' },   // terre : or
+    { mote: 'rgba(200,240,255,A)' },  // glace : givre
+    { mote: 'rgba(255,150,80,A)' },   // enfer : braise
+    { mote: 'rgba(210,240,140,A)' },  // égouts : vase lumineuse
+    { mote: 'rgba(200,170,255,A)' },  // espace : cosmos
+    { mote: 'rgba(190,230,255,A)' }   // tempête : vent glacé
+  ];
+  drawVicMotes(Math.min(1, vicT / 2), MOTES[Math.min(5, Math.max(0, G.campaign || 0))]);
+
+  // ---- coins : ornements médiévaux ----
+  const cornerF = (x, y, sx, sy, a) => {
+    if (a <= 0) return;
+    ctx.save(); ctx.globalAlpha = a; ctx.translate(x, y); ctx.scale(sx, sy);
+    ctx.strokeStyle = 'rgba(212,176,98,0.4)'; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.moveTo(0, 30); ctx.lineTo(0, 9); ctx.lineTo(9, 0); ctx.stroke();
+    ctx.fillStyle = 'rgba(212,176,98,0.45)';
+    ctx.save(); ctx.translate(16, 16); ctx.rotate(Math.PI / 4); ctx.fillRect(-3, -3, 6, 6); ctx.restore();
+    ctx.restore();
+  };
+  cornerF(26, 24, 1, 1, eK(0.1)); cornerF(W - 26, 24, -1, 1, eK(0.1));
+  cornerF(26, H - 24, 1, -1, eK(0.1)); cornerF(W - 26, H - 24, -1, -1, eK(0.1));
 
   ctx.textAlign = 'center';
-  // titre doré pulsé
-  const pulse = 1 + Math.sin(G.time * 3.5) * 0.05;
-  ctx.save();
-  ctx.translate(W / 2, H / 2 - 175);
-  ctx.scale(pulse, pulse);
-  const tg = ctx.createLinearGradient(-280, 0, 280, 0);
-  tg.addColorStop(0, '#ffd740'); tg.addColorStop(0.5, '#fff59d'); tg.addColorStop(1, '#ff8f00');
-  ctx.font = 'bold 72px Georgia, serif';
-  ctx.shadowColor = 'rgba(255,215,64,0.9)'; ctx.shadowBlur = 40;
-  ctx.fillStyle = tg;
-  ctx.fillText('✦ VICTOIRE ✦', 0, 0);
-  ctx.restore();
-  ctx.font = 'italic 19px Georgia, serif';
-  ctx.fillStyle = '#ffe9a3';
-  const vicNames = ['Le Seigneur Oublié est vaincu — les Terres Oubliées sont libérées !',
-    'Le Souverain de Glace est vaincu — la Terre Gelée est libérée !',
-    'Le Baron de l\'Enfer est vaincu — les Enfers sont libérés !',
-    'Le Tyran des Profondeurs est vaincu — les Égouts sont libérés !',
-    'L\'Abomination Cosmique est vaincue — l\'Espace est libéré !',
-    'Le Souverain des Ouragans est vaincu — le Royaume des Tempêtes est libéré !'];
-  ctx.fillText(vicNames[G.campaign] || vicNames[0], W / 2, H / 2 - 128);
-  if (G.campaign === 1) {
-    ctx.save();
-    ctx.shadowColor = 'rgba(129,212,250,0.9)'; ctx.shadowBlur = 16;
-    ctx.fillStyle = '#81d4fa'; ctx.font = 'bold 19px Inter, sans-serif';
-    ctx.fillText('❄ COFFRE DÉBLOQUÉ : ULTIME « PLUIE DE GLACE » — choisis-la dans la forge (onglet Héros)', W / 2, H / 2 - 100);
+
+  // ---- surtitre + titre + sous-titre ----
+  const k0 = eK(0.15);
+  if (k0 > 0) {
+    ctx.save(); ctx.globalAlpha = k0;
+    overlineCentered(`LE MONDE DE ${v.world.toUpperCase()} EST SAUVE`, W / 2, 92, v.col);
     ctx.restore();
   }
-  if (G.campaign === 2) {
+  const k1 = eK(0.4);
+  if (k1 > 0) {
     ctx.save();
-    ctx.shadowColor = 'rgba(255,112,67,0.9)'; ctx.shadowBlur = 16;
-    ctx.fillStyle = '#ffab91'; ctx.font = 'bold 19px Inter, sans-serif';
-    ctx.fillText('🔥 TRÔNE CONQUIS : ULTIME « TITAN DE FEU » — choisis-la dans la forge (onglet Héros)', W / 2, H / 2 - 100);
+    ctx.globalAlpha = k1;
+    const pop = 0.92 + 0.08 * k1;
+    ctx.translate(W / 2, 150); ctx.scale(pop, pop);
+    const tg = ctx.createLinearGradient(-300, 0, 300, 0);
+    tg.addColorStop(0, '#8a6a2f'); tg.addColorStop(0.5, '#f0d78c'); tg.addColorStop(1, '#8a6a2f');
+    ctx.font = 'bold 54px Cinzel, Georgia, serif';
+    ctx.shadowColor = v.glow + '0.55)'; ctx.shadowBlur = 26;
+    ctx.fillStyle = tg;
+    ctx.fillText('✦ CAMPAGNE TERMINÉE ✦', 0, 0);
+    ctx.shadowBlur = 0;
+    ctx.restore();
+    // filet ornemental sous le titre
+    ctx.save(); ctx.globalAlpha = k1 * 0.8;
+    ctx.strokeStyle = 'rgba(212,176,98,0.45)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(W / 2 - 250, 172); ctx.lineTo(W / 2 - 30, 172);
+    ctx.moveTo(W / 2 + 30, 172); ctx.lineTo(W / 2 + 250, 172); ctx.stroke();
+    ctx.fillStyle = 'rgba(212,176,98,0.55)';
+    [[W / 2 - 22, 172], [W / 2 + 22, 172]].forEach(([dx, dy]) => {
+      ctx.save(); ctx.translate(dx, dy); ctx.rotate(Math.PI / 4); ctx.fillRect(-2.5, -2.5, 5, 5); ctx.restore();
+    });
     ctx.restore();
   }
-  if (G.campaign === 3) {
-    ctx.save();
-    ctx.shadowColor = 'rgba(174,234,0,0.9)'; ctx.shadowBlur = 16;
-    ctx.fillStyle = '#dce775'; ctx.font = 'bold 19px Inter, sans-serif';
-    ctx.fillText('☣ LES ÉGOUTS LIBÉRÉS — la prochaine campagne vous attend', W / 2, H / 2 - 100);
-    ctx.restore();
-  }
-  if (G.campaign === 4) {
-    ctx.save();
-    ctx.shadowColor = 'rgba(179,157,219,0.9)'; ctx.shadowBlur = 16;
-    ctx.fillStyle = '#e1bee7'; ctx.font = 'bold 19px Inter, sans-serif';
-    ctx.fillText('🕳 LES ÉTOILES SAUVEES — la prochaine campagne vous attend', W / 2, H / 2 - 100);
-    ctx.restore();
-  }
-  if (G.campaign === 5) {
-    ctx.save();
-    ctx.shadowColor = 'rgba(79,195,247,0.9)'; ctx.shadowBlur = 16;
-    ctx.fillStyle = '#b3e5fc'; ctx.font = 'bold 19px Inter, sans-serif';
-    ctx.fillText('🌪 2ᵉ EMPLACEMENT PASSIF DÉBLOQUÉ — équiper dans le menu Modules !', W / 2, H / 2 - 100);
+  const k2 = eK(0.8);
+  if (k2 > 0) {
+    ctx.save(); ctx.globalAlpha = k2;
+    ctx.font = 'italic 17px Georgia, serif';
+    ctx.fillStyle = '#cbbfa5';
+    ctx.fillText(v.sub, W / 2, 200);
+    // boss vaincu, dans sa couleur
+    ctx.font = '600 12px Inter, sans-serif'; ctx.letterSpacing = '2px';
+    ctx.fillStyle = v.bossCol;
+    ctx.fillText(`BOSS VAINCU : ${v.boss}`, W / 2, 224);
+    ctx.letterSpacing = '0px';
     ctx.restore();
   }
 
-  // carte récapitulative (même style que le game over)
+  // ---- panneau chroniques (gauche) : statistiques réelles ----
   const loot = runLootRows();
-  const cw = 460, ch = 185, cx = W / 2 - cw / 2, cy = H / 2 - 60;
-  ctx.fillStyle = 'rgba(0,0,0,0.55)';
-  roundRect(cx, cy, cw, ch, 14); ctx.fill();
-  ctx.strokeStyle = 'rgba(255,215,64,0.6)'; ctx.lineWidth = 2;
-  roundRect(cx, cy, cw, ch, 14); ctx.stroke();
-  const rows = [
-    ['Vague atteinte', `FINALE (${G.wave})`, '#ff8a65', false],
-    ['Niveau', p.level, '#40c4ff', false],
-    ['Ennemis vaincus', G.kills, '#69f0ae', false],
-    ['Dégâts infligés', Math.floor(G.dmgDealt), '#ffeb3b', false],
-    ['Temps de survie', fmtTime(G.runTime), '#9575cd', false],
-    ['📦 Matériaux gagnés', `+${loot.mats}`, '#ffd740', false],
-    [loot.wmodeLabel, loot.wmodeXp > 0 ? `+${loot.wmodeXp} XP` : '—', '#ce93d8', false],
-    [loot.wearLabel, loot.wear > 0 ? `-${loot.wear.toFixed(0)} %` : '—', '#ff8a65', false]
-  ];
-  ctx.font = '16px Inter, sans-serif';
-  rows.forEach((r, i) => {
-    const ry = cy + 24 + i * 17;
-    ctx.textAlign = 'left'; ctx.fillStyle = '#bdbdbd';
-    ctx.fillText(r[0], cx + 34, ry);
-    ctx.textAlign = 'right'; ctx.fillStyle = r[2]; ctx.font = 'bold 17px Inter, sans-serif';
-    ctx.fillText(String(r[1]), cx + cw - 34, ry);
-    ctx.font = '16px Inter, sans-serif';
-  });
+  const lx = W / 2 - 500, lw = 470, ly = 246, lh = 236;
+  const k3 = eK(1.1);
+  if (k3 > 0) {
+    ctx.save(); ctx.globalAlpha = k3; ctx.translate(0, (1 - k3) * 18);
+    const pg = ctx.createLinearGradient(lx, ly, lx, ly + lh);
+    pg.addColorStop(0, 'rgba(26,20,14,0.92)'); pg.addColorStop(1, 'rgba(14,11,8,0.94)');
+    ctx.fillStyle = pg;
+    roundRect(lx, ly, lw, lh, 12); ctx.fill();
+    ctx.strokeStyle = 'rgba(212,176,98,0.4)'; ctx.lineWidth = 1.4;
+    roundRect(lx + 0.5, ly + 0.5, lw - 1, lh - 1, 12); ctx.stroke();
+    ctx.strokeStyle = 'rgba(212,176,98,0.18)'; ctx.lineWidth = 1;
+    roundRect(lx + 5.5, ly + 5.5, lw - 11, lh - 11, 9); ctx.stroke();
+    overline('CHRONIQUES DE L\'EXPÉDITION', lx + lw / 2, ly + 24, 'rgba(212,176,98,0.9)');
+    const rows = [
+      ['Monde terminé', v.world, v.col],
+      ['Vague atteinte', `FINALE (${G.wave})`, '#ff8a65'],
+      ['Niveau du héros', `Nv. ${p.level}`, '#40c4ff'],
+      ['Ennemis vaincus', G.kills.toLocaleString('fr-FR'), '#69f0ae'],
+      ['Dégâts infligés', Math.floor(G.dmgDealt).toLocaleString('fr-FR'), '#ffeb3b'],
+      ['Temps de campagne', fmtTime(G.runTime), '#9575cd'],
+      ['📦 Matériaux gagnés', `+${loot.mats}`, '#ffd740'],
+      [loot.wearLabel, loot.wear > 0 ? `−${loot.wear.toFixed(0)} %` : 'aucune', '#ff8a65']
+    ];
+    ctx.font = '14px Inter, sans-serif';
+    rows.forEach((r, i) => {
+      const ry = ly + 52 + i * 22;
+      ctx.textAlign = 'left'; ctx.fillStyle = '#b8ac93';
+      ctx.fillText(r[0], lx + 26, ry);
+      ctx.textAlign = 'right'; ctx.fillStyle = r[2]; ctx.font = 'bold 14.5px Inter, sans-serif';
+      ctx.fillText(String(r[1]), lx + lw - 26, ry);
+      ctx.font = '14px Inter, sans-serif';
+    });
+    ctx.restore();
+  }
 
-  // boutons REJOUER / MENU (même géométrie que le game over)
-  // sur la victoire, le bouton devient « MONDE SUIVANT » s'il reste une campagne
-  const b = goButtons();
+  // ---- panneau récompenses (droite) : déblocages réels ----
+  const rx = W / 2 + 30, rw = 470, ry2 = 246, rh = 236;
+  const k4 = eK(1.5);
+  if (k4 > 0) {
+    ctx.save(); ctx.globalAlpha = k4; ctx.translate(0, (1 - k4) * 18);
+    const pg = ctx.createLinearGradient(rx, ry2, rx, ry2 + rh);
+    pg.addColorStop(0, 'rgba(24,26,20,0.92)'); pg.addColorStop(1, 'rgba(13,14,11,0.94)');
+    ctx.fillStyle = pg;
+    roundRect(rx, ry2, rw, rh, 12); ctx.fill();
+    ctx.strokeStyle = 'rgba(212,176,98,0.4)'; ctx.lineWidth = 1.4;
+    roundRect(rx + 0.5, ry2 + 0.5, rw - 1, rh - 1, 12); ctx.stroke();
+    overline('RÉCOMPENSES & DÉBLOQUÉS', rx + rw / 2, ry2 + 24, 'rgba(212,176,98,0.9)');
+    // chaque récompense apparaît avec un léger décalage
+    v.unlocks.forEach((u, i) => {
+      const uk = Math.min(1, Math.max(0, (vicT - 1.9 - i * 0.45) / 0.6));
+      if (uk <= 0) return;
+      const uy = ry2 + 58 + i * 74;
+      ctx.save(); ctx.globalAlpha = uk; ctx.translate(0, (1 - uk) * 10);
+      // liseré doré animé sur la carte de récompense
+      ctx.strokeStyle = `rgba(212,176,98,${0.35 + 0.2 * Math.sin(vicT * 2.4 + i)})`;
+      ctx.lineWidth = 1;
+      roundRect(rx + 20, uy, rw - 40, 58, 9); ctx.stroke();
+      ctx.fillStyle = 'rgba(212,176,98,0.07)';
+      roundRect(rx + 20, uy, rw - 40, 58, 9); ctx.fill();
+      // icône dans un médaillon
+      ctx.save();
+      ctx.translate(rx + 52, uy + 29); ctx.scale(0.85 + 0.15 * uk, 0.85 + 0.15 * uk);
+      ctx.font = '26px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(u.icon, 0, 0);
+      ctx.restore();
+      ctx.textAlign = 'left';
+      ctx.font = '600 13px Inter, sans-serif'; ctx.fillStyle = '#e8dfc8';
+      // texte éventuellement sur 2 lignes
+      const words = u.txt.split(' '); let line = '', ly2 = uy + 24;
+      for (const w of words) {
+        const test = line ? line + ' ' + w : w;
+        if (ctx.measureText(test).width > rw - 110 && line) { ctx.fillText(line, rx + 92, ly2); line = w; ly2 += 15; }
+        else line = test;
+      }
+      if (line) ctx.fillText(line, rx + 92, ly2);
+      ctx.font = '600 9px Inter, sans-serif'; ctx.letterSpacing = '2px';
+      ctx.fillStyle = 'rgba(212,176,98,0.75)';
+      ctx.fillText('✦ DÉBLOQUÉ ✦', rx + 92, uy + 46);
+      ctx.letterSpacing = '0px';
+      ctx.restore();
+    });
+    // mention du compteur de campagne
+    ctx.save(); ctx.globalAlpha = Math.min(1, Math.max(0, (vicT - 2.6) / 0.5));
+    ctx.font = 'italic 11.5px Georgia, serif'; ctx.fillStyle = '#9a8f78';
+    ctx.fillText(G.campaign < 5 ? `${G.campaign + 1} / 6 campagnes conquises` : 'Toutes les campagnes sont conquises', rx + rw / 2, ry2 + rh - 18);
+    ctx.restore();
+    ctx.restore();
+  }
+
+  // ---- boutons ----
+  const b = vicButtons();
   const hasNext = G.campaign < 5;
-  drawMenuButton(b.replay, hasNext ? '▶  MONDE SUIVANT' : '↻  REJOUER',
-    hasNext ? '#1565c0' : '#4caf50', hasNext ? '#64b5f6' : '#69f0ae', true);
-  drawMenuButton(b.menu, '⌂  MENU', '#455a64', '#90a4ae', false);
-
-  ctx.fillStyle = '#ffe9a3'; ctx.font = 'bold 14px Inter, sans-serif';
-  ctx.globalAlpha = 0.6 + Math.sin(G.time * 4) * 0.4;
-  ctx.fillText(hasNext ? 'R — Monde suivant' : 'R — Rejouer', W / 2, b.replay.y + b.replay.h + 26);
-  ctx.globalAlpha = 1;
+  const k5 = eK(2.4);
+  if (k5 > 0) {
+    ctx.save(); ctx.globalAlpha = k5;
+    drawMenuButton(b.next, hasNext ? '▶  MONDE SUIVANT' : '↻  REJOUER', '#8a6a2f', '#f0d78c', true);
+    drawMenuButton(b.campaign, '🗺  CAMPAGNE', '#3a3428', '#c9b896', false);
+    drawMenuButton(b.menu, '⌂  MENU', '#2c2a26', '#a89f8c', false);
+    ctx.restore();
+  }
+  const k6 = eK(2.9);
+  if (k6 > 0) {
+    ctx.save(); ctx.globalAlpha = k6 * (0.6 + Math.sin(G.time * 3) * 0.25);
+    ctx.font = '600 11px Inter, sans-serif'; ctx.letterSpacing = '1.5px';
+    ctx.fillStyle = '#b8ac93'; ctx.textAlign = 'center';
+    ctx.fillText(hasNext ? 'R — Monde suivant · C — Carte campagne · Échap — Menu' : 'R — Rejouer · C — Carte campagne · Échap — Menu', W / 2, b.next.y + b.next.h + 24);
+    ctx.letterSpacing = '0px'; ctx.restore();
+  }
 }
 
 // ---------- GAME OVER 2.0 ----------

@@ -12,7 +12,7 @@ export const ctx = canvas.getContext('2d');
 ctx.scale(SS, SS);
 export const W = 1200, H = 640;
 export const TAU = Math.PI * 2;
-export const VERSION = '4.9.0';
+export const VERSION = '4.10.0';
 export const FINAL_WAVE = 20; // vague du boss final (campagne 1) // incrémenter à chaque mise à jour du jeu
 // vagues finales : campagne 2 -> 25, 3 -> 30, 4 (Égouts) -> 35, 5 (Espace) -> 40
 export function finalWave() {
@@ -107,6 +107,7 @@ export const G = {
   lastKiller: null, // dernier agresseur ayant touché le joueur (pour l'écran de mort)
   deathInfo: null,  // snapshot des infos de mort {killer, killerType, killerColor, world, campaign, wave}
   goT: 0,           // temps écoulé depuis l'apparition de l'écran de mort (animations)
+  vicT: 0,          // temps écoulé depuis l'apparition de l'écran de victoire (révélation)
   resumeTimer: 0, // compte à rebours avant reprise (pause)
   cloudT: 0,      // animation d'ouverture par les nuages au lancement
   screenFlash: 0,
