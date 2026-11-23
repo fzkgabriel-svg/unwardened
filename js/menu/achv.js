@@ -218,8 +218,9 @@ export function drawAchievementsCard() {
   ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
   ctx.font = `bold 34px ${SERIF}`; ctx.fillStyle = '#ffe9a3';
   ctx.fillText(`${done}`, h.x, sy + 12);
+  const doneW = ctx.measureText(`${done}`).width; // mesure avec la police 34px, pas la petite
   ctx.font = `500 13px ${UI}`; ctx.fillStyle = C_MUTED;
-  ctx.fillText(`/ ${total} succès débloqués`, h.x + ctx.measureText(`${done}`).width + 8, sy + 14);
+  ctx.fillText(`/ ${total} succès débloqués`, h.x + doneW + 8, sy + 14);
 
   // barre de progression globale
   const bw = 330, bx = h.x + 190, by = sy + 4;
@@ -251,8 +252,8 @@ export function drawAchievementsCard() {
     cx += w + 10;
   }
 
-  // dernier + prochain succès
-  const ny = sy + 34;
+  // dernier + prochain succès (décalés vers le bas pour aérer le bandeau stats)
+  const ny = sy + 46;
   // dernier succès débloqué
   let lastA = null, lastT = 0;
   for (const a of ACHIEVEMENTS) { const t = achUnlockT(a.id); if (t > lastT) { lastT = t; lastA = a; } }
