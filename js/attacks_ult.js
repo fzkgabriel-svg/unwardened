@@ -92,12 +92,61 @@ export function doIceUlt() {
   G.iceStorm = { t: 12.5, x: p.x, y: p.y, r: stormR, spawnT: 0, friendly: true, tick: 0, iceT: 0, age: 0, megaT: 0, boomed: false, phase: 'charge', gustT: 0 };
   G.iceSpikes = [];
   G.iceShards = [];
-  // le sol se couvre de neige : une nappe blanche persiste ~25 s après la tempête
-  G.snowPatches.push({ x: p.x, y: p.y, r: stormR * 0.95, life: 25, maxLife: 25 });
+  // la couverture de neige procédurale est initialisée dans updateSnowCover
+  // (partagée avec la micro-tempête du boss)
   G.screenShake = Math.max(G.screenShake, 10);
   sfxIceCharge(); // canalisation : montée grave + cristaux qui tintent
   spawnParticles(p.x, p.y - 60, '#b3e5fc', 30, 8);
   addDamageText(p.x, p.y - 90, '❄ PLUIE DE GLACE ❄', '#80d8ff');
+}
+
+// ---------- COUVERTURE DE NEIGE : transformation du sol (Pluie de Glace) ----------
+// Des cellules irrégulières se déposent progressivement depuis le centre de la
+// tempête vers les bords, s'épaississent autour des impacts, puis fondent
+// lentement après la tempête (~16 s). Partagée avec la micro-tempête du boss.
+function initSnowCover(s) {
+  const cells = [];
+  const R = s.r * 1.05;
+  const count = Math.min(110, 14 + Math.round(R / 55) ** 2 * 1.6);
+  for (let i = 0; i < count; i++) {
+    const a = Math.random() * TAU;
+    const d = Math.sqrt(Math.random()) * R;
+    cells.push({
+      x: s.x + Math.cos(a) * d,
+      y: s.y + Math.sin(a) * d * 0.72, // sol vu en perspective : ellipse aplatie
+      r: 46 + Math.random() * 62,
+      seed: Math.random() * 1000,
+      delay: (d / R) * 6.5 + Math.random() * 3, // propagation centre -> bords
+      depth: 0, boost: 0,
+      target: 0.55 + Math.random() * 0.45        // épaisseur variable par cellule
+    });
+  }
+  G.snowCover = { cells, t: 0, melt: 0 };
+}
+
+function updateSnowCover(s, dt) {
+  if (s && !G.snowCover) initSnowCover(s);
+  const cv = G.snowCover;
+  if (!cv) return;
+  if (s) {
+    cv.t += dt;
+    for (const c of cv.cells) {
+      // la neige apparaît d'abord autour des impacts : le boost court-circuite le délai
+      const dl = c.boostT !== undefined ? Math.min(c.delay, c.boostT) : c.delay;
+      const g = Math.max(0, Math.min(1, (cv.t - dl) / 7));
+      const ease = g * g * (3 - 2 * g);
+      c.depth = Math.min(1, ease * Math.min(1, c.target + c.boost));
+    }
+  } else {
+    cv.melt += dt;
+    const k = Math.max(0, 1 - cv.melt / 16); // fonte douce sur ~16 s
+    let alive = false;
+    for (const c of cv.cells) {
+      c.depth *= Math.max(0, 1 - dt * 0.14);
+      if (c.depth * k > 0.015) alive = true;
+    }
+    if (!alive || cv.melt > 22) G.snowCover = null;
+  }
 }
 
 export function updateIceUlt(dt) {
@@ -146,6 +195,27 @@ export function updateIceUlt(dt) {
     // trace de givre au sol : ellipse bleutée qui fond en quelques secondes
     G.iceFrost.push({ x, y: ty, r: rad * (big ? 2.3 : 1.5), life: big ? 5.5 : 3.6, maxLife: big ? 5.5 : 3.6 });
     if (G.iceFrost.length > 70) G.iceFrost.splice(0, G.iceFrost.length - 70);
+    // accumulation de neige autour de l'impact : les cellules proches
+    // se déposent plus vite et plus épais
+    if (G.snowCover) {
+      const reach = rad * 4.5;
+      for (const c of G.snowCover.cells) {
+        const dx = c.x - x, dy = c.y - ty;
+        if (dx * dx + dy * dy < reach * reach) {
+          c.boost = Math.min(0.5, c.boost + (big ? 0.3 : 0.18));
+          c.boostT = Math.min(c.boostT ?? 1e9, (G.snowCover.t || 0) + 0.4);
+        }
+      }
+    }
+    // bouffée de poudreuse au sol
+    for (let i = 0; i < (big ? 9 : 4); i++) {
+      G.particles.push({
+        x: x + (Math.random() - 0.5) * rad * 2.6, y: ty - 3 - Math.random() * 5,
+        vx: (Math.random() - 0.5) * 2.4, vy: -0.5 - Math.random() * 0.9,
+        life: 26 + Math.random() * 20, maxLife: 46,
+        color: 'rgba(255,255,255,0.5)', r: 2.5 + Math.random() * 3.5
+      });
+    }
     // brume froide qui s'élève de l'impact
     const nm = big ? 8 : 3;
     for (let i = 0; i < nm; i++) {
@@ -220,6 +290,9 @@ export function updateIceUlt(dt) {
       });
     }
   }
+  // couverture de neige du sol : dépôt progressif pendant la tempête,
+  // fonte lente ensuite — tourne même quand la tempête est finie
+  updateSnowCover(s, dt);
   // les sols enneigés fondent lentement (~25 s)
   for (let i = G.snowPatches.length - 1; i >= 0; i--) {
     G.snowPatches[i].life -= dt;

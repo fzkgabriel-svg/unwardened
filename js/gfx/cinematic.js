@@ -364,6 +364,98 @@ function stormCloudXY(s, i, t) {
   };
 }
 
+// ---------- COUVERTURE DE NEIGE : transformation du sol (coords monde) ----------
+// Cellules de neige procédurales déposées par la Pluie de Glace : blobs
+// irréguliers avec relief, poudre, cristaux incrustés et congères.
+// Teinte adaptée au biome pour que la neige épouse le décor.
+const SNOW_PAL = {
+  plain:  { hi: '#ffffff', mid: '#e8f4fd', lo: '#c2e2f4', rim: 'rgba(130,175,215,', spark: 1.0, stretch: 1.0 },
+  ice:    { hi: '#ffffff', mid: '#eafaff', lo: '#aedcff', rim: 'rgba(120,190,245,', spark: 1.5, stretch: 1.0 },
+  hell:   { hi: '#fffaf5', mid: '#fdf0e8', lo: '#f0d8c8', rim: 'rgba(215,150,120,', spark: 0.6, stretch: 1.0 },
+  sewer:  { hi: '#f4f8fa', mid: '#e2ecf0', lo: '#c0d2da', rim: 'rgba(125,155,175,', spark: 0.5, stretch: 1.0 },
+  space:  { hi: '#eafcff', mid: '#c8f0ff', lo: '#9fe0ff', rim: 'rgba(100,200,255,', spark: 1.2, stretch: 1.0 },
+  storm:  { hi: '#ffffff', mid: '#eaf2fb', lo: '#c8dcee', rim: 'rgba(135,170,215,', spark: 1.1, stretch: 1.35 },
+};
+// bruit déterministe stable par graine (évite Math.random par frame)
+function snowHash(seed, k) {
+  const s = Math.sin(seed * 12.9898 + k * 78.233) * 43758.5453;
+  return s - Math.floor(s);
+}
+export function drawSnowCover() {
+  const cv = G.snowCover;
+  if (!cv || !cv.cells.length) return;
+  const t = G.time || 0;
+  const pal = SNOW_PAL[(curWorld().def.biome) || 'plain'] || SNOW_PAL.plain;
+  // culling viewport
+  const vx0 = (G.camX || 0) - 140, vy0 = (G.camY || 0) - 140;
+  const vx1 = vx0 + W + 280, vy1 = vy0 + H + 280;
+  for (const c of cv.cells) {
+    const d = c.depth;
+    if (d < 0.04) continue;
+    if (c.x < vx0 || c.x > vx1 || c.y < vy0 || c.y > vy1) continue;
+    const R = c.r * (0.55 + 0.5 * d);           // la congère grandit avec l'épaisseur
+    const ry = R * 0.6 * pal.stretch;
+    const rx = R * pal.stretch;
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, d * 1.15);
+    // ombre bleutée sous la congère : donne du volume au sol enneigé
+    ctx.fillStyle = pal.rim + (0.14 * d) + ')';
+    ctx.beginPath(); ctx.ellipse(c.x, c.y + ry * 0.22, rx * 1.04, ry * 1.06, 0, 0, TAU); ctx.fill();
+    // corps : blob irrégulier à 10 points (silhouette de congère)
+    ctx.beginPath();
+    const N = 10;
+    for (let k = 0; k <= N; k++) {
+      const a = (k / N) * TAU;
+      const nz = 0.74 + 0.26 * snowHash(c.seed, k);
+      const px = c.x + Math.cos(a) * rx * nz;
+      const py = c.y + Math.sin(a) * ry * nz;
+      k ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+    }
+    ctx.closePath();
+    const g = ctx.createRadialGradient(c.x - rx * 0.18, c.y - ry * 0.3, R * 0.1, c.x, c.y, rx);
+    g.addColorStop(0, pal.hi);
+    g.addColorStop(0.55, pal.mid);
+    g.addColorStop(1, pal.lo);
+    ctx.fillStyle = g; ctx.fill();
+    // congères : petits monticules accumulés aux bords (neige épaisse)
+    if (d > 0.55) {
+      ctx.fillStyle = 'rgba(255,255,255,' + (0.45 * d) + ')';
+      for (let k = 0; k < 4; k++) {
+        const a = c.seed + k * 1.83;
+        const bx = c.x + Math.cos(a) * rx * 0.8, by = c.y + Math.sin(a) * ry * 0.78;
+        const br = 4 + snowHash(c.seed, 40 + k) * 9 * d;
+        ctx.beginPath(); ctx.arc(bx, by, br, 0, TAU); ctx.fill();
+      }
+    }
+    // cristaux incrustés : scintillements discrets dans la neige
+    if (d > 0.35) {
+      const ns = Math.round(4 * pal.spark);
+      for (let k = 0; k < ns; k++) {
+        const tw = 0.5 + 0.5 * Math.sin(t * 2.4 + c.seed + k * 1.9);
+        if (tw < 0.5) continue;
+        const a = c.seed * 0.7 + k * 2.4;
+        const dd = 0.3 + 0.55 * snowHash(c.seed, 60 + k);
+        const px = c.x + Math.cos(a) * rx * dd, py = c.y + Math.sin(a) * ry * dd;
+        const s = 1.3 * d * tw * pal.spark;
+        ctx.fillStyle = 'rgba(255,255,255,' + (0.8 * d * tw) + ')';
+        ctx.fillRect(px - s / 2, py - s / 2, s, s);
+        ctx.fillRect(px - s * 1.7, py - 0.4, s * 3.4, 0.8);
+        ctx.fillRect(px - 0.4, py - s * 1.7, 0.8, s * 3.4);
+      }
+    }
+    // poudre : micro-points de relief sur toute la surface
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    for (let k = 0; k < 12; k++) {
+      const a = c.seed * 1.3 + k * 2.62;
+      const dd = Math.sqrt(snowHash(c.seed, 80 + k)) * 0.82;
+      const px = c.x + Math.cos(a) * rx * dd, py = c.y + Math.sin(a) * ry * dd;
+      const pr = 0.7 + snowHash(c.seed, 90 + k) * 1.5;
+      ctx.beginPath(); ctx.arc(px, py, pr * d, 0, TAU); ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
 // ---------- ULTIME : PLUIE DE GLACE (coords monde) ----------
 // zone glacée qui pulse + pics de glace en chute + sol enneigé + nuages
 export function drawIceStorm() {
