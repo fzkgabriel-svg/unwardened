@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Actualités — Tesseract Studio</title>
+<link rel="stylesheet" href="/css/site.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><path d='M32 4 54 18v28L32 60 10 46V18Z' fill='none' stroke='%23d4b062' stroke-width='4'/></svg>">
+</head>
+<body>
+<canvas id="fx"></canvas>
+<header class="site"><nav class="top">
+  <a class="brand" href="/"><span id="logo"></span>
+    <span class="t">TESSERACT<small>STUDIO</small></span></a>
+  <div class="links" id="navlinks"></div>
+  <div id="navauth" style="display:flex;gap:8px"></div>
+</nav></header>
+<main><div class="wrap">
+<section><div class="wrap">
+  <div class="sec-head" style="margin-top:40px"><h2>ACTUALITÉS</h2><div class="orn">✦ ✦ ✦</div>
+  <p>Mises à jour, nouveaux mondes, annonces du studio.</p></div>
+  <div class="news-grid" id="news"></div>
+</div></section>
+</div></main>
+<footer class="site"><div class="wrap">
+  <div class="fl">TESSERACT STUDIO</div><p>© <span id="yr"></span></p>
+</div></footer>
+<script type="module">
+import { LOGO_SVG, mountChrome, startParticles, api, esc, fmtDate } from '/js/site.js';
+document.getElementById('logo').innerHTML = LOGO_SVG;
+try {
+  const { news } = await api('/api/news');
+  document.getElementById('news').innerHTML = news.map(n => `
+    <article class="ncard">
+      ${n.image ? `<img src="${esc(n.image)}" alt="">` : `<div class="noimg">✦</div>`}
+      <div class="body"><div class="date">${fmtDate(n.created_at)}</div>
+      <h3>${esc(n.title)}</h3><p style="-webkit-line-clamp:unset">${esc(n.body)}</p></div>
+    </article>`).join('') || '<div class="empty">Aucune actualité pour le moment.</div>';
+} catch (e) { document.getElementById('news').innerHTML = '<div class="empty">Actualités indisponibles.</div>'; }
+mountChrome('/news.html'); startParticles();
+</script>
+</body></html>

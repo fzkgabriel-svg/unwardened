@@ -1,0 +1,11 @@
+{
+  "name": "tesseract-studio-site",
+  "version": "1.0.0",
+  "description": "Site officiel de Tesseract Studio — RPG 2D Les Terres Oubliées",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "admin": "node tools/mkadmin.js"
+  },
+  "engines": { "node": ">=22.5.0" }
+}

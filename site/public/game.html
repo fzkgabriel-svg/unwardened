@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Les Terres Oubliées — Tesseract Studio</title>
+<link rel="stylesheet" href="/css/site.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><path d='M32 4 54 18v28L32 60 10 46V18Z' fill='none' stroke='%23d4b062' stroke-width='4'/></svg>">
+</head>
+<body>
+<canvas id="fx"></canvas>
+<header class="site"><nav class="top">
+  <a class="brand" href="/"><span id="logo"></span>
+    <span class="t">TESSERACT<small>STUDIO</small></span></a>
+  <div class="links" id="navlinks"></div>
+  <div id="navauth" style="display:flex;gap:8px"></div>
+</nav></header>
+
+<main><div class="wrap">
+<section class="hero" style="padding:70px 0 50px">
+  <div class="kicker">RPG 2D · Action Survival · Monde Procédural</div>
+  <h1 style="font-size:clamp(38px,7vw,72px)">LES TERRES <span class="tess">OUBLIÉES</span></h1>
+  <div class="slogan">Survivez. Forgez. <b>Devenez une légende.</b></div>
+  <p class="lead">Un monde qui ne se répète jamais. Des vagues d'ennemis toujours plus féroces,
+    des armes à forger, des modules mystérieux à maîtriser, six royaumes à conquérir
+    et un arsenal d'ultimes dévastateurs — de la bombe atomique au Titan de Feu.</p>
+  <div class="cta">
+    <a class="btn" href="#download">TÉLÉCHARGER LE JEU</a>
+    <a class="btn ghost" href="https://github.com/CrimsonAwesomeCode/Project-Unwardened" target="_blank" rel="noopener">CODE SOURCE</a>
+  </div>
+</section>
+
+<section><div class="wrap">
+  <div class="sec-head"><h2>SIX ROYAUMES OUBLIÉS</h2><div class="orn">✦ ✦ ✦</div>
+  <p>Chaque campagne est un biome unique avec ses ennemis, son boss, ses mécaniques et sa musique.</p></div>
+  <div class="worlds" id="worlds"></div>
+</div></section>
+
+<section><div class="wrap">
+  <div class="sec-head"><h2>FONCTIONNALITÉS</h2><div class="orn">✦ ✦ ✦</div></div>
+  <div class="worlds">
+    <div class="wcard"><div class="body" style="margin-top:0"><h3>⚔ Combat & Vagues</h3>
+      <p>45 vagues par monde, boss multi-phases, NG+ infini et défis quotidiens à seed stable.</p></div></div>
+    <div class="wcard"><div class="body" style="margin-top:0"><h3>🔨 Forge & Équipement</h3>
+      <p>Armes, armures et modules améliorables en 3 niveaux. Durabilité, réparations, sets.</p></div></div>
+    <div class="wcard"><div class="body" style="margin-top:0"><h3>✦ Modules Mystérieux</h3>
+      <p>16 modules actifs et passifs — boutique à tirage quotidien, effets réels en combat.</p></div></div>
+    <div class="wcard"><div class="body" style="margin-top:0"><h3>🏆 Succès & Collection</h3>
+      <p>34 succès, certains cachés. Bouteille de butin, secrets de carte, bestiaire.</p></div></div>
+  </div>
+</div></section>
+
+<section id="download"><div class="wrap">
+  <div class="sec-head"><h2>TÉLÉCHARGER</h2><div class="orn">✦ ✦ ✦</div></div>
+  <div class="card dl-hero" id="dlbox"><div class="empty">Chargement de la version…</div></div>
+</div></section>
+
+<section><div class="wrap">
+  <div class="sec-head"><h2>NOTES DE VERSION</h2><div class="orn">✦ ✦ ✦</div></div>
+  <div class="changelog" id="changelog"><div class="empty">Historique des versions…</div></div>
+</div></section>
+</div></main>
+
+<footer class="site"><div class="wrap">
+  <div class="fl">TESSERACT STUDIO</div>
+  <p>Forge Your Own Legend — © <span id="yr"></span> Tesseract Studio.</p>
+</div></footer>
+
+<script type="module">
+import { LOGO_SVG, mountChrome, startParticles, api, esc, fmtDate, fmtSize } from '/js/site.js';
+document.getElementById('logo').innerHTML = LOGO_SVG;
+const WORLDS = [
+  ['Terre', '#3f7a3a', 'Forêts et royaume médiéval — le point de départ de l\'épopée.'],
+  ['Neige', '#7ab8e0', 'Royaume gelé : ambiance froide, majestueuse et mystérieuse.'],
+  ['Feu', '#e06040', 'Terres volcaniques : musique intense, ennemis brûlants.'],
+  ['Égouts', '#6a8a5a', 'Cité médiévale engloutie : ambiance sombre et visqueuse.'],
+  ['Espace', '#9a7ae0', 'Planète alien : trous noirs, météores et Titan de Feu.'],
+  ['Tempêtes', '#6ab8d8', 'Royaumes suspendus : tornades, vents et le Souverain des Ouragans.']];
+document.getElementById('worlds').innerHTML = WORLDS.map(([n, c, d]) =>
+  `<div class="wcard"><div class="art" style="background:radial-gradient(circle at 30% 60%, ${c}33, transparent 60%),linear-gradient(160deg,#141824,#0d0f16)"></div>
+   <span class="tag">MONDE</span><div class="body"><h3>${n}</h3><p>${d}</p></div></div>`).join('');
+
+async function loadVersion() {
+  const el = document.getElementById('dlbox');
+  try {
+    const v = await api('/api/game/version');
+    if (!v.available) { el.innerHTML = '<div class="empty">Aucune version disponible pour le moment.</div>'; return; }
+    el.innerHTML = `
+      <div class="dl-file">⬇ LES-TERRES-OUBLIEES-v${esc(v.version)}.zip</div>
+      <div class="dl-meta">
+        <div class="m"><b>${esc(v.version)}</b><span>Version</span></div>
+        <div class="m"><b>${fmtSize(v.size)}</b><span>Taille</span></div>
+        <div class="m"><b>${v.sha256 ? v.sha256.slice(0, 12) + '…' : '—'}</b><span>SHA-256</span></div>
+        <div class="m"><b>${fmtDate(v.updated)}</b><span>Publié</span></div>
+      </div>
+      <a class="btn" href="${v.url}" download>TÉLÉCHARGER v${esc(v.version)}</a>
+      <p class="form-ok" style="margin-top:14px">Archive ZIP — extrait et ouvrez index.html dans votre navigateur.</p>
+      ${v.notes ? `<div class="card changelog" style="margin-top:26px;text-align:left"><h3 style="font-size:14px">Notes de cette version</h3><p style="white-space:pre-line;color:var(--ink-dim);font-size:13.5px;margin-top:8px">${esc(v.notes)}</p></div>` : ''}`;
+  } catch (e) { el.innerHTML = '<div class="empty">Service de téléchargement indisponible.</div>'; }
+}
+async function loadChangelog() {
+  try {
+    const { releases } = await api('/api/game/releases');
+    const el = document.getElementById('changelog');
+    el.innerHTML = releases.map(r => `
+      <div class="rel"><h4>v${esc(r.version)} ${r.current ? '<span class="badge green">ACTUELLE</span>' : ''}</h4>
+      <span class="v">${fmtDate(r.created_at)} — ${fmtSize(r.size)}</span>
+      ${r.notes ? `<p>${esc(r.notes)}</p>` : ''}</div>`).join('')
+      || '<div class="empty">Aucun historique.</div>';
+  } catch (e) {}
+}
+loadVersion(); loadChangelog();
+mountChrome('/game.html'); startParticles();
+</script>
+</body></html>

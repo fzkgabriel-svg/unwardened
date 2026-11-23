@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tesseract Studio — Forge Your Own Legend</title>
+<meta name="description" content="Tesseract Studio — studio indépendant de jeux vidéo. RPG 2D médiéval fantastique : Les Terres Oubliées.">
+<link rel="stylesheet" href="/css/site.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><path d='M32 4 54 18v28L32 60 10 46V18Z' fill='none' stroke='%23d4b062' stroke-width='4'/></svg>">
+</head>
+<body>
+<canvas id="fx"></canvas>
+<header class="site"><nav class="top">
+  <a class="brand" href="/"><span id="logo"></span>
+    <span class="t">TESSERACT<small>STUDIO</small></span></a>
+  <div class="links" id="navlinks"></div>
+  <div id="navauth" style="display:flex;gap:8px"></div>
+</nav></header>
+
+<main>
+<section class="hero">
+  <div class="kicker">Studio Indépendant de Jeux Vidéo</div>
+  <h1><span class="tess">TESSERACT</span> STUDIO</h1>
+  <div class="slogan">« <b>Forge Your Own Legend</b> »</div>
+  <p class="lead">Nous forcons des mondes médiévaux fantastiques où chaque aventurier écrit sa propre épopée.
+    Notre premier jeu, <b style="color:var(--gold-hi)">Les Terres Oubliées</b>, vous plonge dans six royaumes
+    oubliés — de la forêt médievale aux Royaumes suspendus des Tempêtes.</p>
+  <div class="cta">
+    <a class="btn" href="/game.html">DÉCOUVRIR LE JEU</a>
+    <a class="btn ghost" href="/game.html#download">TÉLÉCHARGER</a>
+  </div>
+  <div class="hero-art" id="heroart"></div>
+</section>
+
+<section><div class="wrap">
+  <div class="sec-head">
+    <h2>NOTRE UNIVERS</h2>
+    <div class="orn">✦ ✦ ✦</div>
+    <p>Un RPG d'action survival où le monde se régénère à chaque partie.
+      Survivez aux vagues, forgez des armes légendaires, domptez les boss et débloquez de nouveaux royaumes.</p>
+  </div>
+  <div class="worlds" id="worlds"></div>
+</div></section>
+
+<section><div class="wrap">
+  <div class="sec-head">
+    <h2>DERNIÈRES ACTUALITÉS</h2>
+    <div class="orn">✦ ✦ ✦</div>
+  </div>
+  <div class="news-grid" id="news"></div>
+  <div class="center mt"><a class="btn ghost" href="/news.html">TOUTES LES ACTUALITÉS</a></div>
+</div></section>
+
+<section><div class="wrap">
+  <div class="sec-head">
+    <h2>REJOINDRE L'AVENTURE</h2>
+    <div class="orn">✦ ✦ ✦</div>
+    <p>Créez votre compte de Tesseractien, suivez les mises à jour et rejoignez la communauté.</p>
+  </div>
+  <div class="cta" style="display:flex;gap:16px;justify-content:center">
+    <a class="btn" href="/account.html">CRÉER UN COMPTE</a>
+    <a class="btn ghost" href="/community.html">COMMUNAUTÉ</a>
+  </div>
+</div></section>
+</main>
+
+<footer class="site"><div class="wrap">
+  <div class="fl">TESSERACT STUDIO</div>
+  <p>Forge Your Own Legend — © <span id="yr"></span> Tesseract Studio. Tous droits réservés.</p>
+  <p class="mt"><a href="/game.html">Le Jeu</a><a href="/news.html">Actualités</a>
+  <a href="/community.html">Communauté</a><a href="/account.html">Mon Compte</a></p>
+</div></footer>
+
+<script type="module">
+import { LOGO_SVG, mountChrome, startParticles, api, esc, fmtDate } from '/js/site.js';
+document.getElementById('logo').innerHTML = LOGO_SVG;
+document.getElementById('heroart').innerHTML = `<svg viewBox="0 0 900 300" xmlns="http://www.w3.org/2000/svg">
+<defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#0d1020"/><stop offset=".6" stop-color="#1a1626"/><stop offset="1" stop-color="#0d0f16"/></linearGradient>
+<linearGradient id="gld" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0d492"/><stop offset="1" stop-color="#8a6f3a"/></linearGradient></defs>
+<rect width="900" height="300" fill="url(#sky)"/>
+<circle cx="700" cy="70" r="34" fill="#e8dfc0" opacity=".85"/><circle cx="688" cy="62" r="30" fill="#0d1020" opacity=".9"/>
+<g fill="#0a0c14"><path d="M0 210 L80 150 L150 200 L240 130 L330 210 L420 160 L520 215 L620 140 L720 205 L820 155 L900 210 V300 H0 Z"/></g>
+<g fill="#0d0f16"><path d="M60 300 L60 230 L110 230 L110 300 Z M180 300 L180 200 L230 200 L230 300 Z M330 300 L330 240 L380 240 L380 300 Z M480 300 L480 190 L540 190 L540 300 Z M650 300 L650 220 L700 220 L700 300 Z M790 300 L790 240 L850 240 L850 300 Z"/></g>
+<g stroke="url(#gld)" stroke-width="2" fill="none" opacity=".9">
+<path d="M110 200 V160 M90 175 L110 160 L130 175 M85 190 L110 172 L135 190"/>
+<path d="M240 200 V150 M215 172 L240 150 L265 172 M205 195 L240 170 L275 195"/>
+<path d="M540 190 V140 M512 163 L540 140 L568 163 M500 188 L540 158 L580 188"/>
+</g>
+<text x="450" y="282" text-anchor="middle" font-family="Georgia,serif" font-size="15" letter-spacing="6" fill="#d4b062" opacity=".8">TESSERACT STUDIO</text>
+</svg>`;
+const WORLDS = [
+  ['Terre', 'forêt', '#3f7a3a', 'Royaume médiéval de forêts et de chevalerie.'],
+  ['Neige', 'glace', '#7ab8e0', 'Royaume gelé, majestueux et silencieux.'],
+  ['Feu', 'volcan', '#e06040', 'Terres volcaniques brûlantes et hostiles.'],
+  ['Égouts', 'abysse', '#6a8a5a', 'Cité médiévale engloutie dans les profondeurs.'],
+  ['Espace', 'cosmos', '#9a7ae0', 'Planète alien aux paysages cosmiques.'],
+  ['Tempêtes', 'vent', '#6ab8d8', 'Royaumes suspendus balayés par les ouragans.']];
+document.getElementById('worlds').innerHTML = WORLDS.map(([n, s, c, d]) =>
+  `<div class="wcard"><div class="art" style="background:radial-gradient(circle at 30% 60%, ${c}33, transparent 60%),linear-gradient(160deg,#141824,#0d0f16)"></div>
+   <span class="tag">MONDE</span><div class="body"><h3>${n}</h3><p>${d}</p></div></div>`).join('');
+try {
+  const { news } = await api('/api/news');
+  const el = document.getElementById('news');
+  el.innerHTML = news.slice(0, 3).map(n => `
+    <a class="ncard" href="/news.html" style="text-decoration:none;color:inherit">
+      ${n.image ? `<img src="${esc(n.image)}" alt="">` : `<div class="noimg">✦</div>`}
+      <div class="body"><div class="date">${fmtDate(n.created_at)}</div><h3>${esc(n.title)}</h3>
+      <p>${esc(n.body)}</p><span class="more">LIRE →</span></div></a>`).join('')
+    || '<div class="empty">Les premières nouvelles arrivent bientôt.</div>';
+} catch (e) { document.getElementById('news').innerHTML = '<div class="empty">Actualités indisponibles.</div>'; }
+mountChrome('/'); startParticles();
+</script>
+</body></html>

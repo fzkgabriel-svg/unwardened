@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mon Compte — Tesseract Studio</title>
+<link rel="stylesheet" href="/css/site.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><path d='M32 4 54 18v28L32 60 10 46V18Z' fill='none' stroke='%23d4b062' stroke-width='4'/></svg>">
+</head>
+<body>
+<canvas id="fx"></canvas>
+<header class="site"><nav class="top">
+  <a class="brand" href="/"><span id="logo"></span>
+    <span class="t">TESSERACT<small>STUDIO</small></span></a>
+  <div class="links" id="navlinks"></div>
+  <div id="navauth" style="display:flex;gap:8px"></div>
+</nav></header>
+<main><div class="wrap">
+
+<!-- ===== VUE CONNEXION / INSCRIPTION ===== -->
+<div class="auth-wrap" id="authview">
+  <div class="panel">
+    <h2 id="authtitle">CONNEXION</h2>
+    <div class="sub" id="authsub">Accédez à votre espace de Tesseractien.</div>
+    <form id="authform">
+      <label class="f" id="lbPseudo">Pseudo</label>
+      <input type="text" id="fPseudo" autocomplete="username" placeholder="Votre pseudo">
+      <label class="f">E-mail</label>
+      <input type="email" id="fEmail" autocomplete="email" placeholder="vous@exemple.com">
+      <label class="f">Mot de passe</label>
+      <input type="password" id="fPass" autocomplete="current-password" placeholder="••••••••">
+      <label class="f hidden" id="lbPass2">Confirmer le mot de passe</label>
+      <input type="password" id="fPass2" class="hidden" autocomplete="new-password" placeholder="••••••••">
+      <button class="btn" style="width:100%;margin-top:24px" id="authbtn">SE CONNECTER</button>
+      <div class="form-err" id="autherr"></div>
+      <div class="form-ok" id="authok"></div>
+    </form>
+    <div class="auth-links">
+      <span id="authswitch"></span>
+      <span id="forgotlink"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== VUE TABLEAU DE BORD ===== -->
+<div class="hidden" id="dashview">
+  <section style="padding-top:30px"><div class="sec-head"><h2>ESPACE TESSERACTIEN</h2>
+    <div class="orn">✦ ✦ ✦</div></div>
+  <div class="dash">
+    <div>
+      <div class="card" style="text-align:center">
+        <img class="avatar" id="dAvatar" alt="">
+        <h3 id="dPseudo" style="font-size:20px"></h3>
+        <span class="badge" id="dVerified"></span>
+        <div class="dl-row" style="margin-top:16px"><span class="k">Membre depuis</span><span id="dSince"></span></div>
+        <div class="dl-row"><span class="k">Rôle</span><span id="dRole"></span></div>
+        <div class="dl-row"><span class="k">Version du jeu</span><span id="dVer"></span></div>
+      </div>
+      <div class="card mt">
+        <h3>PROFIL</h3>
+        <label class="f">Pseudo</label>
+        <input type="text" id="pPseudo">
+        <label class="f">Photo de profil</label>
+        <input type="file" id="pAvatar" accept="image/png,image/jpeg,image/webp" style="font-size:12px;color:var(--ink-dim)">
+        <button class="btn small" style="margin-top:14px" id="pSave">ENREGISTRER</button>
+        <div class="form-ok" id="pMsg"></div>
+      </div>
+      <div class="card mt">
+        <h3>ACTIONS</h3>
+        <button class="btn ghost small" id="btnLogout" style="width:100%;margin-bottom:10px">SE DÉCONNECTER</button>
+        <button class="btn danger small" id="btnReset" style="width:100%">RÉINITIALISER LE MOT DE PASSE</button>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <h3>DERNIÈRES ACTUALITÉS</h3>
+        <div id="dNews"><div class="empty">…</div></div>
+      </div>
+      <div class="card mt">
+        <h3>TÉLÉCHARGEMENTS</h3>
+        <div id="dDl"><div class="empty">Aucune version publiée.</div></div>
+      </div>
+    </div>
+  </div>
+  </section>
+</div>
+
+<!-- ===== VUE RESET MOT DE PASSE ===== -->
+<div class="auth-wrap hidden" id="resetview">
+  <div class="panel">
+    <h2>NOUVEAU MOT DE PASSE</h2>
+    <div class="sub">Choisissez un nouveau mot de passe (8 caractères min.).</div>
+    <form id="resetform">
+      <input type="hidden" id="rToken">
+      <label class="f">Nouveau mot de passe</label>
+      <input type="password" id="rPass1" autocomplete="new-password">
+      <label class="f">Confirmer</label>
+      <input type="password" id="rPass2" autocomplete="new-password">
+      <button class="btn" style="width:100%;margin-top:24px">VALIDER</button>
+      <div class="form-err" id="rErr"></div>
+      <div class="form-ok" id="rOk"></div>
+    </form>
+    <div class="auth-links"><a href="/account.html">← Retour à la connexion</a></div>
+  </div>
+</div>
+
+<!-- ===== VUE FORGOT ===== -->
+<div class="auth-wrap hidden" id="forgotview">
+  <div class="panel">
+    <h2>MOT DE PASSE OUBLIÉ</h2>
+    <div class="sub">Entrez votre e-mail : un lien de réinitialisation sera envoyé.</div>
+    <form id="forgotform">
+      <label class="f">E-mail</label>
+      <input type="email" id="ffEmail" required>
+      <button class="btn" style="width:100%;margin-top:24px">ENVOYER LE LIEN</button>
+      <div class="form-err" id="ffErr"></div>
+      <div class="form-ok" id="ffOk"></div>
+    </form>
+    <div class="auth-links"><a href="/account.html">← Retour à la connexion</a></div>
+  </div>
+</div>
+
+</main>
+<footer class="site"><div class="wrap">
+  <div class="fl">TESSERACT STUDIO</div><p>© <span id="yr"></span></p>
+</div></footer>
+
+<script type="module">
+import { LOGO_SVG, mountChrome, startParticles, api, esc, fmtDate, setMe, me, toast } from '/js/site.js';
+document.getElementById('logo').innerHTML = LOGO_SVG;
+startParticles();
+
+const $ = id => document.getElementById(id);
+const qs = new URLSearchParams(location.search);
+let mode = 'login';
+
+function show(which) {
+  for (const v of ['authview','dashview','resetview','forgotview']) $(v).classList.toggle('hidden', v !== which);
+}
+function authMode(m) {
+  mode = m;
+  $('authtitle').textContent = m === 'login' ? 'CONNEXION' : 'CRÉATION DE COMPTE';
+  $('authsub').textContent = m === 'login' ? 'Accédez à votre espace de Tesseractien.'
+    : 'Rejoignez la guilde des Tesseractiens.';
+  $('authbtn').textContent = m === 'login' ? 'SE CONNECTER' : 'CRÉER MON COMPTE';
+  $('lbPseudo').classList.toggle('hidden', m !== 'register');
+  $('fPseudo').classList.toggle('hidden', m !== 'register');
+  $('lbPass2').classList.toggle('hidden', m !== 'register');
+  $('fPass2').classList.toggle('hidden', m !== 'register');
+  $('fPass').autocomplete = m === 'login' ? 'current-password' : 'new-password';
+  $('authswitch').innerHTML = m === 'login'
+    ? 'Pas encore de compte ? <a href="#" id="tosignup">Créer un compte</a>'
+    : 'Déjà un compte ? <a href="#" id="tologin">Se connecter</a>';
+  $('forgotlink').innerHTML = m === 'login' ? ' — <a href="#" id="toforgot">Mot de passe oublié ?</a>' : '';
+  $('tosignup')?.addEventListener('click', e => { e.preventDefault(); authMode('register'); });
+  $('tologin')?.addEventListener('click', e => { e.preventDefault(); authMode('login'); });
+  $('toforgot')?.addEventListener('click', e => { e.preventDefault(); show('forgotview'); });
+}
+
+$('authform').addEventListener('submit', async e => {
+  e.preventDefault(); $('autherr').textContent = ''; $('authok').textContent = '';
+  const body = mode === 'register'
+    ? { pseudo: $('fPseudo').value, email: $('fEmail').value, password: $('fPass').value }
+    : { email: $('fEmail').value, password: $('fPass').value };
+  try {
+    const d = await api('/api/' + mode, { method: 'POST', body });
+    setMe(d.user);
+    if (mode === 'register') toast('Compte créé ! Vérifiez votre e-mail.');
+    location.reload();
+  } catch (err) { $('autherr').textContent = err.message; }
+});
+
+$('forgotform').addEventListener('submit', async e => {
+  e.preventDefault(); $('ffErr').textContent = ''; $('ffOk').textContent = '';
+  try {
+    const d = await api('/api/forgot', { method: 'POST', body: { email: $('ffEmail').value } });
+    $('ffOk').textContent = 'Si ce compte existe, un lien a été envoyé.';
+    if (d.devToken) $('ffOk').textContent += ` (dev: /reset?token=${d.devToken})`;
+  } catch (err) { $('ffErr').textContent = err.message; }
+});
+
+$('resetform').addEventListener('submit', async e => {
+  e.preventDefault(); $('rErr').textContent = ''; $('rOk').textContent = '';
+  if ($('rPass1').value !== $('rPass2').value) { $('rErr').textContent = 'Les mots de passe diffèrent'; return; }
+  try {
+    await api('/api/reset', { method: 'POST', body: { token: $('rToken').value, password: $('rPass1').value } });
+    $('rOk').textContent = 'Mot de passe modifié — vous pouvez vous connecter.';
+    setTimeout(() => location.href = '/account.html', 1500);
+  } catch (err) { $('rErr').textContent = err.message; }
+});
+
+// ---------- tableau de bord ----------
+async function loadDash(u) {
+  $('dPseudo').textContent = u.pseudo;
+  $('dAvatar').src = u.avatar || '';
+  if (!u.avatar) { $('dAvatar').className = 'avatar ph'; $('dAvatar').textContent = u.pseudo[0].toUpperCase(); }
+  $('dVerified').textContent = u.verified ? '✔ E-MAIL VÉRIFIÉ' : 'E-MAIL NON VÉRIFIÉ';
+  $('dVerified').className = 'badge ' + (u.verified ? 'green' : 'red');
+  $('dSince').textContent = fmtDate(u.created_at);
+  $('dRole').textContent = u.role === 'admin' ? '👑 Administrateur' : 'Aventurier';
+  $('pPseudo').value = u.pseudo;
+  try {
+    const v = await api('/api/game/version');
+    $('dVer').textContent = v.available ? 'v' + v.version : '—';
+    $('dDl').innerHTML = v.available
+      ? `<div class="dl-row"><span class="k">v${esc(v.version)}</span><span>${esc(v.sha256?.slice(0,10) || '')}</span></div>
+         <a class="btn small" style="margin-top:14px" href="${v.url}" download>TÉLÉCHARGER</a>`
+      : '<div class="empty">Aucune version.</div>';
+  } catch (e) { $('dDl').innerHTML = '<div class="empty">—</div>'; }
+  try {
+    const { news } = await api('/api/news');
+    $('dNews').innerHTML = news.slice(0, 4).map(n =>
+      `<div class="dl-row"><span class="k">${esc(n.title)}</span><span>${fmtDate(n.created_at)}</span></div>`).join('')
+      || '<div class="empty">Aucune actualité.</div>';
+  } catch (e) {}
+}
+$('pSave').addEventListener('click', async () => {
+  $('pMsg').textContent = '';
+  try {
+    const body = { pseudo: $('pPseudo').value };
+    const f = $('pAvatar').files[0];
+    if (f) {
+      if (f.size > 300 * 1024) { $('pMsg').textContent = 'Image trop lourde (max 300 Ko)'; $('pMsg').style.color = 'var(--danger)'; return; }
+      body.avatar = await new Promise((ok, no) => {
+        const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = no; r.readAsDataURL(f);
+      });
+    }
+    const d = await api('/api/profile', { method: 'POST', body });
+    setMe(d.user); $('pMsg').textContent = 'Profil enregistré ✔';
+    $('pMsg').style.color = 'var(--ok)'; loadDash(d.user);
+    setTimeout(() => location.reload(), 800);
+  } catch (err) { $('pMsg').textContent = err.message; $('pMsg').style.color = 'var(--danger)'; }
+});
+$('btnLogout').addEventListener('click', async () => { await api('/api/logout', { method: 'POST' }); setMe(null); location.href = '/'; });
+$('btnReset').addEventListener('click', async () => {
+  const email = prompt('Votre e-mail de compte :'); if (!email) return;
+  try { await api('/api/forgot', { method: 'POST', body: { email } }); toast('Lien de réinitialisation envoyé.'); }
+  catch (e) { toast(e.message); }
+});
+
+// ---------- route ----------
+const u = await me();
+if (qs.get('reset')) {
+  $('rToken').value = qs.get('reset'); show('resetview');
+} else if (u) {
+  show('dashview'); loadDash(u);
+} else {
+  show('authview');
+  if (qs.get('verify')) {
+    try { await api('/api/verify?token=' + qs.get('verify')); toast('E-mail vérifié ✔'); } catch (e) {}
+    history.replaceState({}, '', '/account.html');
+  }
+  authMode('login');
+}
+mountChrome('/account.html');
+</script>
+</body></html>

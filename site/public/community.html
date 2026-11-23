@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Communauté — Tesseract Studio</title>
+<link rel="stylesheet" href="/css/site.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><path d='M32 4 54 18v28L32 60 10 46V18Z' fill='none' stroke='%23d4b062' stroke-width='4'/></svg>">
+</head>
+<body>
+<canvas id="fx"></canvas>
+<header class="site"><nav class="top">
+  <a class="brand" href="/"><span id="logo"></span>
+    <span class="t">TESSERACT<small>STUDIO</small></span></a>
+  <div class="links" id="navlinks"></div>
+  <div id="navauth" style="display:flex;gap:8px"></div>
+</nav></header>
+<main><div class="wrap">
+<section><div class="wrap">
+  <div class="sec-head" style="margin-top:40px"><h2>COMMUNAUTÉ</h2><div class="orn">✦ ✦ ✦</div>
+  <p>Rejoignez les Tesseractiens !</p></div>
+  <div class="soc-grid">
+    <div class="card soc-card"><div class="ico">🐉</div><h3>Discord</h3>
+      <p>Le hub des Tesseractiens : annonces, aide, captures d'écran et événements.
+      <br><br><span class="badge">Bientôt disponible</span></p></div>
+    <div class="card soc-card"><div class="ico">𝕏</div><h3>Réseaux sociaux</h3>
+      <p>Suivez le studio pour les annonces de mondes, boss et mises à jour.
+      <br><br><span class="badge">Bientôt disponible</span></p></div>
+    <div class="card soc-card"><div class="ico">🐛</div><h3>Signaler un bug</h3>
+      <p>Un bug dans le jeu ? Contactez le studio via la page de votre compte
+      ou ouvrez une issue sur le dépôt public.</p>
+      <br><a class="btn ghost small" href="https://github.com/CrimsonAwesomeCode/Project-Unwardened/issues" target="_blank" rel="noopener">SIGNALER SUR GITHUB</a></div>
+    <div class="card soc-card"><div class="ico">📜</div><h3>Code source</h3>
+      <p>Le jeu est open-source : parcourez le code, proposez des améliorations
+      ou forkez votre propre version.</p>
+      <br><a class="btn ghost small" href="https://github.com/CrimsonAwesomeCode/Project-Unwardened" target="_blank" rel="noopener">GITHUB</a></div>
+  </div>
+</div></section>
+</div></main>
+<footer class="site"><div class="wrap">
+  <div class="fl">TESSERACT STUDIO</div><p>© <span id="yr"></span></p>
+</div></footer>
+<script type="module">
+import { LOGO_SVG, mountChrome, startParticles } from '/js/site.js';
+document.getElementById('logo').innerHTML = LOGO_SVG;
+mountChrome('/community.html'); startParticles();
+</script>
+</body></html>

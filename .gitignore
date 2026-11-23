@@ -7,3 +7,7 @@ __pycache__/
 # Système
 Thumbs.db
 Desktop.ini
+
+# Site Tesseract Studio : donnees locales (BDD, downloads, avatars)
+site/data/
+site/node_modules/

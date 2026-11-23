@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Administration — Tesseract Studio</title>
+<link rel="stylesheet" href="/css/site.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><path d='M32 4 54 18v28L32 60 10 46V18Z' fill='none' stroke='%23d4b062' stroke-width='4'/></svg>">
+</head>
+<body>
+<canvas id="fx"></canvas>
+<header class="site"><nav class="top">
+  <a class="brand" href="/"><span id="logo"></span>
+    <span class="t">TESSERACT<small>STUDIO</small></span></a>
+  <div class="links" id="navlinks"></div>
+  <div id="navauth" style="display:flex;gap:8px"></div>
+</nav></header>
+<main><div class="wrap">
+<div class="hidden" id="denied"><section style="padding:80px 0;text-align:center">
+  <h2 style="font-family:var(--serif);color:var(--gold)">ACCÈS REFUSÉ</h2>
+  <p style="color:var(--ink-dim);margin-top:10px">Réservé aux administrateurs.</p>
+  <a class="btn ghost mt" href="/account.html">CONNEXION</a></section></div>
+
+<div class="hidden" id="adminview">
+<div class="admin-grid">
+  <div class="admin-nav" id="adminnav">
+    <button data-t="stats" class="on">📊 Statistiques</button>
+    <button data-t="news">📰 Actualités</button>
+    <button data-t="release">⬇ Versions</button>
+    <button data-t="users">👥 Utilisateurs</button>
+  </div>
+  <div id="adminpane"></div>
+</div>
+</div>
+</div></main>
+<footer class="site"><div class="wrap"><div class="fl">TESSERACT STUDIO</div><p>© <span id="yr"></span></p></div></footer>
+
+<script type="module">
+import { LOGO_SVG, mountChrome, startParticles, api, esc, fmtDate, fmtSize, me, toast } from '/js/site.js';
+document.getElementById('logo').innerHTML = LOGO_SVG;
+startParticles();
+const $ = id => document.getElementById(id);
+const pane = $('adminpane');
+
+const u = await me();
+if (!u || u.role !== 'admin') { $('denied').classList.remove('hidden'); }
+else { $('adminview').classList.remove('hidden'); init(); }
+
+function init() {
+  document.querySelectorAll('#adminnav button').forEach(b => b.onclick = () => {
+    document.querySelectorAll('#adminnav button').forEach(x => x.classList.toggle('on', x === b));
+    ({ stats: vStats, news: vNews, release: vRelease, users: vUsers })[b.dataset.t]();
+  });
+  vStats();
+}
+
+// ---------- statistiques ----------
+async function vStats() {
+  const d = await api('/api/admin/stats');
+  pane.innerHTML = `
+    <div class="worlds" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
+      <div class="card center"><b style="font-size:34px;color:var(--gold);font-family:var(--serif)">${d.users}</b>
+        <div style="color:var(--ink-dim);font-size:12px;letter-spacing:1px">COMPTES</div></div>
+      <div class="card center"><b style="font-size:34px;color:var(--gold);font-family:var(--serif)">${d.downloads}</b>
+        <div style="color:var(--ink-dim);font-size:12px;letter-spacing:1px">TÉLÉCHARGEMENTS</div></div>
+      <div class="card center"><b style="font-size:34px;color:var(--gold);font-family:var(--serif)">${d.news}</b>
+        <div style="color:var(--ink-dim);font-size:12px;letter-spacing:1px">ARTICLES</div></div>
+    </div>
+    <div class="card mt"><h3>TÉLÉCHARGEMENTS RÉCENTS</h3>
+      ${d.recent.length ? `<table class="tbl"><tr><th>Date</th><th>Version</th><th>Compte</th></tr>
+        ${d.recent.map(r => `<tr><td>${fmtDate(r.created_at)}</td><td>v${esc(r.version || '?')}</td>
+        <td><b>${esc(r.pseudo || 'anonyme')}</b></td></tr>`).join('')}</table>`
+      : '<div class="empty">Aucun téléchargement.</div>'}</div>`;
+}
+
+// ---------- actualités ----------
+let editingNews = null;
+async function vNews() {
+  const { news } = await api('/api/news');
+  pane.innerHTML = `
+    <div class="card"><h3>NOUVELLE ACTUALITÉ</h3>
+      <label class="f">Titre</label><input type="text" id="nTitle" maxlength="200">
+      <label class="f">Contenu</label><textarea id="nBody"></textarea>
+      <label class="f">Image (optionnel — collez une URL ou importez un fichier)</label>
+      <input type="file" id="nImg" accept="image/*" style="font-size:12px;color:var(--ink-dim)">
+      <div class="form-ok" id="nMsg"></div>
+      <button class="btn" id="nSave" style="margin-top:14px">PUBLIER</button>
+      <button class="btn ghost hidden" id="nCancel" style="margin-top:14px">ANNULER</button>
+    </div>
+    <div class="card mt"><h3>PUBLICATIONS (${news.length})</h3>
+      <table class="tbl"><tr><th>Titre</th><th>Date</th><th></th></tr>
+      ${news.map(n => `<tr><td><b>${esc(n.title)}</b><br><span style="font-size:11px">${esc(n.body.slice(0, 80))}…</span></td>
+        <td>${fmtDate(n.created_at)}</td>
+        <td><button data-e="${n.id}">MODIFIER</button> <button data-d="${n.id}">SUPPRIMER</button></td></tr>`).join('')}
+      </table></div>`;
+  $('nSave').onclick = async () => {
+    const body = { title: $('nTitle').value, body: $('nBody').value };
+    const f = $('nImg').files[0];
+    if (f) {
+      if (f.size > 1024 * 1024) { toast('Image > 1 Mo'); return; }
+      body.image = await new Promise((ok, no) => { const r = new FileReader();
+        r.onload = () => ok(r.result); r.onerror = no; r.readAsDataURL(f); });
+    }
+    try {
+      if (editingNews) { await api(`/api/admin/news/${editingNews}`, { method: 'PUT', body: { ...body, image: body.image } }); toast('Article modifié'); }
+      else await api('/api/admin/news', { method: 'POST', body });
+      toast('Publié ✔'); vNews();
+    } catch (e) { toast(e.message); }
+  };
+  $('nCancel').onclick = () => { editingNews = null; $('nCancel').classList.add('hidden'); $('nSave').textContent = 'PUBLIER'; };
+  pane.querySelectorAll('[data-e]').forEach(b => b.onclick = () => {
+    const n = news.find(x => x.id === +b.dataset.e); if (!n) return;
+    editingNews = n.id; $('nTitle').value = n.title; $('nBody').value = n.body;
+    $('nSave').textContent = 'ENREGISTRER'; $('nCancel').classList.remove('hidden');
+    pane.scrollIntoView({ behavior: 'smooth' });
+  });
+  pane.querySelectorAll('[data-d]').forEach(b => b.onclick = async () => {
+    if (!confirm('Supprimer cet article ?')) return;
+    await api(`/api/admin/news/${b.dataset.d}`, { method: 'DELETE' }); toast('Supprimé'); vNews();
+  });
+}
+
+// ---------- versions / téléchargement ----------
+async function vRelease() {
+  const { releases } = await api('/api/game/releases');
+  const v = await api('/api/game/version').catch(() => ({}));
+  pane.innerHTML = `
+    <div class="card"><h3>NOUVELLE VERSION</h3>
+      <p style="color:var(--ink-dim);font-size:13px;margin-bottom:14px">
+      Déposez le ZIP dans <code>site/data/downloads/</code> (via <code>node tools/package.js</code>),
+      puis enregistrez ses métadonnées ici.</p>
+      <label class="f">Version (x.y.z)</label><input type="text" id="rVer" placeholder="4.4.0">
+      <label class="f">Fichier ZIP (dans data/downloads)</label><input type="text" id="rFile" placeholder="les-terres-oubliees-v4.4.0.zip">
+      <label class="f">Notes de patch</label><textarea id="rNotes" style="min-height:80px"></textarea>
+      <label class="f">Config. minimale</label><input type="text" id="rMin" placeholder="Ex : Windows 10, Chrome récent, 4 Go RAM">
+      <label class="f">Config. recommandée</label><input type="text" id="rRec" placeholder="Ex : Windows 11, GPU dédié, 8 Go RAM">
+      <label style="display:flex;gap:8px;align-items:center;margin-top:14px;color:var(--ink-dim);font-size:13px">
+        <input type="checkbox" id="rCur"> Définir comme version actuelle</label>
+      <button class="btn" id="rSave" style="margin-top:14px">ENREGISTRER LA VERSION</button>
+      <div class="form-ok" id="rMsg"></div>
+    </div>
+    <div class="card mt"><h3>HISTORIQUE DES VERSIONS</h3>
+      <div class="changelog">${releases.map(r => `
+        <div class="rel"><h4>v${esc(r.version)} ${r.current ? '<span class="badge green">ACTUELLE</span>' : ''}</h4>
+        <span class="v">${fmtDate(r.created_at)} — ${fmtSize(r.size)} — SHA-256 <code style="font-size:10px">${esc((r.sha256||'').slice(0,16))}…</code></span>
+        ${r.notes ? `<p>${esc(r.notes)}</p>` : ''}
+        <p style="margin-top:8px">
+          ${r.current ? '' : `<button data-c="${r.id}">DÉFINIR ACTUELLE</button> `}
+          <a href="${r.url}" style="color:var(--gold);font-size:12px">Télécharger</a>
+          <button data-rd="${r.id}" style="color:var(--danger)">SUPPRIMER</button></p></div>`).join('')
+      || '<div class="empty">Aucune version.</div>'}</div></div>`;
+  $('rSave').onclick = async () => {
+    try {
+      await api('/api/admin/releases', { method: 'POST', body: {
+        version: $('rVer').value, filename: $('rFile').value, notes: $('rNotes').value,
+        min_spec: $('rMin').value, rec_spec: $('rRec').value, current: $('rCur').checked }});
+      toast('Version publiée ✔'); vRelease();
+    } catch (e) { $('rMsg').textContent = e.message; $('rMsg').style.color = 'var(--danger)'; }
+  };
+  pane.querySelectorAll('[data-c]').forEach(b => b.onclick = async () => {
+    await api(`/api/admin/releases/${b.dataset.c}/current`, { method: 'POST' }); toast('Version actuelle mise à jour'); vRelease();
+  });
+  pane.querySelectorAll('[data-rd]').forEach(b => b.onclick = async () => {
+    if (!confirm('Supprimer cette version ?')) return;
+    await api(`/api/admin/releases/${b.dataset.rd}`, { method: 'DELETE' }); vRelease();
+  });
+}
+
+// ---------- utilisateurs ----------
+async function vUsers() {
+  const { users } = await api('/api/admin/users');
+  pane.innerHTML = `<div class="card"><h3>COMPTES (${users.length})</h3>
+    <table class="tbl"><tr><th>Pseudo</th><th>E-mail</th><th>Rôle</th><th>Statut</th><th>Depuis</th><th></th></tr>
+    ${users.map(x => `<tr><td><b>${esc(x.pseudo)}</b>${x.avatar ? ' 🖼' : ''}</td>
+      <td>${esc(x.email)}${x.verified ? ' ✔' : ''}</td>
+      <td>${x.role === 'admin' ? '👑' : 'Aventurier'}</td>
+      <td>${x.suspended ? '<span class="badge red">SUSPENDU</span>' : '<span class="badge green">ACTIF</span>'}</td>
+      <td>${fmtDate(x.created_at)}</td>
+      <td><button data-s="${x.id}">${x.suspended ? 'RÉACTIVER' : 'SUSPENDRE'}</button>
+          <button data-r="${x.id}">${x.role === 'admin' ? 'RÉVOQUER ADMIN' : 'PROMOUVOIR ADMIN'}</button>
+          <button data-d="${x.id}" style="color:var(--danger)">SUPPRIMER</button></td></tr>`).join('')}
+    </table></div>`;
+  pane.querySelectorAll('[data-s]').forEach(b => b.onclick = async () => {
+    await api(`/api/admin/users/${b.dataset.s}/suspend`, { method: 'POST' }); toast('Statut mis à jour'); vUsers();
+  });
+  pane.querySelectorAll('[data-r]').forEach(b => b.onclick = async () => {
+    const u2 = users.find(x => x.id === +b.dataset.r);
+    if (u2?.role === 'admin' && !confirm('Révoquer les droits admin ?')) return;
+    await api(`/api/admin/users/${b.dataset.r}/role`, { method: 'POST',
+      body: { role: u2.role === 'admin' ? 'user' : 'admin' } }); toast('Rôle mis à jour'); vUsers();
+  });
+  pane.querySelectorAll('[data-d]').forEach(b => b.onclick = async () => {
+    if (!confirm('Supprimer définitivement ce compte ?')) return;
+    try { await api(`/api/admin/users/${b.dataset.d}`, { method: 'DELETE' }); toast('Compte supprimé'); vUsers(); }
+    catch (e) { toast(e.message); }
+  });
+}
+mountChrome('/admin.html');
+</script>
+</body></html>

@@ -23,3 +23,11 @@ Jeu HTML5 Canvas / JavaScript ES modules. Servi en HTTP (ES modules incompatible
 - `js/tutorial.js` : tutoriel 12 étapes (retour menu, Entrée = étape suivante, cooldown 2,5 s).
 - `js/hud.js` : orchestrateur HUD ; sous-modules `js/hud/` (frame, profile, skills, boss, map, equip, toasts) — HUD médiéval fantastique. Minimap : bâtiments = brouillard de guerre, lacs, obstacles.
 - `js/main.js` : game loop, collisions, update.
+
+## Site officiel (site/)
+- Backend Node.js pur (node:http + node:sqlite, zéro dépendance) : `node site/server.js 8080` (Node ≥22.5 requis, binaire : `%LOCALAPPDATA%\Programs\nodejs\node.exe`).
+- Frontend statique dans `site/public/` (index, game, news, community, account, admin).
+- Données dans `site/data/` (gitignoré) : `tesseract.db`, `downloads/`, `avatars/`, `news/`.
+- Outils : `node site/tools/mkadmin.js <pseudo> <email> <mdp>` (crée un admin) ; `node site/tools/package.js "notes" "min" "rec"` (zippe le jeu depuis js/state.js VERSION → data/downloads + release courante).
+- Auth : scrypt + sessions cookie HttpOnly, rate-limit login/register, tokens verify/reset (mode dev : liens loggés en console, SMTP à brancher via SMTP_URL).
+- Version jeu affichée via `GET /api/game/version` ; téléchargement `/download/<fichier>.zip` (loggé + header X-Checksum-Sha256).
