@@ -54,6 +54,11 @@
         <div class="dl-row" style="margin-top:16px"><span class="k">Membre depuis</span><span id="dSince"></span></div>
         <div class="dl-row"><span class="k">Rôle</span><span id="dRole"></span></div>
         <div class="dl-row"><span class="k">Version du jeu</span><span id="dVer"></span></div>
+        <a class="btn ghost small" id="dProfile" style="width:100%;margin-top:14px;display:none">VOIR MA FICHE PUBLIQUE ↗</a>
+      </div>
+      <div class="card mt">
+        <h3>STATISTIQUES</h3>
+        <div id="dStats"><div class="empty">…</div></div>
       </div>
       <div class="card mt">
         <h3>PROFIL</h3>
@@ -217,6 +222,26 @@ async function loadDash(u) {
       `<div class="dl-row"><span class="k">${esc(n.title)}</span><span>${fmtDate(n.created_at)}</span></div>`).join('')
       || '<div class="empty">Aucune actualité.</div>';
   } catch (e) {}
+  // statistiques de jeu (progression synchronisée)
+  try {
+    const d = await api('/api/player/' + encodeURIComponent(u.pseudo));
+    const p = d.player, fmt = n => (n || 0).toLocaleString('fr-FR');
+    const h = Math.floor((p.playtime || 0) / 3600), m = Math.floor(((p.playtime || 0) % 3600) / 60);
+    const pt = p.playtime >= 3600 ? `${h}h ${String(m).padStart(2, '0')}` : `${m} min`;
+    $('dStats').innerHTML = `
+      <div class="dl-row"><span class="k">Score</span><span>${fmt(p.score)}</span></div>
+      <div class="dl-row"><span class="k">Rang mondial</span><span>${p.rank ? '#' + p.rank : '—'}</span></div>
+      <div class="dl-row"><span class="k">Niveau</span><span>${p.level}</span></div>
+      <div class="dl-row"><span class="k">Mondes conquis</span><span>${p.worlds_done}/6</span></div>
+      <div class="dl-row"><span class="k">Boss vaincus</span><span>${p.bosses}</span></div>
+      <div class="dl-row"><span class="k">Succès débloqués</span><span>${p.achievements}</span></div>
+      <div class="dl-row"><span class="k">Temps de jeu</span><span>${pt}</span></div>
+      <div class="dl-row"><span class="k">Dernière synchro</span><span>${p.updated_at ? fmtDate(p.updated_at) : '—'}</span></div>`;
+    $('dProfile').href = '/joueur/' + encodeURIComponent(p.pseudo);
+    $('dProfile').style.display = 'block';
+  } catch (e) {
+    $('dStats').innerHTML = '<div class="empty">Aucune progression synchronisée.<br>Jouez en ligne et synchronisez depuis le jeu.</div>';
+  }
 }
 $('pSave').addEventListener('click', async () => {
   $('pMsg').textContent = '';

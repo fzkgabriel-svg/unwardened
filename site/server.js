@@ -539,11 +539,16 @@ route('GET', '/api/leaderboard', (req, res, b, s, m) => {
 route('GET', '/api/player/:pseudo', (req, res, b, s, m) => {
   const st = q.publicStats.get(decodeURIComponent(m[1]));
   if (!st) return json(res, 404, { error: 'Joueur introuvable' });
+  const rank = st.score > 0
+    ? db.prepare(`SELECT COUNT(*) c FROM player_stats ps JOIN users u ON u.id = ps.user_id
+                  WHERE u.suspended = 0 AND ps.score > ?`).get(st.score).c + 1
+    : null;
   json(res, 200, { player: {
     pseudo: st.pseudo, avatar: st.avatar ? `/avatar/${st.avatar}` : null,
     score: st.score, level: st.level, worlds_done: st.worlds_done,
     bosses: st.bosses, achievements: st.achievements,
-    playtime: st.playtime, updated_at: st.updated_at, member_since: st.created_at
+    playtime: st.playtime, updated_at: st.updated_at, member_since: st.created_at,
+    rank
   }});
 });
 
