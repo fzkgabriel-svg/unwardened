@@ -3,7 +3,7 @@ import { worldW, worldH, resolveObstacles } from './world.js';
 import { addDamageText, spawnParticles } from './effects.js';
 import { gainXp } from './player.js';
 import { MATS, MATERIAL_DROPS, addMaterial, modeKey, modeMult } from './inventory.js';
-import { sfxHit, sfxDie, sfxBoss, sfxBossRoar, sfxBossDie, sfxBossHit } from './audio.js';
+import { sfxHit, sfxDie, sfxBoss, sfxBossRoar, sfxBossDie, sfxBossHit, sfxGem } from './audio.js';
 import { modDmgMult, modCritBonus, modLifesteal } from './modules.js';
 
 export const enemyTypes = {
@@ -208,7 +208,7 @@ export function damageEnemy(e, dmg, angle) {
   if (ls > 0 && G.player.alive && G.player.hp > 0) {
     G.player.hp = Math.min(G.player.maxHp, G.player.hp + real * ls);
   }
-  (e.isBoss || e.isMini ? sfxBossHit : sfxHit)(); // les boss ont un impact plus lourd
+  (e.isBoss || e.isMini ? sfxBossHit : () => sfxHit(e.r > 32 || isCrit)); // les boss ont un impact plus lourd
   G.dmgDealt += real;
   // progression : le type d'arme (épée/lance) gagne l'XP des dégâts infligés
   G.runWmode = G.runWmode || {};
@@ -224,7 +224,7 @@ export function damageEnemy(e, dmg, angle) {
       || e.type === 'finalBossEgout' || e.type === 'finalBossSpace' || e.type === 'finalBossTempete') && !e.bossDying) {
       e.bossDying = 2.4;
       e.hp = 0;
-      sfxBossDie(); // long effondrement sonore pendant l'agonie
+      sfxBossDie(e.type); // long effondrement sonore pendant l'agonie, teinté par l'univers du boss
       G.screenShake = Math.max(G.screenShake, 18);
       G.screenFlash = Math.max(G.screenFlash, 0.55);
       G.rings.push({
@@ -239,7 +239,7 @@ export function damageEnemy(e, dmg, angle) {
       addDamageText(e.x, e.y - e.r - 30, 'LE BOSS S\'EFFONDRE...', '#ffd740');
       return; // la mort effective est gérée dans la boucle de mise à jour
     }
-    sfxDie();
+    sfxDie(e.r > 34 ? 'big' : ''); // les gros monstres ont une mort plus grave
     spawnParticles(e.x, e.y, e.color, 18, 6);
     addDamageText(e.x, e.y - 16, `+${e.xp} XP`, '#40c4ff');
     gainXp(e.xp);
@@ -265,18 +265,21 @@ export function damageEnemy(e, dmg, angle) {
     const table = MATERIAL_DROPS[e.type] || {};
     const matMult = (e.isBoss || e.isMini || e.type.startsWith('finalBoss')) ? 1 : 0.6;
     let mi = 0;
+    let gotEmerald = false;
     for (const m in table) {
       if (Math.random() < table[m] * matMult) {
         // l'émeraude est précieuse : les boss en lâchent une petite poignée
         const qty = m === 'emeraude'
           ? Math.round(((e.type.startsWith('finalBoss') ? 8 : e.isBoss ? 5 : e.isMini ? 3 : 1)) * ((G.mods && G.mods.lootMult) || 1))
           : 1;
+        if (m === 'emeraude') gotEmerald = true;
         addMaterial(G.inv, m, qty);
         G.runMats[m] = (G.runMats[m] || 0) + qty; // résumé de fin de partie
         addDamageText(e.x + (mi % 3 - 1) * 14, e.y - e.r - 26 - mi * 10, `+${qty} ${MATS[m].name}`, MATS[m].color);
         mi++;
       }
     }
+    if (gotEmerald) sfxGem(); // carillon cristallin : butin d'émeraudes
     G.enemies.splice(idx, 1);
     G.kills++;
     G.waveKills++; // compte pour le quota de la vague

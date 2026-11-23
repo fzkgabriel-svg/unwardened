@@ -2,7 +2,7 @@ import { G, W, H, TAU } from './state.js';
 import { spawnParticles, addDamageText } from './effects.js';
 import { damageEnemy } from './enemies.js';
 import { worldW, worldH } from './world.js';
-import { sfxSlash, sfxThrust, sfxSpin, sfxShield, sfxNuke, sfxBossAtk } from './audio.js';
+import { sfxSlash, sfxThrust, sfxSpin, sfxShield, sfxNuke, sfxBossAtk, sfxFireLaser, sfxFireHand, sfxVolcano } from './audio.js';
 import { waveBonus, clampW, clampH, playerAngle, inMeleeArc } from './attacks_util.js';
 import { doIceUlt, doHellUlt } from './attacks_ult.js';
 import { wearWeaponUse } from './inventory.js';
@@ -144,7 +144,7 @@ export function doFireLaser() {
     len: p.ultRadius * 2.0, w: 42,
     life: 0.65, maxLife: 0.65, tick: 0
   });
-  sfxSlash();
+  sfxFireLaser(); // souffle de laser brûlant + zap + crépitements
   spawnParticles(p.x + Math.cos(a) * 30, p.y + Math.sin(a) * 30, '#ff7043', 8, 5);
 }
 
@@ -202,7 +202,7 @@ export function doFireHand() {
     x: p.x, y: p.y - p.r, tx: p.x + Math.cos(a) * d, ty: p.y + Math.sin(a) * d,
     sx: p.x, sy: p.y - p.r, t: 0, dur: 0.38
   });
-  sfxBossAtk('fire');
+  sfxFireHand(); // whoosh enflammé + burst de feu
   spawnParticles(p.x, p.y - 20, '#ff7043', 14, 6);
 }
 
@@ -238,7 +238,7 @@ function spawnVolcano(x, y) {
   G.screenFlash = Math.max(G.screenFlash, 0.3);
   G.rings.push({ x, y, r: 10, maxR: 175, life: 26, maxLife: 26, color: '#ff7043' });
   G.rings.push({ x, y, r: 5, maxR: 110, life: 20, maxLife: 20, color: '#ffd740' });
-  sfxBossAtk('earth');
+  sfxVolcano(); // éruption : boom profond + projections + sifflement
   spawnParticles(x, y, '#ff7043', 36, 9);
   spawnParticles(x, y, '#4e342e', 22, 7); // projections de roche
 }

@@ -2,7 +2,7 @@ import { G, W, H, TAU } from './state.js';
 import { spawnParticles, addDamageText } from './effects.js';
 import { damageEnemy } from './enemies.js';
 import { worldW, worldH } from './world.js';
-import { sfxSlash, sfxThrust, sfxSpin, sfxNuke, sfxBossAtk, sfxWave, sfxIceCharge, sfxIceOpen, sfxIceStorm, sfxIceImpact, sfxIceEnd } from './audio.js';
+import { sfxSlash, sfxThrust, sfxSpin, sfxNuke, sfxBossAtk, sfxWave, sfxIceCharge, sfxIceOpen, sfxIceStorm, sfxIceImpact, sfxIceEnd, sfxHellTransform } from './audio.js';
 import { waveBonus, clampW, clampH, playerAngle } from './attacks_util.js';
 
 export function updateNuke(dt) {
@@ -507,6 +507,7 @@ export function doHellUlt() {
   spawnParticles(p.x, p.y - 20, '#ff7043', 50, 11);
   spawnParticles(p.x, p.y - 20, '#ffd740', 30, 10);
   addDamageText(p.x, p.y - 90, '🔥 TITAN DE FEU 🔥', '#ffab91');
+  sfxHellTransform(); // rugissement de transformation : montée de feu + battements
 }
 
 // laser de feu : faisceau persistant qui brûle tout sur son passage.

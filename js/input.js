@@ -4,7 +4,7 @@ import { checkAdminPass, createChar } from './chars.js';
 import { adminMenuClickAt, adminButtonAt, adminUnlocked } from './menu.js';
 import { usePotion } from './player.js';
 import { tryInteract } from './world.js';
-import { ensureAudio, audioButtonAt, audioPanelClickAt, audioPanelDragAt, audioPanelDragEnd, sfxClick, sfxConfirm } from './audio.js';
+import { ensureAudio, audioButtonAt, audioPanelClickAt, audioPanelDragAt, audioPanelDragEnd, sfxClick, sfxConfirm, sfxOpen, sfxClose, sfxTab } from './audio.js';
 import { shopButtonAt, shopClickAt, shopDay } from './shop.js';
 import { startTutorial, tutorialEnter, tutorialClickAt } from './tutorial.js';
 import { bowUnlocked } from './bow.js';
@@ -168,11 +168,11 @@ export function initInput() {
       return;
     }
     // panneau de réglages audio ouvert : il intercepte tous les clics
-    if (G.audioOpen) { audioPanelClickAt(G.mouse.x, G.mouse.y); return; }
+    if (G.audioOpen) { const ar = audioPanelClickAt(G.mouse.x, G.mouse.y); if (ar === 'close') sfxClose(); return; }
     // bouton ⚙ RÉGLAGES : ouvre le panneau (interrupteurs + volumes)
     if (['menu', 'playing', 'paused', 'gameover', 'victory'].includes(G.state)) {
       const ab = audioButtonAt(G.mouse.x, G.mouse.y);
-      if (ab === 'opt') { G.audioOpen = true; sfxClick(); return; }
+      if (ab === 'opt') { G.audioOpen = true; sfxOpen(); return; }
     }
     if (G.state === 'menu') {
       // popup durabilité : intercepte tous les clics tant qu'elle est ouverte
@@ -185,6 +185,7 @@ export function initInput() {
       if (G.menuView === 'forge') {
         const act = forgeClickAt(G.mouse.x, G.mouse.y);
         if (act === 'back') { G.menuView = 'main'; sfxClick(); }
+        else if (act === 'tab' || act === 'htab') sfxTab();
         else if (act) sfxClick();
         return;
       }

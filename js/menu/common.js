@@ -2,6 +2,7 @@
 import { G, ctx, W, H, TAU } from '../state.js';
 import { roundRect, drawMatIcon, drawItemIcon, itemTier } from '../utils.js';
 import { adminOK as _adminOK } from '../chars.js';
+import { sfxHover } from '../audio.js';
 
 export function adminUnlocked() { return _adminOK; }
 // Géométrie des boutons du menu (partagée avec le hit-test)
@@ -52,6 +53,10 @@ export function panel(x, y, w, h) {
 // bouton générique sobre (retour, pause, popups) : plein si primary, sinon contour
 export function drawMenuButton(r, label, c1, c2, primary) {
   const hov = inR(r, G.mouse.x, G.mouse.y);
+  // micro-son de survol : une seule fois par bouton survolé
+  const hid = label + '@' + Math.round(r.x) + ',' + Math.round(r.y);
+  if (hov && G._uiHov !== hid) { G._uiHov = hid; sfxHover(); }
+  else if (!hov && G._uiHov === hid) G._uiHov = null;
   ctx.save();
   if (primary) {
     ctx.fillStyle = hexA(c1, hov ? 1 : 0.88);

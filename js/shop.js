@@ -5,7 +5,7 @@ import { G, ctx, W, H, TAU } from './state.js';
 import { roundRect, drawMatIcon, hexA } from './utils.js';
 import { MATS, addMaterial, loadInv, saveInv } from './inventory.js';
 import { MODULES, MOD_IDS, ownModule, modState, drawModuleIcon } from './modules.js';
-import { sfxClick, sfxPickup, sfxBuy } from './audio.js';
+import { sfxClick, sfxPickup, sfxBuy, sfxDeny, sfxTab } from './audio.js';
 
 // catalogue : clef = matériau vendu (JAMAIS 'emeraude' — on n'achète pas la monnaie)
 // stock: null = illimité · sinon unités max par jour
@@ -198,8 +198,8 @@ export function shopClickAt(x, y) {
       if (inR(L.modBuy, x, y)) {
         const m = MODULES[mid];
         const owned = modState(inv).owned.includes(mid);
-        if (owned) { G.shopFlash = { msg: `${m.name} : déjà possédé`, t: G.time, bad: true }; sfxClick(); return 'deny'; }
-        if ((inv.mats.emeraude || 0) < m.price) { G.shopFlash = { msg: `Il faut ${m.price} émeraudes pour ${m.name}`, t: G.time, bad: true }; G.shopMood = 'sad'; G.shopMoodT = G.time; sfxClick(); return 'deny'; }
+        if (owned) { G.shopFlash = { msg: `${m.name} : déjà possédé`, t: G.time, bad: true }; sfxDeny(); return 'deny'; }
+        if ((inv.mats.emeraude || 0) < m.price) { G.shopFlash = { msg: `Il faut ${m.price} émeraudes pour ${m.name}`, t: G.time, bad: true }; G.shopMood = 'sad'; G.shopMoodT = G.time; sfxDeny(); return 'deny'; }
         G.shopConfirm = { mod: mid, cost: m.price };
         sfxClick(); return 'buy';
       }
@@ -227,7 +227,7 @@ export function shopClickAt(x, y) {
         const r = buyMaterial(inv, key, qty);
         G.shopFlash = { msg: r.msg, t: G.time, bad: true };
         G.shopMood = 'sad'; G.shopMoodT = G.time;
-        sfxClick();
+        sfxDeny();
         return 'deny';
       }
       if (cost >= 12) { G.shopConfirm = { key, qty, cost }; sfxClick(); }
@@ -240,6 +240,7 @@ export function shopClickAt(x, y) {
         } else {
           G.shopFlash = { msg: r.msg, t: G.time, bad: true };
           G.shopMood = 'sad'; G.shopMoodT = G.time;
+          sfxDeny();
         }
       }
       return 'buy';
@@ -257,7 +258,7 @@ function setShopTab(tab) {
   if ((G.shopTab || 'mats') === tab) return;
   G.shopTab = tab; G.shopTabT = G.time || 0;
   G.shopSel = null; G.shopModSel = null; G.shopConfirm = null;
-  sfxClick();
+  sfxTab(); // glissement de parchemin entre les onglets de la boutique
 }
 function inR(r, x, y) { return r && x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h; }
 

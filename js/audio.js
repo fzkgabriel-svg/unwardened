@@ -6,11 +6,13 @@ import { G, ctx, W, H } from './state.js';
 import { roundRect } from './utils.js';
 
 let AC = null;          // AudioContext (créé au premier geste utilisateur)
-let master = null, musicBus = null, sfxBus = null, ambGain = null, ambFilter = null;
+let master = null, musicBus = null, sfxBus = null, uiBus = null, ambGain = null, ambFilter = null;
 const MUSIC_GAIN = 0.55;
 let step = 0, nextT = 0, timer = null;
 let curThemeKey = null; // thème musical actif (pour les transitions)
 let lastState = null;   // état précédent (stingers victoire/défaite)
+let voices = 0;         // voix SFX actives (plafond anti-saturation)
+const MAX_VOICES = 56;
 
 let on = true;
 try { on = localStorage.getItem('rpg2d_music') !== '0'; } catch (e) {}
@@ -28,6 +30,14 @@ try { const v = _pv('rpg2d_amb'); ambVol = Math.max(0, Math.min(100, v === null 
 const ambGainFn = () => (ambVol / 100) * 0.5;
 let ambOn = true; // ambiances activées (persisté)
 try { ambOn = localStorage.getItem('rpg2d_amb_on') !== '0'; } catch (e) {}
+let masterVol = 85; // volume général 0-100 (persisté)
+try { const v = _pv('rpg2d_master'); masterVol = Math.max(0, Math.min(100, v === null ? 85 : v)); } catch (e) {}
+const masterGainFn = () => (masterVol / 100) * 0.9;
+let uiVol = 80; // volume interface 0-100 (persisté)
+try { const v = _pv('rpg2d_ui'); uiVol = Math.max(0, Math.min(100, v === null ? 80 : v)); } catch (e) {}
+const uiGainFn = () => (uiVol / 100) * 0.9;
+let uiOn = true; // interface activée (persisté)
+try { uiOn = localStorage.getItem('rpg2d_ui_on') !== '0'; } catch (e) {}
 
 const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
 
@@ -130,8 +140,12 @@ export function ensureAudio() {
     try {
       AC = new (window.AudioContext || window.webkitAudioContext)();
       master = AC.createGain();
-      master.gain.value = 0.85;
-      master.connect(AC.destination);
+      master.gain.value = masterGainFn();
+      // compresseur de sortie : colle le mix et évite les saturations
+      const comp = AC.createDynamicsCompressor();
+      comp.threshold.value = -14; comp.knee.value = 22;
+      comp.ratio.value = 5; comp.attack.value = 0.004; comp.release.value = 0.18;
+      master.connect(comp); comp.connect(AC.destination);
       // bus musique : filtré pour un son feutré
       musicBus = AC.createGain();
       musicBus.gain.value = on ? volGain() : 0;
@@ -142,6 +156,10 @@ export function ensureAudio() {
       sfxBus = AC.createGain();
       sfxBus.gain.value = sfxOn ? sfxGain() : 0;
       sfxBus.connect(master);
+      // bus interface : clics, confirmations, boutique, succès
+      uiBus = AC.createGain();
+      uiBus.gain.value = uiOn ? uiGainFn() : 0;
+      uiBus.connect(master);
       // bus ambiances : boucle de bruit filtré (vent, souffle, frimas...)
       ambGain = AC.createGain();
       ambGain.gain.value = ambOn ? ambGainFn() : 0;
@@ -205,6 +223,27 @@ export function toggleAmb() {
   try { localStorage.setItem('rpg2d_amb_on', ambOn ? '1' : '0'); } catch (e) {}
   if (AC && ambGain) ambGain.gain.setTargetAtTime(ambOn ? ambGainFn() : 0, AC.currentTime, 0.08);
   return ambOn;
+}
+
+// ---------- réglages général & interface ----------
+export function masterVolLevel() { return masterVol; }
+export function setMasterVol(v) {
+  masterVol = Math.max(0, Math.min(100, Math.round(v)));
+  try { localStorage.setItem('rpg2d_master', String(masterVol)); } catch (e) {}
+  if (AC && master) master.gain.setTargetAtTime(masterGainFn(), AC.currentTime, 0.05);
+}
+export function uiVolLevel() { return uiVol; }
+export function uiOnState() { return uiOn; }
+export function setUiVol(v) {
+  uiVol = Math.max(0, Math.min(100, Math.round(v)));
+  try { localStorage.setItem('rpg2d_ui', String(uiVol)); } catch (e) {}
+  if (AC && uiBus) uiBus.gain.setTargetAtTime(uiOn ? uiGainFn() : 0, AC.currentTime, 0.05);
+}
+export function toggleUi() {
+  uiOn = !uiOn;
+  try { localStorage.setItem('rpg2d_ui_on', uiOn ? '1' : '0'); } catch (e) {}
+  if (AC && uiBus) uiBus.gain.setTargetAtTime(uiOn ? uiGainFn() : 0, AC.currentTime, 0.08);
+  return uiOn;
 }
 
 // ---------- synthèse ----------
@@ -465,7 +504,7 @@ function stinger() {
   const was = lastState; lastState = st;
   if (!AC || !musicBus) return;
   const t = AC.currentTime + 0.15;
-  const seq = st === 'victory' ? [[523, 0], [659, 0.14], [784, 0.28], [1047, 0.46]]
+  const seq = st === 'victory' ? null // la victoire a son sting dédié (sfxVictory)
             : st === 'gameover' ? [[392, 0], [330, 0.3], [262, 0.6], [196, 0.95]]
             : null;
   if (!seq) return;
@@ -505,38 +544,72 @@ function scheduleBar() {
   }
 }
 
-// cliquetis d'interface (boutons du menu)
-export function sfxClick() {
-  if (!AC) return;
-  try {
-  const t = AC.currentTime;
-  const o = AC.createOscillator(), g = AC.createGain();
-  o.type = 'triangle';
-  o.frequency.setValueAtTime(660, t);
-  o.frequency.exponentialRampToValueAtTime(320, t + 0.09);
-  g.gain.setValueAtTime(0.18, t);
-  g.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
-  o.connect(g); g.connect(sfxBus || master);
-  o.start(t); o.stop(t + 0.12);
-  } catch (e) {}
+// ---------- sons d'interface (bus uiBus : volume « INTERFACE ») ----------
+function uiReady() { return !!(AC && (uiBus || sfxBus || master)); }
+const UIB = () => uiBus || sfxBus || master;
+// survol : micro-clic feutré (beaucoup plus discret que le clic)
+export function sfxHover() {
+  if (!uiReady()) return;
+  const t = ST();
+  partial(t, jit(1500, 0.08), 0.05, 0.022, 'sine', UIB());
+  nzSweep(t, 0.025, 0.012, 'highpass', 7000, 9000, 1, 0.001);
 }
-
-// petit arpège de confirmation (nouvelle partie, victoire…)
+// clic : cliquet bois + pierre, deux micro-couches
+export function sfxClick() {
+  if (!uiReady()) return;
+  const t = ST();
+  const d = UIB();
+  nzSweep(t, 0.035, 0.07, 'bandpass', jit(1900, 0.15), jit(1400, 0.15), 3.5, 0.001);
+  oscA('triangle', jit(720, 0.1), jit(380, 0.1), t, 0.06, 0.055, 0.002, d);
+  oscA('sine', jit(190, 0.08), 90, t, 0.05, 0.04, 0.001, d);
+}
+// refus : double coup sourd (action impossible, pas assez de mats…)
+export function sfxDeny() {
+  if (!uiReady()) return;
+  const t = ST(); const d = UIB();
+  oscA('sine', 150, 70, t, 0.14, 0.12, 0.004, d);
+  nzSweep(t, 0.08, 0.06, 'lowpass', 500, 300, 1, 0.002);
+  oscA('sine', 120, 60, t + 0.11, 0.12, 0.08, 0.004, d);
+}
+// changement d'onglet : glissement de parchemin
+export function sfxTab() {
+  if (!uiReady()) return;
+  const t = ST();
+  nzSweep(t, 0.13, 0.05, 'bandpass', jit(900, 0.1), jit(2300, 0.1), 0.9, 0.02);
+  partial(t + 0.05, 880, 0.08, 0.018, 'sine', UIB());
+}
+// ouverture de menu : page qui se déploie + chime discret
+export function sfxOpen() {
+  if (!uiReady()) return;
+  const t = ST(); const d = UIB();
+  nzSweep(t, 0.22, 0.06, 'bandpass', 500, 1900, 0.8, 0.03);
+  chime(t + 0.1, 1047, 0.4, 0.035, d);
+}
+// fermeture : version feutrée et descendante
+export function sfxClose() {
+  if (!uiReady()) return;
+  const t = ST();
+  nzSweep(t, 0.18, 0.05, 'bandpass', 1700, 600, 0.9, 0.01);
+  partial(t + 0.04, 784, 0.3, 0.03, 'sine', UIB());
+}
+// confirmation : petite harpe — 3 notes cristallines en montant
 export function sfxConfirm() {
-  if (!AC) return;
-  try {
-  const t = AC.currentTime;
+  if (!uiReady()) return;
+  const t = ST(); const d = UIB();
   [523, 659, 784].forEach((f, i) => {
-    const o = AC.createOscillator(), g = AC.createGain();
-    o.type = 'sine'; o.frequency.value = f;
     const t0 = t + i * 0.07;
-    g.gain.setValueAtTime(0.0001, t0);
-    g.gain.linearRampToValueAtTime(0.12, t0 + 0.02);
-    g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.35);
-    o.connect(g); g.connect(sfxBus || master);
-    o.start(t0); o.stop(t0 + 0.4);
+    partial(t0, f, 0.34, 0.07, 'triangle', d);
+    partial(t0, f * 2, 0.18, 0.03, 'sine', d);
   });
-  } catch (e) {}
+  nzSweep(t + 0.05, 0.3, 0.015, 'highpass', 6500, 8000, 1, 0.02);
+}
+// émeraude / matériau rare : scintillement cristallin
+export function sfxGem() {
+  if (!uiReady()) return;
+  const t = ST(); const d = UIB();
+  chime(t, jit(2093, 0.06), 0.5, 0.06, d);
+  chime(t + 0.09, jit(3136, 0.06), 0.45, 0.045, d);
+  nzSweep(t + 0.05, 0.35, 0.02, 'highpass', 7000, 10000, 1, 0.03);
 }
 
 // ---------- bouton RÉGLAGES + panneau (coin haut-droit) ----------
@@ -574,22 +647,26 @@ export function drawMusicButton() {
 }
 
 // ---------- panneau de réglages audio ----------
-const AP_W = 480, AP_H = 340;
+const AP_W = 500, AP_H = 540;
 const apRect = () => ({ x: W / 2 - AP_W / 2, y: H / 2 - AP_H / 2, w: AP_W, h: AP_H });
 // une ligne = { key, label, icon, color, getVol, setVol, getOn, toggle }
 const AP_ROWS = [
+  { key: 'master', label: 'VOLUME GÉNÉRAL', icon: '◉', color: '#e8d9a8',
+    vol: () => masterVol, set: setMasterVol, on: () => masterVol > 0, tog: () => setMasterVol(masterVol > 0 ? 0 : 85) },
   { key: 'mus', label: 'MUSIQUE', icon: '♪', color: '#d4b062',
     vol: () => vol, set: setMusicVol, on: () => on, tog: toggleMusic },
   { key: 'sfx', label: 'EFFETS SONORES', icon: '✦', color: '#7fb8d6',
     vol: () => sfxVol, set: setSfxVol, on: () => sfxOn, tog: toggleSfx },
   { key: 'amb', label: 'AMBIANCES', icon: '≋', color: '#8fd0a0',
-    vol: () => ambVol, set: setAmbVol, on: () => ambOn, tog: toggleAmb }
+    vol: () => ambVol, set: setAmbVol, on: () => ambOn, tog: toggleAmb },
+  { key: 'ui', label: 'INTERFACE', icon: '❖', color: '#d8a0c8',
+    vol: () => uiVol, set: setUiVol, on: () => uiOn, tog: toggleUi }
 ];
 // géométrie d'une ligne : label en haut, pastille ON/OFF à droite,
 // curseur pleine largeur en dessous — aucune superposition possible
 function apRowRect(i) {
   const r = apRect();
-  return { x: r.x + 26, y: r.y + 76 + i * 74, w: r.w - 52, h: 62 };
+  return { x: r.x + 26, y: r.y + 76 + i * 80, w: r.w - 52, h: 66 };
 }
 function apSliderRect(rr) {
   return { x: rr.x + 12, y: rr.y + 40, w: rr.w - 24 };
@@ -702,306 +779,549 @@ export function drawAudioPanel() {
 // ==================== EFFETS SONORES DE JEU ====================
 // tous routés via sfxBus (volume "EFFETS" du panneau)
 function sfxReady() { return !!(AC && sfxBus); }
-function osc(type, f0, f1, t, dur, vol) {
-  try {
-    const o = AC.createOscillator(), g = AC.createGain();
-    o.type = type;
-    o.frequency.setValueAtTime(f0, t);
-    if (f1 && f1 !== f0) o.frequency.exponentialRampToValueAtTime(Math.max(1, f1), t + dur);
-    g.gain.setValueAtTime(vol, t);
-    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-    o.connect(g); g.connect(sfxBus);
-    o.start(t); o.stop(t + dur + 0.05);
-  } catch (e) {}
-}
 function nz(t, dur, vol, type, freq, q = 1) {
-  try {
-    const s = AC.createBufferSource(); s.buffer = getNoise();
-    const f = AC.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
-    const g = AC.createGain();
-    g.gain.setValueAtTime(vol, t);
-    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-    s.connect(f); f.connect(g); g.connect(sfxBus);
-    s.start(t); s.stop(t + dur + 0.05);
-  } catch (e) {}
+  nzSweep(t, dur, vol, type, freq, freq, q, 0.002);
 }
 const ST = () => AC.currentTime;
 
-export function sfxSlash() { // coup d'épée : whoosh + claquement d'acier
-  if (!sfxReady()) return; const t = ST();
-  nz(t, 0.16, 0.22, 'bandpass', 2400, 1.4);
-  osc('square', 900, 300, t, 0.07, 0.05);
+// ---------- synthèse enrichie : couches, enveloppes, variations ----------
+const jit = (x, a = 0.05) => x * (1 - a / 2 + Math.random() * a); // ±a de hauteur
+function env(t, dur, vol, atk = 0.006) {
+  const g = AC.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(vol, t + Math.min(atk, dur * 0.4));
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  return g;
 }
-export function sfxThrust() { // estoc de lance : souffle + pointe métallique
-  if (!sfxReady()) return; const t = ST();
-  nz(t, 0.1, 0.18, 'bandpass', 3200, 2);
-  osc('sawtooth', 500, 1400, t, 0.09, 0.05);
+// oscillateur avec attaque douce et compte de voix (anti-saturation)
+function oscA(type, f0, f1, t, dur, vol, atk = 0.006, dest) {
+  try {
+    if (voices >= MAX_VOICES) return;
+    const o = AC.createOscillator(), g = env(t, dur, vol, atk);
+    o.type = type; o.frequency.setValueAtTime(f0, t);
+    if (f1 && f1 !== f0) o.frequency.exponentialRampToValueAtTime(Math.max(1, f1), t + dur * 0.85);
+    o.connect(g); g.connect(dest || sfxBus || master);
+    voices++; o.onended = () => { voices--; };
+    o.start(t); o.stop(t + dur + 0.08);
+  } catch (e) {}
 }
-export function sfxSpin() { // rotation : grand whoosh tournoyant
-  if (!sfxReady()) return; const t = ST();
-  nz(t, 0.35, 0.16, 'bandpass', 1200, 0.8);
-  osc('sine', 300, 700, t, 0.3, 0.04);
+// bruit filtré avec balayage de fréquence (whooshes, risers, souffles)
+function nzSweep(t, dur, vol, type, f0, f1, q = 1, atk = 0.004, dest) {
+  try {
+    if (voices >= MAX_VOICES) return;
+    const s = AC.createBufferSource(); s.buffer = getNoise();
+    const f = AC.createBiquadFilter(); f.type = type; f.Q.value = q;
+    f.frequency.setValueAtTime(f0, t);
+    if (f1 && f1 !== f0) f.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur * 0.9);
+    const g = env(t, dur, vol, atk);
+    s.connect(f); f.connect(g); g.connect(dest || sfxBus || master);
+    voices++; s.onended = () => { voices--; };
+    s.start(t); s.stop(t + dur + 0.08);
+  } catch (e) {}
 }
-export function sfxShield() { // dôme : bulle cristalline montante
-  if (!sfxReady()) return; const t = ST();
-  osc('sine', 400, 1200, t, 0.4, 0.07);
-  osc('sine', 800, 1600, t + 0.05, 0.35, 0.04);
-  nz(t, 0.3, 0.05, 'highpass', 5000);
+function osc(type, f0, f1, t, dur, vol) { oscA(type, f0, f1, t, dur, vol, 0.002); }
+// crépitement : n micro-grains de bruit (feu, givre, étincelles)
+function crackle(t, dur, n, vol, fMin = 2000, fMax = 8000, dest) {
+  for (let i = 0; i < n; i++) {
+    const tt = t + Math.random() * dur;
+    const nd = dest || (sfxBus || master);
+    try {
+      if (voices >= MAX_VOICES) return;
+      const s = AC.createBufferSource(); s.buffer = getNoise();
+      const f = AC.createBiquadFilter(); f.type = 'highpass';
+      f.frequency.value = jit(fMin + Math.random() * (fMax - fMin), 0.35);
+      const g = AC.createGain();
+      const dv = 0.015 + Math.random() * 0.02, vv = vol * (0.4 + Math.random() * 0.6);
+      g.gain.setValueAtTime(vv, tt);
+      g.gain.exponentialRampToValueAtTime(0.001, tt + dv);
+      s.connect(f); f.connect(g); g.connect(nd);
+      voices++; s.onended = () => { voices--; };
+      s.start(tt); s.stop(tt + dv + 0.02);
+    } catch (e) {}
+  }
 }
-export function sfxHit() { // impact : thud sec + étincelle
-  if (!sfxReady()) return; const t = ST();
-  osc('sine', 200, 55, t, 0.12, 0.28);
-  nz(t, 0.06, 0.15, 'highpass', 3000);
+// partiel inharmonique : teinte les cloches, cristaux et métaux
+function partial(t, f, dur, vol, type = 'sine', dest) {
+  oscA(type, f, f, t, dur, vol, 0.004, dest);
 }
-export function sfxHurt() { // le héros est touché : grondement grave
-  if (!sfxReady()) return; const t = ST();
-  osc('sawtooth', 160, 60, t, 0.25, 0.16);
-  nz(t, 0.12, 0.1, 'lowpass', 700);
+// petite clochette : fondamentale + partiels brillants
+function chime(t, base, dur = 0.5, vol = 0.06, dest) {
+  partial(t, base, dur, vol, 'sine', dest);
+  partial(t, base * 2.76, dur * 0.55, vol * 0.4, 'sine', dest);
+  partial(t, base * 5.4, dur * 0.3, vol * 0.16, 'sine', dest);
 }
-export function sfxDie() { // monstre tué : descente dramatique
-  if (!sfxReady()) return; const t = ST();
-  osc('square', 320, 70, t, 0.3, 0.1);
-  nz(t, 0.2, 0.1, 'bandpass', 900, 1);
+// gong : fondamental grave + partiels inharmoniques + frappe
+function gong(t, f, dur, vol, dest) {
+  oscA('sine', f, f, t, dur, vol, 0.02, dest);
+  oscA('sine', f * 1.48, f * 1.48, t, dur * 0.7, vol * 0.4, 0.02, dest);
+  oscA('sine', f * 2.09, f * 2.09, t, dur * 0.45, vol * 0.25, 0.02, dest);
+  nzSweep(t, 0.06, vol * 0.5, 'bandpass', f * 8, f * 4, 2, 0.002);
 }
-export function sfxPickup() { // butin : deux notes brillantes
-  if (!sfxReady()) return; const t = ST();
-  osc('sine', 880, 880, t, 0.09, 0.09);
-  osc('sine', 1320, 1320, t + 0.07, 0.12, 0.08);
+// pièce : ping métallique bref (deux partiels)
+function coin(t, f, vol = 0.07, dest) {
+  partial(t, f, 0.22, vol, 'square', dest);
+  partial(t, f * 2.4, 0.1, vol * 0.5, 'sine', dest);
+  nzSweep(t, 0.03, vol * 0.6, 'highpass', 6000, 9000, 1, 0.001);
 }
-export function sfxPotion() { // fiole : gargouillis montant
-  if (!sfxReady()) return; const t = ST();
-  osc('sine', 300, 900, t, 0.35, 0.09);
-  osc('sine', 450, 1350, t + 0.08, 0.3, 0.05);
+// enclume : frappe métallique + queue de résonance
+function anvil(t, f = 1900, vol = 0.16, dest) {
+  nzSweep(t, 0.05, vol, 'bandpass', f * 0.8, f * 1.6, 3, 0.001);
+  partial(t, f, 0.5, vol * 0.55, 'triangle', dest);
+  partial(t, f * 2.76, 0.28, vol * 0.3, 'sine', dest);
+  partial(t, f * 0.5, 0.4, vol * 0.3, 'sine', dest);
 }
-export function sfxLevel() { // niveau supérieur : petite fanfare
-  if (!sfxReady()) return; const t = ST();
-  [523, 659, 784, 1047].forEach((f, i) => osc('triangle', f, f, t + i * 0.09, 0.3, 0.1));
+// le mix baisse la musique un instant : les impacts gardent la priorité
+function duck(amount = 0.3, hold = 0.32) {
+  if (!AC || !musicBus || !on) return;
+  const now = AC.currentTime;
+  try {
+    musicBus.gain.cancelScheduledValues(now);
+    musicBus.gain.setTargetAtTime(musicBus.gain.value * (1 - amount), now, 0.02);
+    musicBus.gain.setTargetAtTime(volGain(), now + hold, 0.4);
+  } catch (e) {}
 }
-export function sfxCraft() { // forge : 3 coups de marteau + ding final
-  if (!sfxReady()) return; const t = ST();
-  for (let i = 0; i < 3; i++) { nz(t + i * 0.28, 0.05, 0.2, 'bandpass', 1800, 3); osc('sine', 140, 60, t + i * 0.28, 0.08, 0.2); }
-  osc('sine', 1568, 1568, t + 0.9, 0.5, 0.09);
+// souffle granulaire : nappe de bruit dont le filtre oscille doucement
+function gust(t, dur, vol, f0, f1, q = 0.8) {
+  nzSweep(t, dur, vol, 'bandpass', f0, f1, q, dur * 0.3);
 }
-export function sfxEquip() { // équipement : cliquet + accord
+
+// frappe d'arme : whoosh d'acier + claquement de lame + queue métallique
+export function sfxSlash() {
   if (!sfxReady()) return; const t = ST();
-  nz(t, 0.05, 0.18, 'bandpass', 2500, 4);
-  osc('triangle', 660, 660, t + 0.06, 0.15, 0.08);
+  nzSweep(t, 0.14, 0.2, 'bandpass', jit(2300, 0.15), jit(800, 0.15), 1.6, 0.004);
+  oscA('sawtooth', jit(1300, 0.1), jit(240, 0.1), t, 0.07, 0.035, 0.002);
+  partial(t + 0.03, jit(2600, 0.08), 0.16, 0.05, 'triangle');
+  crackle(t, 0.08, 3, 0.03, 5000, 9000);
 }
-export function sfxRepair() { // réparation : limage + étincelles
+// estoc : souffle perçant + pointe métallique qui vibre
+export function sfxThrust() {
   if (!sfxReady()) return; const t = ST();
-  for (let i = 0; i < 4; i++) nz(t + i * 0.18, 0.06, 0.14, 'highpass', 4000 + i * 500);
-  osc('sine', 1200, 1600, t + 0.7, 0.3, 0.06);
+  nzSweep(t, 0.1, 0.17, 'bandpass', jit(3400, 0.12), jit(5200, 0.12), 2.2, 0.002);
+  oscA('sawtooth', jit(480, 0.08), jit(1500, 0.08), t, 0.1, 0.04, 0.003);
+  partial(t + 0.02, jit(3100, 0.1), 0.18, 0.045, 'sine');
 }
-export function sfxPortal() { // portail : montée scintillante
+// rotation : double whoosh tourbillonnant + sifflement montant
+export function sfxSpin() {
   if (!sfxReady()) return; const t = ST();
-  osc('sine', 200, 1600, t, 0.7, 0.08);
-  nz(t, 0.6, 0.05, 'highpass', 6000);
+  nzSweep(t, 0.2, 0.13, 'bandpass', jit(700, 0.1), jit(2100, 0.1), 0.9, 0.02);
+  nzSweep(t + 0.12, 0.18, 0.11, 'bandpass', jit(2000, 0.1), jit(600, 0.1), 1.1, 0.015);
+  oscA('sine', jit(280, 0.1), jit(720, 0.1), t, 0.3, 0.035, 0.02);
 }
-export function sfxNuke() { // bombe atomique : coup + explosion dévastatrice
+// dôme : bulle cristalline — fondamental montant + chœur de partiels
+export function sfxShield() {
   if (!sfxReady()) return; const t = ST();
-  nz(t, 1.6, 0.5, 'lowpass', 500);
-  osc('sine', 90, 28, t, 1.4, 0.5);
-  nz(t + 0.15, 0.8, 0.3, 'bandpass', 250, 0.6);
+  oscA('sine', jit(400, 0.05), jit(1250, 0.05), t, 0.42, 0.065, 0.02);
+  oscA('sine', jit(810, 0.05), jit(1650, 0.05), t + 0.05, 0.36, 0.04, 0.02);
+  partial(t + 0.1, 1980, 0.3, 0.02);
+  nzSweep(t, 0.3, 0.045, 'highpass', 5200, 6800, 1, 0.03);
 }
-export function sfxBoss() { // rugissement de boss : grondement sourd enrichi (3 couches)
+// impact : corps + craquement + étincelle ; heavy = coup massif (boss, critiques)
+export function sfxHit(heavy = false) {
   if (!sfxReady()) return; const t = ST();
-  osc('sawtooth', 70, 45, t, 0.9, 0.2);
-  osc('sawtooth', 95, 55, t, 0.9, 0.14);
-  osc('sawtooth', 52, 34, t, 1.15, 0.2);   // sous-grave
-  osc('square', 140, 60, t + 0.06, 0.7, 0.07);
-  nz(t, 0.7, 0.16, 'lowpass', 400);
-  nz(t + 0.05, 0.55, 0.11, 'bandpass', 280, 1.6);
-  nz(t + 0.12, 0.4, 0.07, 'bandpass', 900, 2);
+  oscA('sine', jit(heavy ? 170 : 200, 0.08), heavy ? 45 : 55, t, heavy ? 0.18 : 0.12, heavy ? 0.34 : 0.24, 0.003);
+  nzSweep(t, heavy ? 0.1 : 0.055, heavy ? 0.2 : 0.13, 'highpass', jit(3200, 0.15), jit(5000, 0.15), 1, 0.001);
+  nzSweep(t, heavy ? 0.14 : 0.07, heavy ? 0.13 : 0.07, 'bandpass', 900, 500, 1.2, 0.002);
+  if (heavy) {
+    partial(t + 0.02, jit(1150, 0.1), 0.2, 0.08, 'triangle');
+    duck(0.18, 0.25);
+  }
+}
+// le héros est touché : coup sourd + souffle de douleur
+export function sfxHurt() {
+  if (!sfxReady()) return; const t = ST();
+  oscA('sawtooth', jit(150, 0.07), jit(55, 0.07), t, 0.24, 0.15, 0.004);
+  nzSweep(t, 0.13, 0.1, 'lowpass', jit(750, 0.1), jit(350, 0.1), 1, 0.003);
+  oscA('sine', 95, 50, t + 0.02, 0.2, 0.14, 0.004);
+}
+// mort de monstre : descente dramatique + poof ; 'boss'/'big' = plus grave et long
+export function sfxDie(kind = '') {
+  if (!sfxReady()) return; const t = ST();
+  const big = kind === 'boss' || kind === 'big' || kind.includes('final');
+  oscA('square', jit(big ? 300 : 320, 0.06), jit(big ? 55 : 70, 0.06), t, big ? 0.42 : 0.3, big ? 0.12 : 0.09, 0.004);
+  nzSweep(t, big ? 0.3 : 0.2, big ? 0.13 : 0.09, 'bandpass', jit(950, 0.1), jit(280, 0.1), 1.1, 0.008);
+  oscA('sine', jit(180, 0.06), jit(40, 0.06), t + 0.04, big ? 0.36 : 0.26, big ? 0.12 : 0.08, 0.01);
+  if (big) { crackle(t + 0.1, 0.3, 6, 0.05, 900, 4000); duck(0.22, 0.4); }
+}
+// butin : deux notes brillantes + micro-scintillement
+export function sfxPickup() {
+  if (!sfxReady()) return; const t = ST();
+  partial(t, jit(880, 0.04), 0.1, 0.08);
+  partial(t + 0.07, jit(1318, 0.04), 0.14, 0.07);
+  nzSweep(t + 0.04, 0.18, 0.02, 'highpass', 6800, 9000, 1, 0.015);
+}
+// fiole : gargouillis — 3 bulles montantes désaccordées
+export function sfxPotion() {
+  if (!sfxReady()) return; const t = ST();
+  [jit(300, 0.1), jit(430, 0.1), jit(620, 0.1)].forEach((f, i) => {
+    oscA('sine', f, f * jit(2.6, 0.15), t + i * 0.11, 0.14, 0.07 - i * 0.012, 0.01);
+  });
+  nzSweep(t + 0.3, 0.15, 0.03, 'bandpass', 1200, 2400, 1.4, 0.01);
+}
+// niveau supérieur : fanfare ascendante + queue de scintillements
+export function sfxLevel() {
+  if (!sfxReady()) return; const t = ST();
+  [523, 659, 784, 1047].forEach((f, i) => {
+    const t0 = t + i * 0.09;
+    oscA('triangle', f, f, t0, 0.32, 0.09, 0.008);
+    partial(t0, f * 2, 0.2, 0.03);
+  });
+  nzSweep(t + 0.3, 0.5, 0.03, 'highpass', 7000, 10000, 1, 0.05);
+}
+// forge : 3 coups d'enclume + grondement de forge + dernier ding harmonique
+export function sfxCraft() {
+  if (!uiReady()) return; const t = ST(); const d = UIB();
+  for (let i = 0; i < 3; i++) {
+    const tt = t + i * 0.28;
+    anvil(tt, jit(1800 + i * 260, 0.08), 0.17, d);
+    oscA('sine', jit(140, 0.06), 55, tt, 0.09, 0.18, 0.002, d);
+  }
+  nzSweep(t + 0.8, 0.35, 0.05, 'lowpass', 900, 300, 1, 0.05, d);
+  chime(t + 0.92, 1568, 0.55, 0.06, d);
+}
+// équipement : cliquet de boucle + froissement de cuir + note claire
+export function sfxEquip() {
+  if (!uiReady()) return; const t = ST(); const d = UIB();
+  nzSweep(t, 0.045, 0.15, 'bandpass', jit(2600, 0.15), jit(3200, 0.15), 4, 0.001, d);
+  oscA('triangle', jit(660, 0.05), jit(660, 0.05), t + 0.06, 0.14, 0.075, 0.004, d);
+  nzSweep(t + 0.03, 0.12, 0.05, 'highpass', 5000, 7500, 1, 0.01, d);
+  partial(t + 0.09, 1320, 0.2, 0.035, 'sine', d);
+}
+// réparation : limage granuleux + étincelles + montée de satisfaction
+export function sfxRepair() {
+  if (!uiReady()) return; const t = ST(); const d = UIB();
+  for (let i = 0; i < 4; i++) {
+    nzSweep(t + i * 0.17, 0.07, 0.11, 'highpass', jit(3600 + i * 400, 0.2), jit(5200 + i * 400, 0.2), 1.2, 0.002, d);
+  }
+  crackle(t + 0.5, 0.3, 7, 0.05, 4500, 9000, d);
+  oscA('sine', jit(1100, 0.05), jit(1600, 0.05), t + 0.72, 0.3, 0.05, 0.02, d);
+}
+// équipement cassé : claquement sec + débris qui tombent
+export function sfxBreak() {
+  if (!uiReady()) return; const t = ST(); const d = UIB();
+  nzSweep(t, 0.06, 0.22, 'bandpass', jit(850, 0.15), jit(400, 0.15), 2, 0.001, d);
+  oscA('square', jit(230, 0.08), jit(50, 0.08), t, 0.2, 0.14, 0.003, d);
+  crackle(t + 0.05, 0.25, 8, 0.06, 1200, 5500, d);
+  oscA('sine', 110, 45, t + 0.03, 0.22, 0.15, 0.004, d);
+}
+// portail : montée scintillante + battement grave d'arrivée
+export function sfxPortal() {
+  if (!sfxReady()) return; const t = ST();
+  oscA('sine', jit(200, 0.05), jit(1650, 0.05), t, 0.75, 0.075, 0.05);
+  nzSweep(t, 0.65, 0.05, 'highpass', jit(5500, 0.1), jit(8200, 0.1), 1, 0.04);
+  chime(t + 0.55, 1568, 0.6, 0.045);
+  oscA('sine', 90, 45, t + 0.6, 0.4, 0.1, 0.01);
+}
+// bombe : souffle → déflagration massive en couches + onde sourde
+export function sfxNuke() {
+  if (!sfxReady()) return; const t = ST();
+  nzSweep(t, 1.7, 0.45, 'lowpass', jit(600, 0.1), 120, 0.8, 0.02);
+  oscA('sine', jit(95, 0.05), 26, t, 1.5, 0.48, 0.01);
+  nzSweep(t + 0.15, 0.85, 0.3, 'bandpass', jit(280, 0.1), jit(90, 0.1), 0.7, 0.01);
+  crackle(t + 0.1, 1.1, 26, 0.09, 800, 6000);
+  oscA('sawtooth', jit(160, 0.05), jit(35, 0.05), t + 0.05, 1.1, 0.12, 0.02);
+  duck(0.4, 0.9);
+}
+// rugissement de boss : 3 couches de grondement + souffle + grognements
+export function sfxBoss() {
+  if (!sfxReady()) return; const t = ST();
+  oscA('sawtooth', jit(72, 0.06), jit(46, 0.06), t, 0.95, 0.19, 0.02);
+  oscA('sawtooth', jit(98, 0.06), jit(56, 0.06), t, 0.9, 0.13, 0.02);
+  oscA('sawtooth', jit(50, 0.05), jit(32, 0.05), t, 1.2, 0.19, 0.02);
+  oscA('square', jit(145, 0.06), jit(58, 0.06), t + 0.06, 0.75, 0.06, 0.02);
+  nzSweep(t, 0.75, 0.15, 'lowpass', jit(420, 0.1), 220, 1, 0.01);
+  nzSweep(t + 0.05, 0.6, 0.11, 'bandpass', jit(300, 0.1), jit(700, 0.1), 1.5, 0.01);
+  crackle(t, 0.5, 8, 0.04, 700, 3000);
 }
 // rugissement du boss FINAL : immense, en deux temps (cri + grondement)
 export function sfxBossRoar() {
   if (!sfxReady()) return; const t = ST();
-  osc('sawtooth', 55, 30, t, 1.6, 0.3);
-  osc('sawtooth', 82, 38, t, 1.6, 0.2);
-  osc('square', 38, 22, t, 1.7, 0.16);
-  osc('sawtooth', 240, 55, t + 0.3, 1.1, 0.09); // hurlement descendant
-  nz(t, 1.4, 0.22, 'lowpass', 320);
-  nz(t + 0.08, 1.0, 0.15, 'bandpass', 480, 1.1);
-  nz(t + 0.2, 0.7, 0.1, 'highpass', 1800);
+  oscA('sawtooth', jit(56, 0.05), jit(30, 0.05), t, 1.7, 0.29, 0.03);
+  oscA('sawtooth', jit(84, 0.05), jit(38, 0.05), t, 1.65, 0.19, 0.03);
+  oscA('square', jit(38, 0.04), jit(21, 0.04), t, 1.8, 0.15, 0.03);
+  oscA('sawtooth', jit(250, 0.06), jit(55, 0.06), t + 0.3, 1.15, 0.09, 0.05); // hurlement
+  nzSweep(t, 1.5, 0.2, 'lowpass', jit(340, 0.08), 180, 1, 0.02);
+  nzSweep(t + 0.08, 1.05, 0.14, 'bandpass', jit(500, 0.1), jit(250, 0.1), 1.1, 0.02);
+  nzSweep(t + 0.2, 0.75, 0.09, 'highpass', jit(1800, 0.15), jit(3000, 0.15), 1, 0.02);
+  crackle(t + 0.2, 1.0, 14, 0.05, 900, 4500);
+  duck(0.35, 0.8);
 }
 // transition de phase : coup dramatique + grondement + descente sinistre
 export function sfxPhase() {
   if (!sfxReady()) return; const t = ST();
-  nz(t, 0.45, 0.3, 'lowpass', 280);
-  osc('sine', 120, 30, t, 1.0, 0.42);
-  osc('sawtooth', 190, 42, t + 0.05, 0.9, 0.18);
-  [311, 392, 466].forEach((f, i) => osc('triangle', f, f * 0.5, t + 0.18 + i * 0.13, 0.5, 0.07));
-  nz(t + 0.15, 0.8, 0.08, 'bandpass', 600, 1.4);
+  nzSweep(t, 0.5, 0.28, 'lowpass', jit(300, 0.08), 140, 1, 0.01);
+  oscA('sine', jit(125, 0.05), jit(30, 0.05), t, 1.05, 0.4, 0.01);
+  oscA('sawtooth', jit(195, 0.05), jit(42, 0.05), t + 0.05, 0.95, 0.17, 0.01);
+  [311, 392, 466].forEach((f, i) => oscA('triangle', f, f * 0.5, t + 0.18 + i * 0.13, 0.55, 0.065, 0.01));
+  nzSweep(t + 0.15, 0.85, 0.07, 'bandpass', jit(650, 0.1), jit(300, 0.1), 1.4, 0.01);
+  duck(0.3, 0.6);
 }
-// effondrement du boss final : long grondement + craquements de débris
-export function sfxBossDie() {
+// effondrement du boss final : long grondement + débris propres à son univers
+export function sfxBossDie(kind = '') {
   if (!sfxReady()) return; const t = ST();
-  osc('sawtooth', 95, 24, t, 2.3, 0.3);
-  osc('sine', 62, 18, t, 2.5, 0.36);
-  osc('square', 48, 20, t + 0.1, 1.8, 0.12);
-  nz(t, 2.0, 0.2, 'lowpass', 340);
-  for (let i = 0; i < 6; i++) nz(t + 0.35 + i * 0.33, 0.09, 0.12, 'bandpass', 650 + i * 220, 2.2);
-  nz(t + 1.9, 0.5, 0.14, 'lowpass', 200);
-}
-// attaque signature du boss final : 'fire' | 'ice' | 'shadow' | 'earth'
-export function sfxBossAtk(kind) {
-  if (!sfxReady()) return; const t = ST();
-  if (kind === 'fire') {
-    nz(t, 0.55, 0.26, 'lowpass', 620);
-    osc('sawtooth', 210, 55, t, 0.55, 0.13);
-    nz(t + 0.1, 0.4, 0.14, 'bandpass', 1400, 0.9);
-  } else if (kind === 'ice') {
-    nz(t, 0.45, 0.2, 'highpass', 3200);
-    osc('sine', 1300, 280, t, 0.45, 0.09);
-    osc('sine', 1950, 700, t + 0.05, 0.35, 0.05);
-  } else if (kind === 'earth') {
-    nz(t, 0.7, 0.3, 'lowpass', 260);
-    osc('sine', 85, 30, t, 0.7, 0.3);
-    nz(t + 0.08, 0.5, 0.16, 'bandpass', 350, 1.2);
-  } else if (kind === 'acid') {
-    // vase : bouillonnement grave + gouttes acides aiguës
-    nz(t, 0.6, 0.22, 'bandpass', 500, 1.4);
-    osc('sine', 140, 60, t, 0.6, 0.14);
-    osc('sine', 900, 1400, t + 0.12, 0.3, 0.05);
-    nz(t + 0.2, 0.4, 0.1, 'highpass', 2400);
-  } else if (kind === 'storm') {
-    // vent : whoosh montant + grondement de tornade + crépitement électrique
-    nz(t, 0.7, 0.24, 'bandpass', 700, 1.1);
-    osc('sawtooth', 90, 40, t, 0.7, 0.14);
-    nz(t + 0.15, 0.5, 0.12, 'highpass', 2800);
-    osc('sine', 2200, 600, t + 0.2, 0.3, 0.04);
-  } else if (kind === 'void') {
-    // trou noir : sirène descendante + claquement de marée
-    osc('sine', 800, 90, t, 0.7, 0.16);
-    osc('sine', 1200, 150, t + 0.05, 0.5, 0.08);
-    nz(t, 0.55, 0.18, 'bandpass', 900, 2.5);
-    nz(t + 0.15, 0.3, 0.1, 'highpass', 4200);
-  } else { // shadow / défaut
-    nz(t, 0.5, 0.2, 'bandpass', 380, 1);
-    osc('square', 150, 55, t, 0.5, 0.11);
-    osc('sawtooth', 300, 80, t + 0.08, 0.4, 0.06);
+  const k = kind || '';
+  const ice = k.includes('Glace'), hell = k.includes('Enfer'), sewer = k.includes('Egout'),
+    space = k.includes('Space'), storm = k.includes('Tempete');
+  // corps commun : descente grave + fracas sourd
+  oscA('sawtooth', jit(96, 0.05), jit(24, 0.05), t, 2.4, 0.28, 0.02);
+  oscA('sine', jit(63, 0.04), jit(17, 0.04), t, 2.6, 0.34, 0.02);
+  oscA('square', jit(50, 0.04), jit(19, 0.04), t + 0.1, 1.9, 0.11, 0.02);
+  nzSweep(t, 2.1, 0.19, 'lowpass', jit(360, 0.08), 120, 1, 0.02);
+  // craquements progressifs (tous les boss)
+  for (let i = 0; i < 6; i++) nzSweep(t + 0.35 + i * 0.33, 0.1, 0.11, 'bandpass', jit(650 + i * 230, 0.15), jit(300 + i * 120, 0.15), 2.2, 0.002);
+  // teinte de l'univers
+  if (ice) { // éclats de cristal
+    for (let i = 0; i < 7; i++) partial(t + 0.5 + i * 0.24, jit(1900 + i * 420, 0.1), 0.5, 0.035);
+    nzSweep(t + 0.4, 1.6, 0.07, 'highpass', 3400, 5200, 1, 0.05);
+  } else if (hell) { // braises
+    crackle(t + 0.3, 1.8, 30, 0.08, 600, 5200);
+    nzSweep(t + 0.5, 1.5, 0.1, 'lowpass', 700, 200, 0.9, 0.06);
+  } else if (sewer) { // bulles et vase
+    for (let i = 0; i < 6; i++) oscA('sine', jit(500 + i * 140, 0.15), jit(900 + i * 200, 0.15), t + 0.4 + i * 0.3, 0.22, 0.045, 0.02);
+    nzSweep(t + 0.3, 1.7, 0.09, 'bandpass', 420, 180, 1.3, 0.05);
+  } else if (space) { // résonances cosmiques
+    for (let i = 0; i < 5; i++) partial(t + 0.4 + i * 0.3, jit(700 + i * 500, 0.08), 1.1, 0.03);
+    nzSweep(t + 0.3, 1.8, 0.06, 'bandpass', 1400, 3200, 2.5, 0.08);
+  } else if (storm) { // rafales
+    for (let i = 0; i < 4; i++) gust(t + 0.3 + i * 0.45, 0.7, 0.1, jit(500, 0.15), jit(2400, 0.15), 0.9);
+  } else { // pierre et ombre (Terres Oubliées)
+    for (let i = 0; i < 6; i++) nzSweep(t + 0.3 + i * 0.3, 0.12, 0.1, 'lowpass', jit(500, 0.2), jit(150, 0.2), 1, 0.004);
+    crackle(t + 0.2, 1.4, 12, 0.05, 400, 3200);
   }
+  nzSweep(t + 1.9, 0.55, 0.13, 'lowpass', 210, 90, 1, 0.02);
+  duck(0.4, 1.0);
 }
 // coup porté à un boss : impact lourd métallique + craquement
 export function sfxBossHit() {
   if (!sfxReady()) return; const t = ST();
-  osc('sine', 170, 45, t, 0.2, 0.32);
-  nz(t, 0.09, 0.2, 'bandpass', 1700, 2);
-  osc('triangle', 520, 110, t, 0.14, 0.09);
-  nz(t + 0.02, 0.05, 0.1, 'highpass', 5000);
+  oscA('sine', jit(175, 0.06), jit(45, 0.06), t, 0.22, 0.3, 0.003);
+  nzSweep(t, 0.1, 0.19, 'bandpass', jit(1750, 0.12), jit(1100, 0.12), 2, 0.001);
+  oscA('triangle', jit(530, 0.06), jit(115, 0.06), t, 0.15, 0.085, 0.003);
+  nzSweep(t + 0.02, 0.05, 0.09, 'highpass', jit(5200, 0.15), jit(6800, 0.15), 1, 0.001);
+  duck(0.12, 0.2);
 }
-export function sfxBreak() { // équipement cassé : craquement
+// attaque signature du boss final : identité sonore par élément
+export function sfxBossAtk(kind) {
   if (!sfxReady()) return; const t = ST();
-  nz(t, 0.15, 0.25, 'bandpass', 900, 2);
-  osc('square', 220, 50, t, 0.2, 0.15);
+  if (kind === 'fire') { // souffle brûlant + grondement + crépitements
+    nzSweep(t, 0.6, 0.24, 'lowpass', jit(700, 0.1), jit(300, 0.1), 0.9, 0.01);
+    oscA('sawtooth', jit(215, 0.06), jit(55, 0.06), t, 0.6, 0.12, 0.005);
+    nzSweep(t + 0.1, 0.45, 0.13, 'bandpass', jit(1500, 0.15), jit(700, 0.15), 0.9, 0.005);
+    crackle(t, 0.5, 12, 0.07, 900, 6000);
+  } else if (kind === 'ice') { // vent glacial + cristaux qui tintent
+    nzSweep(t, 0.5, 0.19, 'highpass', jit(3400, 0.12), jit(5200, 0.12), 1, 0.008);
+    oscA('sine', jit(1350, 0.08), jit(290, 0.08), t, 0.5, 0.085, 0.004);
+    oscA('sine', jit(1980, 0.08), jit(720, 0.08), t + 0.05, 0.4, 0.045, 0.004);
+    partial(t + 0.15, 2637, 0.5, 0.03);
+    crackle(t, 0.4, 8, 0.05, 4000, 9000);
+  } else if (kind === 'earth') { // grondement + roches qui se fendent
+    nzSweep(t, 0.75, 0.28, 'lowpass', jit(280, 0.1), 120, 1, 0.008);
+    oscA('sine', jit(88, 0.05), jit(30, 0.05), t, 0.75, 0.28, 0.005);
+    nzSweep(t + 0.08, 0.55, 0.15, 'bandpass', jit(380, 0.12), jit(160, 0.12), 1.2, 0.005);
+    crackle(t + 0.05, 0.5, 10, 0.07, 500, 2600);
+  } else if (kind === 'acid') { // vase : bouillonnement + gouttes acides
+    nzSweep(t, 0.65, 0.2, 'bandpass', jit(520, 0.1), jit(260, 0.1), 1.4, 0.01);
+    oscA('sine', jit(145, 0.06), jit(58, 0.06), t, 0.65, 0.13, 0.005);
+    oscA('sine', jit(950, 0.08), jit(1500, 0.08), t + 0.12, 0.32, 0.045, 0.01);
+    nzSweep(t + 0.2, 0.45, 0.09, 'highpass', jit(2500, 0.15), jit(4000, 0.15), 1, 0.01);
+    crackle(t + 0.15, 0.4, 6, 0.04, 2000, 6000);
+  } else if (kind === 'storm') { // whoosh de tornade + claquement électrique
+    gust(t, 0.75, 0.22, jit(650, 0.12), jit(2600, 0.12), 1.1);
+    oscA('sawtooth', jit(95, 0.06), jit(38, 0.06), t, 0.75, 0.13, 0.005);
+    nzSweep(t + 0.15, 0.55, 0.11, 'highpass', jit(2900, 0.15), jit(4800, 0.15), 1, 0.01);
+    oscA('sine', jit(2300, 0.1), jit(600, 0.1), t + 0.2, 0.32, 0.035, 0.005);
+    crackle(t + 0.1, 0.4, 8, 0.06, 3000, 8000);
+  } else if (kind === 'void') { // sirène cosmique + marée gravitationnelle
+    oscA('sine', jit(820, 0.06), jit(90, 0.06), t, 0.75, 0.15, 0.005);
+    oscA('sine', jit(1250, 0.06), jit(155, 0.06), t + 0.05, 0.55, 0.07, 0.005);
+    nzSweep(t, 0.6, 0.17, 'bandpass', jit(950, 0.15), jit(500, 0.15), 2.5, 0.005);
+    nzSweep(t + 0.15, 0.35, 0.09, 'highpass', jit(4400, 0.15), jit(6500, 0.15), 1, 0.008);
+    partial(t + 0.1, 1760, 0.5, 0.03);
+  } else { // shadow / défaut : souffle sombre + grondement
+    nzSweep(t, 0.55, 0.18, 'bandpass', jit(400, 0.12), jit(180, 0.12), 1, 0.008);
+    oscA('square', jit(155, 0.07), jit(55, 0.07), t, 0.55, 0.1, 0.005);
+    oscA('sawtooth', jit(310, 0.07), jit(85, 0.07), t + 0.08, 0.45, 0.055, 0.005);
+    crackle(t, 0.35, 6, 0.04, 800, 3500);
+  }
+  duck(0.15, 0.3);
 }
-export function sfxWave() { // nouvelle vague : gong grave
+// nouvelle vague : annonce au cor + coup de gong grave
+export function sfxWave() {
   if (!sfxReady()) return; const t = ST();
-  osc('sine', 220, 220, t, 0.8, 0.12);
-  osc('sine', 330, 330, t, 0.7, 0.07);
-  nz(t, 0.3, 0.06, 'bandpass', 1200, 2);
+  gong(t, jit(196, 0.04), 1.1, 0.1);
+  oscA('sawtooth', jit(294, 0.04), jit(294, 0.04), t + 0.05, 0.8, 0.045, 0.04);
+  nzSweep(t, 0.35, 0.05, 'bandpass', jit(1300, 0.1), jit(800, 0.1), 2, 0.01);
 }
-export function sfxWarn() { // alerte : deux notes graves descendantes
+// alerte : deux notes graves descendantes + claquement sourd
+export function sfxWarn() {
   if (!sfxReady()) return; const t = ST();
-  osc('sawtooth', 330, 160, t, 0.5, 0.1);
-  osc('sawtooth', 220, 110, t + 0.12, 0.55, 0.1);
-  nz(t, 0.3, 0.05, 'lowpass', 700, 1);
+  oscA('sawtooth', jit(335, 0.05), jit(160, 0.05), t, 0.55, 0.09, 0.005);
+  oscA('sawtooth', jit(225, 0.05), jit(110, 0.05), t + 0.13, 0.6, 0.09, 0.005);
+  nzSweep(t, 0.32, 0.045, 'lowpass', jit(750, 0.1), 350, 1, 0.005);
+  oscA('sine', 80, 45, t + 0.1, 0.3, 0.08, 0.005);
+}
+
+// ---------- TITAN DE FEU : transformation, laser, main de feu, éruption ----------
+// transformation : montée de feu + battements de cœur + crépitements
+export function sfxHellTransform() {
+  if (!sfxReady()) return; const t = ST();
+  oscA('sawtooth', jit(60, 0.05), jit(220, 0.05), t, 0.9, 0.16, 0.05);
+  oscA('sine', jit(90, 0.05), jit(45, 0.05), t + 0.55, 0.6, 0.22, 0.02);
+  nzSweep(t + 0.2, 0.9, 0.14, 'lowpass', jit(500, 0.12), jit(1400, 0.12), 0.9, 0.06);
+  crackle(t + 0.15, 0.9, 24, 0.08, 700, 5500);
+  oscA('square', jit(180, 0.05), jit(60, 0.05), t + 0.1, 0.5, 0.07, 0.01);
+  duck(0.3, 0.7);
+}
+// laser de feu : souffle + zap descendant + crépitements de brûlure
+export function sfxFireLaser() {
+  if (!sfxReady()) return; const t = ST();
+  nzSweep(t, 0.22, 0.2, 'bandpass', jit(2800, 0.15), jit(900, 0.15), 1.4, 0.003);
+  oscA('sawtooth', jit(950, 0.1), jit(160, 0.1), t, 0.2, 0.11, 0.002);
+  oscA('square', jit(1900, 0.1), jit(300, 0.1), t, 0.12, 0.05, 0.001);
+  crackle(t, 0.18, 8, 0.07, 1200, 7000);
+  oscA('sine', 70, 40, t, 0.18, 0.14, 0.002);
+}
+// main de feu : whoosh enflammé + burst au lancement
+export function sfxFireHand() {
+  if (!sfxReady()) return; const t = ST();
+  nzSweep(t, 0.4, 0.2, 'bandpass', jit(400, 0.12), jit(2200, 0.12), 1, 0.03);
+  oscA('sawtooth', jit(140, 0.08), jit(480, 0.08), t + 0.1, 0.3, 0.09, 0.02);
+  crackle(t + 0.15, 0.35, 16, 0.08, 800, 6000);
+  oscA('sine', 85, 40, t + 0.2, 0.3, 0.18, 0.01);
+}
+// éruption volcanique : boom profond + projections de roche + sifflement
+export function sfxVolcano() {
+  if (!sfxReady()) return; const t = ST();
+  oscA('sine', jit(75, 0.05), jit(30, 0.05), t, 0.6, 0.34, 0.004);
+  nzSweep(t, 0.65, 0.3, 'lowpass', jit(600, 0.1), 140, 0.9, 0.005);
+  crackle(t + 0.05, 0.55, 20, 0.09, 500, 5000);
+  nzSweep(t + 0.1, 0.5, 0.16, 'bandpass', jit(900, 0.15), jit(300, 0.15), 1, 0.01);
+  duck(0.28, 0.5);
+}
+// fin de transformation : le feu s'éteint en soupir
+export function sfxTitanEnd() {
+  if (!sfxReady()) return; const t = ST();
+  oscA('sawtooth', jit(200, 0.06), jit(50, 0.06), t, 0.8, 0.12, 0.02);
+  nzSweep(t, 0.7, 0.11, 'lowpass', jit(900, 0.1), 250, 0.9, 0.03);
+  crackle(t, 0.6, 14, 0.05, 600, 4500);
+  oscA('sine', 120, 45, t + 0.15, 0.5, 0.1, 0.02);
 }
 
 // ---------- ULTIME : PLUIE DE GLACE (sound design en 4 couches) ----------
 // activation : montée grave mystérieuse + cristaux qui tintent
 export function sfxIceCharge() {
   if (!sfxReady()) return; const t = ST();
-  osc('sine', 70, 240, t, 1.15, 0.11);          // grondement montant
-  osc('triangle', 140, 480, t + 0.1, 1.0, 0.05);
-  nz(t, 1.0, 0.045, 'bandpass', 2200, 2.5);    // souffle cristallin naissant
-  [1568, 1976, 2637].forEach((f, i) => osc('sine', f, f * 1.02, t + 0.55 + i * 0.2, 0.32, 0.028));
+  oscA('sine', jit(72, 0.05), jit(250, 0.05), t, 1.2, 0.1, 0.06);
+  oscA('triangle', jit(145, 0.05), jit(490, 0.05), t + 0.1, 1.05, 0.045, 0.06);
+  nzSweep(t, 1.05, 0.04, 'bandpass', jit(2300, 0.1), jit(3400, 0.1), 2.5, 0.08);
+  [1568, 1976, 2637].forEach((f, i) => partial(t + 0.55 + i * 0.2, jit(f, 0.03), 0.34, 0.026));
 }
 // ouverture : déchirure lumineuse + accord de glace
 export function sfxIceOpen() {
   if (!sfxReady()) return; const t = ST();
-  nz(t, 0.7, 0.13, 'bandpass', 1900, 0.8);     // whoosh montant
-  osc('sawtooth', 280, 980, t, 0.6, 0.045);
-  [1047, 1319, 1568].forEach((f, i) => osc('triangle', f, f, t + 0.12 + i * 0.09, 0.5, 0.04));
-  nz(t + 0.1, 0.5, 0.05, 'highpass', 5200);
+  nzSweep(t, 0.75, 0.12, 'bandpass', jit(1900, 0.1), jit(3200, 0.1), 0.8, 0.02);
+  oscA('sawtooth', jit(285, 0.06), jit(990, 0.06), t, 0.65, 0.04, 0.01);
+  [1047, 1319, 1568].forEach((f, i) => oscA('triangle', f, f, t + 0.12 + i * 0.09, 0.55, 0.037, 0.01));
+  nzSweep(t + 0.1, 0.55, 0.045, 'highpass', jit(5400, 0.1), jit(7600, 0.1), 1, 0.02);
+  chime(t + 0.3, 2093, 0.7, 0.03);
 }
 // tempête : vent glacial soutenu + grondement d'altitude (~8 s)
 export function sfxIceStorm() {
   if (!sfxReady()) return; const t = ST();
-  nz(t, 8.0, 0.085, 'bandpass', 850, 0.55);    // souffle de vent filtré
-  nz(t + 0.5, 7.0, 0.06, 'highpass', 3400);    // sifflement de givre
-  osc('sine', 55, 38, t, 8.0, 0.07);           // grondement lointain
-  nz(t + 1.2, 5.0, 0.04, 'bandpass', 500, 0.8); // seconde nappe plus grave
+  gust(t, 8.0, 0.08, jit(850, 0.05), jit(1150, 0.05), 0.55);
+  nzSweep(t + 0.5, 7.0, 0.055, 'highpass', jit(3500, 0.08), jit(4200, 0.08), 1, 0.1);
+  oscA('sine', jit(56, 0.04), jit(38, 0.04), t, 8.0, 0.065, 0.2);
+  nzSweep(t + 1.2, 5.0, 0.035, 'bandpass', jit(520, 0.08), jit(380, 0.08), 0.8, 0.2);
+  crackle(t + 0.4, 6.0, 30, 0.025, 5000, 9500);
 }
 // impact : craquement cristallin — pitch aléatoire contrôlé (anti-boucle)
 export function sfxIceImpact(big = false) {
   if (!sfxReady()) return; const t = ST();
-  const f = 1700 + Math.random() * 1500;
-  nz(t, 0.05, big ? 0.13 : 0.07, 'highpass', 4200);
-  osc('sine', f, f * 0.55, t, 0.13, big ? 0.075 : 0.04);
-  osc('sine', f * 1.5, f * 0.85, t + 0.025, 0.09, big ? 0.045 : 0.025);
-  if (big) { nz(t, 0.22, 0.09, 'lowpass', 480); osc('sine', 120, 45, t, 0.25, 0.08); }
+  const f = jit(1750 + Math.random() * 1400, 0.12);
+  nzSweep(t, 0.05, big ? 0.12 : 0.065, 'highpass', jit(4300, 0.2), jit(6200, 0.2), 1, 0.001);
+  oscA('sine', f, f * 0.55, t, 0.14, big ? 0.07 : 0.038, 0.002);
+  oscA('sine', f * 1.5, f * 0.85, t + 0.025, 0.1, big ? 0.042 : 0.024, 0.002);
+  partial(t + 0.04, f * 2.7, 0.2, big ? 0.03 : 0.015);
+  if (big) { nzSweep(t, 0.24, 0.08, 'lowpass', 500, 200, 1, 0.004); oscA('sine', jit(125, 0.05), 45, t, 0.28, 0.075, 0.003); }
 }
-// fin : expiration glacée descendante + dernier tintement de cristal
+// fin : expiration glacée descendante + derniers tintements de cristal
 export function sfxIceEnd() {
   if (!sfxReady()) return; const t = ST();
-  nz(t, 1.5, 0.11, 'highpass', 2600);
-  osc('sine', 1500, 260, t, 1.25, 0.055);
-  osc('sine', 2093, 2093, t + 0.5, 0.6, 0.045);
-  osc('sine', 3136, 3136, t + 0.78, 0.5, 0.028);
-  nz(t + 0.3, 0.9, 0.04, 'bandpass', 700, 0.7);
+  nzSweep(t, 1.6, 0.1, 'highpass', jit(2700, 0.08), jit(1800, 0.08), 1, 0.06);
+  oscA('sine', jit(1520, 0.05), jit(260, 0.05), t, 1.3, 0.05, 0.03);
+  partial(t + 0.5, 2093, 0.65, 0.042);
+  partial(t + 0.78, 3136, 0.55, 0.026);
+  nzSweep(t + 0.3, 0.95, 0.035, 'bandpass', jit(720, 0.08), jit(420, 0.08), 0.7, 0.05);
 }
 
 // ---------- ARC CINÉTIQUE COSMIQUE ----------
-export function sfxBowFire(power = 0.5) { // tir : zap électronique montant, puissance = charge
+export function sfxBowFire(power = 0.5) { // tir : zap cinétique montant, puissance = charge
   if (!sfxReady()) return; const t = ST();
   const p = Math.min(1, Math.max(0, power));
-  // corps :-descente rapide type laser
-  osc('sawtooth', 1400 + p * 900, 180, t, 0.14 + p * 0.1, 0.10 + p * 0.08);
-  // sifflement d'énergie
-  nz(t, 0.12 + p * 0.12, 0.10 + p * 0.10, 'bandpass', 3600 + p * 2400, 3);
-  // clic cristallin en fin de charge
+  oscA('sawtooth', jit(1450 + p * 850, 0.08), jit(180, 0.08), t, 0.15 + p * 0.1, 0.095 + p * 0.075, 0.002);
+  nzSweep(t, 0.13 + p * 0.12, 0.095 + p * 0.095, 'bandpass', jit(3700 + p * 2300, 0.12), jit(1400 + p * 800, 0.12), 3, 0.002);
+  oscA('square', jit(2800 + p * 1200, 0.1), jit(500, 0.1), t, 0.1 + p * 0.06, 0.035 + p * 0.03, 0.001);
   if (p > 0.55) {
-    osc('sine', 2200, 3200, t + 0.03, 0.18, 0.06);
-    nz(t + 0.02, 0.1, 0.08, 'highpass', 6000);
+    oscA('sine', jit(2300, 0.06), jit(3300, 0.06), t + 0.03, 0.2, 0.055, 0.005);
+    nzSweep(t + 0.02, 0.11, 0.075, 'highpass', jit(6200, 0.15), jit(8400, 0.15), 1, 0.001);
   }
+  if (p > 0.85) duck(0.15, 0.25);
 }
 export function sfxSingularity() { // SINGULARITÉ : compression gravitationnelle + explosion
   if (!sfxReady()) return; const t = ST();
-  // montée sub-grave de compression
-  osc('sine', 60, 240, t, 0.5, 0.22);
-  osc('sine', 90, 30, t + 0.42, 0.5, 0.24); // chute = implosion
-  // shimmer cosmique
+  oscA('sine', jit(62, 0.04), jit(250, 0.04), t, 0.55, 0.2, 0.03);
+  oscA('sine', jit(92, 0.04), jit(30, 0.04), t + 0.45, 0.55, 0.23, 0.01);
   for (let i = 0; i < 4; i++) {
-    osc('sine', 900 + i * 380, 1400 + i * 500, t + 0.1 + i * 0.07, 0.4, 0.04);
+    oscA('sine', jit(950 + i * 380, 0.05), jit(1450 + i * 500, 0.05), t + 0.1 + i * 0.07, 0.45, 0.035, 0.01);
   }
-  nz(t + 0.45, 0.4, 0.16, 'lowpass', 900, 1); // boom sourd de la distorsion
-  nz(t, 0.5, 0.05, 'highpass', 4000);
+  nzSweep(t + 0.47, 0.45, 0.15, 'lowpass', jit(950, 0.12), 300, 1, 0.005);
+  nzSweep(t, 0.55, 0.045, 'highpass', jit(4200, 0.1), jit(6200, 0.1), 1, 0.02);
+  duck(0.3, 0.5);
 }
 
 // ---------- SFX boutique / progression ----------
 export function sfxBuy() { // achat : deux pièces + registre satisfaisant
-  if (!sfxReady()) return; const t = ST();
-  osc('square', 1568, 1568, t, 0.08, 0.07);
-  osc('square', 2093, 2093, t + 0.09, 0.14, 0.07);
-  osc('sine', 1047, 1047, t + 0.05, 0.2, 0.05);
+  if (!uiReady()) return; const t = ST(); const d = UIB();
+  coin(t, jit(1568, 0.04), 0.065, d);
+  coin(t + 0.1, jit(2093, 0.04), 0.065, d);
+  oscA('sine', jit(1050, 0.03), jit(1050, 0.03), t + 0.06, 0.22, 0.045, 0.01, d);
+  nzSweep(t + 0.12, 0.25, 0.015, 'highpass', 7000, 9500, 1, 0.02, d);
 }
-export function sfxUnlock() { // déblocage : arpège montant cristallin
-  if (!sfxReady()) return; const t = ST();
-  [784, 988, 1175, 1568].forEach((f, i) =>
-    osc('sine', f, f, t + i * 0.08, 0.4, 0.08));
-  nz(t + 0.1, 0.5, 0.04, 'highpass', 6000);
+export function sfxSell() { // vente : pièce grave + registre feutré
+  if (!uiReady()) return; const t = ST(); const d = UIB();
+  coin(t, jit(1319, 0.04), 0.055, d);
+  oscA('sine', jit(660, 0.04), jit(660, 0.04), t + 0.11, 0.16, 0.055, 0.008, d);
+  nzSweep(t + 0.08, 0.2, 0.03, 'bandpass', jit(1100, 0.1), jit(700, 0.1), 1.4, 0.01, d);
 }
-export function sfxAchievement() { // succès débloqué : petite fanfare dorée
-  if (!sfxReady()) return; const t = ST();
-  [523, 659, 784, 1047, 1319].forEach((f, i) =>
-    osc('triangle', f, f, t + i * 0.1, 0.5, 0.09));
-  osc('sine', 2093, 2093, t + 0.5, 0.6, 0.05);
+export function sfxUnlock() { // déblocage : arpège montant cristallin + halo
+  if (!uiReady()) return; const t = ST(); const d = UIB();
+  [784, 988, 1175, 1568].forEach((f, i) => {
+    const t0 = t + i * 0.08;
+    oscA('sine', jit(f, 0.02), jit(f, 0.02), t0, 0.42, 0.075, 0.008, d);
+    partial(t0, f * 2.76, 0.3, 0.025, 'sine', d);
+  });
+  nzSweep(t + 0.1, 0.6, 0.035, 'highpass', jit(6200, 0.1), jit(9200, 0.1), 1, 0.05, d);
+  chime(t + 0.42, 2637, 0.8, 0.035, d);
 }
-export function sfxSell() { // vente : registre grave + pièce
+export function sfxAchievement() { // succès débloqué : fanfare dorée en cloches
+  if (!uiReady()) return; const t = ST(); const d = UIB();
+  [523, 659, 784, 1047, 1319].forEach((f, i) => {
+    const t0 = t + i * 0.1;
+    chime(t0, jit(f, 0.02), 0.6, 0.06, d);
+  });
+  gong(t + 0.5, jit(262, 0.03), 1.4, 0.06, d);
+  nzSweep(t + 0.3, 0.7, 0.02, 'highpass', 7500, 10500, 1, 0.05, d);
+}
+// ---------- fin de campagne : sting triomphal sombre ----------
+export function sfxVictory() {
   if (!sfxReady()) return; const t = ST();
-  osc('sine', 660, 660, t, 0.12, 0.07);
-  osc('square', 1319, 1319, t + 0.1, 0.1, 0.05);
+  gong(t, jit(196, 0.03), 2.2, 0.12);
+  [392, 523, 659, 784].forEach((f, i) => {
+    const t0 = t + 0.15 + i * 0.16;
+    oscA('sawtooth', f, f, t0, 0.9, 0.05, 0.03);
+    oscA('sine', f * 2, f * 2, t0, 0.6, 0.03, 0.02);
+  });
+  nzSweep(t + 0.2, 1.6, 0.03, 'highpass', 6000, 9000, 1, 0.1);
+  duck(0.2, 0.5);
 }
 
 // debug/test : contexte musical courant + intensité

@@ -9,7 +9,7 @@ import { drawHUD, drawAchToast, drawWarnToast } from './hud.js';
 import { drawMenu, drawGameOver, drawPauseMenu, drawVictory, recordRun, drawAdminMenu, drawAdminButton, drawDurWarnPopup } from './menu.js';
 import { initWorlds, updateCamera, worldW, worldH, checkWavePortal, syncCamera, resolveObstacles, curWorld } from './world.js';
 import { CAMPAIGNS } from './world_data.js';
-import { drawMusicButton, sfxHurt, sfxWave, sfxPickup, sfxBreak, sfxBoss, sfxWarn, sfxPhase, sfxBossAtk } from './audio.js';
+import { drawMusicButton, sfxHurt, sfxWave, sfxPickup, sfxBreak, sfxBoss, sfxWarn, sfxPhase, sfxBossAtk, sfxTitanEnd, sfxVictory } from './audio.js';
 import { updateTutorial, drawTutorial } from './tutorial.js';
 import { tickPlaytime } from './chars.js';
 import { updateHellEvents, updateFrozenEvents, updateSewerEvents, updateSpaceEvents, updateStormEvents } from './events.js';
@@ -248,6 +248,7 @@ function update(dt) {
     p.hp = Math.min(p.hp, p._titanMax);
     p.maxHp = p._titanMax;
     p._titanMax = 0;
+    sfxTitanEnd(); // le feu s'éteint en soupir
   }
   p.ultAnim = Math.max(0, p.ultAnim - dt);
   p.potionCooldown = Math.max(0, p.potionCooldown - dt);
@@ -728,6 +729,7 @@ function update(dt) {
     G.pendingVictory = false;
     G.state = 'victory';
     G.vicT = 0; // horloge de la révélation de l'écran de victoire
+    sfxVictory(); // sting triomphal sombre : gong + accords ascendants
     recordRun(); // la victoire compte comme une partie réussie dans les stats
     // campagne terminée : débloque la suite (campagne 1 -> Frozen Land)
     G.stats.campaignDone = G.stats.campaignDone || {};
