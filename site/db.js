@@ -57,6 +57,22 @@ CREATE TABLE IF NOT EXISTS releases (
   current INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+CREATE TABLE IF NOT EXISTS saves (
+  user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  payload TEXT NOT NULL,             -- JSON complet de la sauvegarde du jeu
+  version INTEGER NOT NULL DEFAULT 1,-- incrémenté à chaque upload accepté
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS player_stats (
+  user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  level INTEGER NOT NULL DEFAULT 1,
+  worlds_done INTEGER NOT NULL DEFAULT 0,
+  bosses INTEGER NOT NULL DEFAULT 0,
+  achievements INTEGER NOT NULL DEFAULT 0,
+  playtime INTEGER NOT NULL DEFAULT 0,  -- secondes de jeu cumulées
+  score INTEGER NOT NULL DEFAULT 0,     -- calculé côté serveur, jamais par le client
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 CREATE TABLE IF NOT EXISTS downloads_log (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
@@ -66,6 +82,7 @@ CREATE TABLE IF NOT EXISTS downloads_log (
 );
 CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_tokens_user ON tokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_stats_score ON player_stats(score DESC);
 `);
 
 export const q = {
@@ -105,5 +122,33 @@ export const q = {
   countNews: db.prepare('SELECT COUNT(*) c FROM news'),
   countDownloads: db.prepare('SELECT COUNT(*) c FROM downloads_log'),
   recentDownloads: db.prepare(`SELECT d.created_at, d.version, u.pseudo FROM downloads_log d
-                                LEFT JOIN users u ON u.id = d.user_id ORDER BY d.id DESC LIMIT 20`)
+                                LEFT JOIN users u ON u.id = d.user_id ORDER BY d.id DESC LIMIT 20`),
+  // ---------- sauvegardes cloud + stats publiques ----------
+  saveByUser: db.prepare('SELECT * FROM saves WHERE user_id = ?'),
+  insSave: db.prepare(`INSERT INTO saves (user_id, payload, version) VALUES (?,?,1)
+                       ON CONFLICT(user_id) DO UPDATE SET payload=excluded.payload,
+                       version=saves.version+1, updated_at=datetime('now')`),
+  updSaveVer: db.prepare('UPDATE saves SET version = version + 1, updated_at = datetime(\'now\') WHERE user_id = ?'),
+  statsByUser: db.prepare('SELECT * FROM player_stats WHERE user_id = ?'),
+  upsertStats: db.prepare(`INSERT INTO player_stats (user_id,level,worlds_done,bosses,achievements,playtime,score)
+                           VALUES (?,?,?,?,?,?,?)
+                           ON CONFLICT(user_id) DO UPDATE SET level=excluded.level,
+                           worlds_done=excluded.worlds_done, bosses=excluded.bosses,
+                           achievements=excluded.achievements, playtime=excluded.playtime,
+                           score=excluded.score, updated_at=datetime('now')`),
+  leaderboard: db.prepare(`SELECT ps.score, ps.level, ps.worlds_done, ps.bosses, ps.achievements,
+                            ps.playtime, ps.updated_at, u.pseudo, u.avatar
+                            FROM player_stats ps JOIN users u ON u.id = ps.user_id
+                            WHERE u.suspended = 0 AND ps.score > 0
+                            ORDER BY ps.score DESC, ps.updated_at ASC LIMIT ? OFFSET ?`),
+  countLeaderboard: db.prepare(`SELECT COUNT(*) c FROM player_stats ps JOIN users u ON u.id = ps.user_id
+                                WHERE u.suspended = 0 AND ps.score > 0`),
+  searchLeaderboard: db.prepare(`SELECT ps.score, ps.level, ps.worlds_done, u.pseudo
+                                 FROM player_stats ps JOIN users u ON u.id = ps.user_id
+                                 WHERE u.suspended = 0 AND ps.score > 0 AND u.pseudo LIKE ? ESCAPE '\\'
+                                 ORDER BY ps.score DESC LIMIT 20`),
+  publicStats: db.prepare(`SELECT ps.score, ps.level, ps.worlds_done, ps.bosses, ps.achievements,
+                           ps.playtime, ps.updated_at, u.pseudo, u.avatar, u.created_at
+                           FROM player_stats ps JOIN users u ON u.id = ps.user_id
+                           WHERE u.pseudo = ? COLLATE NOCASE AND u.suspended = 0`)
 };

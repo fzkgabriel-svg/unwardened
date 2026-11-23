@@ -302,11 +302,147 @@ route('GET', '/download/:file', (req, res) => {
   createReadStream(path).pipe(res);
 });
 
+// ---------- JEU : authentification par token + sauvegarde cloud + classement ----------
+// Le jeu tourne sur une autre origine (localhost:8000) : authentification par
+// Authorization: Bearer <session token> et CORS restreint à cette origine.
+const GAME_ORIGIN = process.env.GAME_ORIGIN || 'http://localhost:8000';
+function gameCors(res) {
+  res.setHeader('Access-Control-Allow-Origin', GAME_ORIGIN);
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS');
+  res.setHeader('Vary', 'Origin');
+}
+function getGameSession(req) {
+  const m = /^Bearer ([a-f0-9]{64})$/.exec(req.headers.authorization || '');
+  if (!m) return null;
+  const s = q.sessByToken.get(m[1]);
+  if (!s || s.expires_at < new Date().toISOString() || s.suspended) return null;
+  return s;
+}
+const needGame = fn => (req, res, b) => {
+  const s = getGameSession(req);
+  return s ? fn(req, res, b, s) : json(res, 401, { error: 'Connexion jeu requise' });
+};
+
+route('POST', '/api/game/login', async (req, res, b) => {
+  const ip = clientIp(req);
+  if (!rateLimit('glogin:' + ip, 10, 600e3)) return json(res, 429, { error: 'Trop de tentatives — réessayez plus tard' });
+  const pseudo = clean(b.pseudo || b.email), pass = b.password;
+  const u = q.userByPseudo.get(pseudo) || q.userByEmail.get(clean(pseudo).toLowerCase());
+  const okPass = u && verifyPass(pass, u.pass);
+  await new Promise(r => setTimeout(r, 120));
+  if (!u || !okPass) return json(res, 401, { error: 'Identifiants incorrects' });
+  if (u.suspended) return json(res, 403, { error: 'Ce compte est suspendu' });
+  // session SANS cookie : le jeu garde le token en localStorage
+  const token = crypto.randomBytes(32).toString('hex');
+  q.insSession.run(token, u.id, new Date(Date.now() + SESSION_DAYS * 864e5).toISOString());
+  json(res, 200, { ok: true, token, user: pubUser(q.userById.get(u.id)) });
+});
+
+route('POST', '/api/game/logout', needGame((req, res, b, s) => {
+  const m = /^Bearer ([a-f0-9]{64})$/.exec(req.headers.authorization || '');
+  if (m) q.delSession.run(m[1]);
+  json(res, 200, { ok: true });
+}));
+
+// ---------- score officiel : calculé côté serveur depuis les stats brutes ----------
+// Le client envoie des compteurs ; le serveur borne chaque valeur puis applique
+// une formule fixe. Le score n'est JAMAIS fourni par le client.
+function computeScore(st) {
+  const lvl = Math.min(200, Math.max(1, Math.floor(+st.level) || 1));
+  const worlds = Math.min(6, Math.max(0, Math.floor(+st.worldsDone) || 0));
+  const bosses = Math.min(60, Math.max(0, Math.floor(+st.bosses) || 0));
+  const achv = Math.min(100, Math.max(0, Math.floor(+st.achievements) || 0));
+  const playMin = Math.min(20000, Math.max(0, Math.floor((+st.playtime || 0) / 60)));
+  return {
+    level: lvl, worlds_done: worlds, bosses, achievements: achv, playtime: playMin * 60,
+    score: lvl * 100 + worlds * 5000 + bosses * 800 + achv * 300 + playMin * 2
+  };
+}
+
+route('GET', '/api/game/save', needGame((req, res, b, s) => {
+  const sv = q.saveByUser.get(s.id);
+  if (!sv) return json(res, 404, { error: 'Aucune sauvegarde cloud' });
+  let payload = null;
+  try { payload = JSON.parse(sv.payload); } catch (e) {}
+  json(res, 200, { version: sv.version, updated_at: sv.updated_at, payload });
+}));
+
+route('PUT', '/api/game/save', needGame((req, res, b, s) => {
+  const ip = clientIp(req);
+  if (!rateLimit('gsave:' + s.id, 30, 600e3)) return json(res, 429, { error: 'Synchronisation trop fréquente' });
+  const payload = b.payload;
+  if (!payload || typeof payload !== 'object') return json(res, 400, { error: 'Payload invalide' });
+  const raw = JSON.stringify(payload);
+  if (raw.length > 400000) return json(res, 413, { error: 'Sauvegarde trop volumineuse' });
+  const baseVersion = Math.floor(+b.baseVersion) || 0;
+  const sv = q.saveByUser.get(s.id);
+  const curVersion = sv ? sv.version : 0;
+  // gestion de conflit : le client DOIT fournir la version qu'il a lue.
+  // Si les versions divergent, on refuse et on renvoie la version serveur —
+  // le client décide (écraser / fusionner / garder le local).
+  if (baseVersion !== curVersion) {
+    return json(res, 409, { conflict: true, version: curVersion,
+      updated_at: sv ? sv.updated_at : null, hasSave: !!sv });
+  }
+  q.insSave.run(s.id, raw);
+  // stats publiques : extraites du payload (stats du jeu), score recalculé serveur
+  const st = (payload.stats && typeof payload.stats === 'object') ? payload.stats : {};
+  const sc = computeScore(st);
+  q.upsertStats.run(s.id, sc.level, sc.worlds_done, sc.bosses, sc.achievements, sc.playtime, sc.score);
+  json(res, 200, { ok: true, version: curVersion + 1 });
+}));
+
+// ---------- classement public ----------
+route('GET', '/api/leaderboard', (req, res, b, s, m) => {
+  const u = new URL(req.url, `http://${req.headers.host}`);
+  const qstr = clean(u.searchParams.get('q'));
+  if (qstr) {
+    const like = '%' + qstr.replace(/[\\%_]/g, c => '\\' + c) + '%';
+    return json(res, 200, { players: q.searchLeaderboard.all(like) });
+  }
+  const limit = Math.min(100, Math.max(1, Math.floor(+u.searchParams.get('limit')) || 50));
+  const offset = Math.max(0, Math.floor(+u.searchParams.get('offset')) || 0);
+  const players = q.leaderboard.all(limit, offset);
+  const total = q.countLeaderboard.get().c;
+  // rang du joueur connecté (si token fourni) même hors page affichée
+  let me = null;
+  const gs = getGameSession(req);
+  if (gs) {
+    const row = q.statsByUser.get(gs.id);
+    if (row && row.score > 0) {
+      const above = db.prepare('SELECT COUNT(*) c FROM player_stats ps JOIN users u ON u.id=ps.user_id WHERE u.suspended=0 AND ps.score > ?').get(row.score).c;
+      me = { rank: above + 1, score: row.score, level: row.level, worlds_done: row.worlds_done };
+    }
+  }
+  json(res, 200, { players, total, limit, offset, me });
+});
+
+// profil public : aucune donnée privée (pas d'email)
+route('GET', '/api/player/:pseudo', (req, res, b, s, m) => {
+  const st = q.publicStats.get(decodeURIComponent(m[1]));
+  if (!st) return json(res, 404, { error: 'Joueur introuvable' });
+  json(res, 200, { player: {
+    pseudo: st.pseudo, avatar: st.avatar ? `/avatar/${st.avatar}` : null,
+    score: st.score, level: st.level, worlds_done: st.worlds_done,
+    bosses: st.bosses, achievements: st.achievements,
+    playtime: st.playtime, updated_at: st.updated_at, member_since: st.created_at
+  }});
+});
+
 // ---------- dispatch ----------
 const server = http.createServer(async (req, res) => {
   try {
     const u = new URL(req.url, `http://${req.headers.host}`);
     const pathname = decodeURIComponent(u.pathname);
+    // CORS pour les routes consommées par le jeu (autre origine) :
+    // préflight OPTIONS + en-têtes sur les réponses
+    const isGameApi = pathname.startsWith('/api/game/') || pathname === '/api/leaderboard'
+      || pathname.startsWith('/api/player/');
+    if (isGameApi) {
+      gameCors(res);
+      if (req.method === 'OPTIONS') { res.writeHead(204); return res.end(); }
+    }
     if (pathname.startsWith('/api/') || pathname.startsWith('/download/')) {
       for (const r of routes) {
         const m = pathname.match(new RegExp('^' + r.p.replace(/:[^/]+/g, '([^/]+)') + '$'));
