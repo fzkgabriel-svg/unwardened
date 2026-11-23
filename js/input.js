@@ -4,7 +4,7 @@ import { checkAdminPass, createChar } from './chars.js';
 import { adminMenuClickAt, adminButtonAt, adminUnlocked } from './menu.js';
 import { usePotion } from './player.js';
 import { tryInteract } from './world.js';
-import { ensureAudio, toggleMusic, toggleSfx, audioButtonAt, audioPanelClickAt, sfxClick, sfxConfirm } from './audio.js';
+import { ensureAudio, toggleMusic, toggleSfx, audioButtonAt, audioPanelClickAt, audioPanelDragAt, audioPanelDragEnd, sfxClick, sfxConfirm } from './audio.js';
 import { shopButtonAt, shopClickAt, shopDay } from './shop.js';
 import { startTutorial, tutorialEnter } from './tutorial.js';
 import { bowUnlocked } from './bow.js';
@@ -121,7 +121,17 @@ export function initInput() {
     G.mouse.x = (e.clientX - r.left) * (W / r.width);
     G.mouse.y = (e.clientY - r.top) * (H / r.height);
   }
-  canvas.addEventListener('mousemove', canvasPos);
+  canvas.addEventListener('mousemove', e => {
+    canvasPos(e);
+    // drag d'un curseur audio : le volume suit la souris en temps réel
+    if (G.audioOpen) audioPanelDragAt(G.mouse.x, G.mouse.y);
+  });
+  // relâcher le bouton termine le drag (même hors du canvas)
+  window.addEventListener('mouseup', () => audioPanelDragEnd());
+  // le drag continue même si la souris sort du canvas
+  window.addEventListener('mousemove', e => {
+    if (G.audioOpen) { canvasPos(e); audioPanelDragAt(G.mouse.x, G.mouse.y); }
+  });
   canvas.addEventListener('mousedown', e => {
     ensureAudio();
     canvasPos(e);

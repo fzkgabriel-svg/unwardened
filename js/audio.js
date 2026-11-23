@@ -615,20 +615,29 @@ export function audioPanelAt(x, y) {
   }
   return 'inside';
 }
+let audDrag = -1; // index de la ligne en cours de drag (-1 = aucune)
 export function audioPanelClickAt(x, y) {
   const hit = audioPanelAt(x, y);
-  if (hit === 'close') { G.audioOpen = false; return 'close'; }
-  if (hit === 'outside') { G.audioOpen = false; return 'close'; }
+  if (hit === 'close') { G.audioOpen = false; audDrag = -1; return 'close'; }
+  if (hit === 'outside') { G.audioOpen = false; audDrag = -1; return 'close'; }
   if (hit && hit[0] === 't' && hit[4] >= '0') {
     AP_ROWS[+hit[4]].tog(); sfxClick(); return hit;
   }
   if (hit && hit[0] === 'v' && hit[3] >= '0') {
-    const i = +hit[3], rr = apRowRect(i), sl = apSliderRect(rr);
-    const v = Math.max(0, Math.min(100, Math.round(((x - sl.x) / sl.w) * 100)));
-    AP_ROWS[i].set(v); sfxClick(); return hit;
+    audDrag = +hit[3];
+    audioPanelDragAt(x, y); sfxClick(); return hit;
   }
   return hit;
 }
+// drag : met à jour le volume de la ligne saisie tant que le bouton est maintenu
+export function audioPanelDragAt(x, y) {
+  if (audDrag < 0) return false;
+  const rr = apRowRect(audDrag), sl = apSliderRect(rr);
+  const v = Math.max(0, Math.min(100, Math.round(((x - sl.x) / sl.w) * 100)));
+  AP_ROWS[audDrag].set(v);
+  return true;
+}
+export function audioPanelDragEnd() { audDrag = -1; }
 export function drawAudioPanel() {
   if (!G.audioOpen) return;
   const r = apRect();
