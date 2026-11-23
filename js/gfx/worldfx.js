@@ -273,6 +273,21 @@ export function drawProjectiles() {
   for (const pr of G.projectiles) {
     ctx.save();
     ctx.translate(pr.x, pr.y);
+    if (pr.sonic) {
+      // orbe sonique du Chanteur : noyau clair + anneaux concentriques + traînée
+      ctx.rotate(Math.atan2(pr.vy, pr.vx));
+      ctx.fillStyle = 'rgba(197,225,165,0.3)';
+      ctx.beginPath(); ctx.ellipse(-10, 0, 10, 4.5, 0, 0, TAU); ctx.fill();
+      const sg = ctx.createRadialGradient(-pr.r * 0.2, -pr.r * 0.2, 1, 0, 0, pr.r);
+      sg.addColorStop(0, '#f1f8e9'); sg.addColorStop(0.55, '#aed581'); sg.addColorStop(1, '#33691e');
+      ctx.fillStyle = sg;
+      ctx.beginPath(); ctx.arc(0, 0, pr.r, 0, TAU); ctx.fill();
+      ctx.strokeStyle = 'rgba(240,255,220,0.85)'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(0, 0, pr.r * 0.62, 0, TAU); ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, 0, pr.r * 1.25, 0, TAU); ctx.stroke();
+      ctx.restore();
+      continue;
+    }
     if (pr.hex) {
       // orbe de sort violet
       ctx.rotate(Math.atan2(pr.vy, pr.vx));

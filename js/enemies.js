@@ -41,7 +41,7 @@ export const enemyTypes = {
   vase:     { name: 'Vase Toxique',        hp: 110, speed: 0.55, damage: 18, xp: 32,  r: 16, aggro: Infinity, range: 0,  color: '#558b2f', glow: '#aeea00', attack: 'acid' },
   crapaud:  { name: 'Crapaud des Égoûts',  hp: 150, speed: 1.0,  damage: 24, xp: 38,  r: 15, aggro: Infinity, range: 19, color: '#4e6b3a', glow: '#aed581' },
   ver:      { name: 'Ver des Profondeurs', hp: 190, speed: 0.8,  damage: 26, xp: 46,  r: 17, aggro: Infinity, range: 0,  color: '#7a6a52', glow: '#d7ccc8', attack: 'acid' },
-  chanter:  { name: 'Chanteur des Égoûts',  hp: 130, speed: 0.85, damage: 20, xp: 42,  r: 14, aggro: Infinity, range: 0,  color: '#5d4037', glow: '#bcaaa4', attack: 'hex' },
+  chanter:  { name: 'Chanteur des Profondeurs',hp: 130, speed: 0.85, damage: 20, xp: 42,  r: 14, aggro: Infinity, range: 0,  color: '#5d4037', glow: '#bcaaa4', attack: 'sonic' },
   matriarche:{ name: 'Matriarche',          hp: 300, speed: 0.9,  damage: 30, xp: 90,  r: 22, aggro: Infinity, range: 26, color: '#6d4c41', glow: '#ffab91', isMini: true },
   bossEgout:{ name: 'Roi des Rats',        hp: 950, speed: 0.5,  damage: 44, xp: 320, r: 34, aggro: Infinity, range: 0,  color: '#5d4037', glow: '#aed581', isBoss: true, attack: 'acid' },
   finalBossEgout:{ name: 'Le Tyran des Profondeurs', hp: 1, speed: 0.5, damage: 80, xp: 2200, r: 56, aggro: Infinity, range: 66, color: '#3e2723', glow: '#aeea00', isBoss: true, attack: 'acid' },

@@ -1387,6 +1387,34 @@ export function sfxGardienUnlock() {
   duck(0.3, 0.9);
 }
 
+// ---------- Chanteur des Profondeurs : identité sonore des orbes soniques ----------
+// concentration : deux notes jumelles qui montent + souffle filtré montant
+export function sfxSonicCharge() {
+  if (!sfxReady()) return; const t = ST();
+  oscA('sine', jit(196, 0.04), 392, t, 0.55, 0.09, 0.08, sfxBus);
+  oscA('sine', jit(294, 0.04), 588, t + 0.06, 0.5, 0.06, 0.08, sfxBus);
+  nzSweep(t, 0.5, 0.05, 'bandpass', 300, 2600, 2.5, 0.15);
+  for (let i = 0; i < 3; i++) partial(t + 0.15 + i * 0.12, jit(880 + i * 220, 0.05), 0.3, 0.025, 'sine');
+  duck(0.15, 0.3);
+}
+// projection : souffle compressé + claquement + clochette grave
+export function sfxSonicShot() {
+  if (!sfxReady()) return; const t = ST();
+  nzSweep(t, 0.16, 0.16, 'bandpass', 260, 2200, 1.4);
+  oscA('triangle', jit(540, 0.05), 190, t, 0.15, 0.11, 0.004, sfxBus);
+  partial(t + 0.02, jit(1040, 0.06), 0.28, 0.05, 'sine');
+  partial(t + 0.05, jit(520, 0.04), 0.3, 0.04, 'triangle');
+  duck(0.12, 0.2);
+}
+// impact : nappe sourde + ping cristallin court
+export function sfxSonicHit() {
+  if (!sfxReady()) return; const t = ST();
+  oscA('sine', jit(170, 0.05), 58, t, 0.18, 0.13, 0.004, sfxBus);
+  nzSweep(t, 0.12, 0.09, 'lowpass', 1000, 180);
+  partial(t + 0.03, jit(940, 0.06), 0.22, 0.04, 'sine');
+  duck(0.08, 0.15);
+}
+
 // debug/test : contexte musical courant + intensité
 export function audioDebug() {
   return { key: themeKey(), inten: +musicIntensity().toFixed(2), boss: bossActive(),

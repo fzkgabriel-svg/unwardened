@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>test monstres</title></head>
+<body>
+<canvas id="game" width="1200" height="640"></canvas>
+<pre id="out"></pre>
+<script>
+window.__errs = [];
+window.addEventListener('error', e => window.__errs.push(String(e.message || e.error)));
+window.addEventListener('unhandledrejection', e => window.__errs.push('rej:' + e.reason));
+setTimeout(() => { const o = document.getElementById('out'); if (o && !o.textContent) o.textContent = 'NOEXEC ' + window.__errs.join('|'); }, 3000);
+</script>
+<script type="module">
+import { G, ctx } from './js/state.js';
+import { enemyTypes, spawnEnemy } from './js/enemies.js';
+import { drawEnemy } from './js/gfx/enemies_draw.js';
+import { drawProjectiles } from './js/gfx/worldfx.js';
+
+const out = [];
+const ok = (name, cond) => out.push((cond ? 'PASS' : 'FAIL') + ' ' + name);
+
+// état minimal
+window.onerror = (m) => { document.getElementById('out').textContent = 'ERR ' + m; };
+if (!G.player) G.player = { x: 600, y: 320, r: 12, hp: 100, maxHp: 100, alive: true, attackMode: 1, ultCharge: 0 };
+G.campaign = 3; G.wave = 5;
+G.enemies = []; G.projectiles = []; G.portals = []; G.drops = []; G.rings = []; G.time = 1; G.kills = 0; G.waveKills = 0; G.typeKills = {}; G.runMats = {}; G.dmgDealt = 0; G.bossesKilled = 0; G.mods = null; G.stats = G.stats || {};
+
+// ---------- 1. tous les types spawnent ----------
+let spawnFails = [];
+for (const t of Object.keys(enemyTypes)) {
+  try { spawnEnemy(t, false, 500 + Math.random() * 100, 300); }
+  catch (err) { spawnFails.push(t + ':' + err.message); }
+}
+ok('tous les types spawnent (' + G.enemies.length + ')', G.enemies.length === Object.keys(enemyTypes).length);
+ok('aucun échec spawn', spawnFails.length === 0);
+if (spawnFails.length) out.push('  -> ' + spawnFails.join(' | '));
+
+// ---------- 2. tous les types se dessinent sans erreur ----------
+let drawFails = [];
+for (const e of G.enemies) {
+  try { drawEnemy(e); }
+  catch (err) { drawFails.push(e.type + ':' + err.message); }
+}
+ok('tous les monstres se dessinent', drawFails.length === 0);
+if (drawFails.length) out.push('  -> ' + drawFails.join(' | '));
+
+// ---------- 3. projectile sonique ----------
+G.projectiles.push({ x: 400, y: 300, vx: 4.9, vy: 0, life: 2, r: 8, dmg: 10, color: '#dcedc8', sonic: true });
+try { drawProjectiles(); ok('projectile sonique dessiné', true); }
+catch (err) { ok('projectile sonique dessiné', false); out.push('  -> ' + err.message); }
+
+// ---------- 4. chanter = artilleur ----------
+const ch = enemyTypes.chanter;
+ok('chanter a attack sonic', ch.attack === 'sonic');
+ok('chanter stats inchangées', ch.hp === 130 && ch.damage === 20 && ch.r === 14);
+const chE = G.enemies.find(e => e.type === 'chanter');
+ok('chanter spawné avec specialCd', chE && typeof chE.specialCd === 'number');
+
+// télégraphie : shotCharge force le rendu de la phase de charge
+chE.shotCharge = 0.4;
+try { drawEnemy(chE); ok('chanter phase de charge dessinée', true); }
+catch (err) { ok('chanter phase de charge dessinée', false); out.push('  -> ' + err.message); }
+chE.shotCharge = 0;
+
+// ---------- 5. hitboxes conservées ----------
+ok('rayons dans fourchette', G.enemies.every(e => e.r >= 10 && e.r <= 60));
+
+document.getElementById('out').textContent = out.join('\n') + '\nDONE';
+</script>
+</body></html>

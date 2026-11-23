@@ -334,84 +334,198 @@ export function drawEnemy(e) {
     drawSpaceEnemy(e);
   } else if (['courant', 'rafale', 'esprit', 'gardien', 'colosse', 'bossOuragan', 'finalBossTempete'].includes(e.type)) {
     drawStormEnemy(e);
-  } else { // golem / mini-boss / boss
-    const g = ctx.createRadialGradient(-4, -4, 2, 0, 0, e.r);
-    g.addColorStop(0, light); g.addColorStop(1, bodyColor);
+  } else if (e.type === 'brute') {
+    // brute : colosse voûté, tête enfoncée dans les épaules, bras massifs,
+    // os de trophée en collier, silhouette large et menaçante
+    const g = ctx.createRadialGradient(-e.r * 0.3, -e.r * 0.5, 2, 0, 0, e.r * 1.1);
+    g.addColorStop(0, light); g.addColorStop(0.6, bodyColor); g.addColorStop(1, dark);
+    ctx.fillStyle = g;
+    // torse large et voûté
+    ctx.beginPath();
+    ctx.moveTo(-e.r * 0.95, e.r * 0.75);
+    ctx.quadraticCurveTo(-e.r * 1.05, -e.r * 0.35, -e.r * 0.5, -e.r * 0.8);
+    ctx.quadraticCurveTo(0, -e.r * 1.0, e.r * 0.5, -e.r * 0.8);
+    ctx.quadraticCurveTo(e.r * 1.05, -e.r * 0.35, e.r * 0.95, e.r * 0.75);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.55)'; ctx.lineWidth = 2.5; ctx.stroke();
+    // muscles : stries sombres sur le torse
+    ctx.strokeStyle = 'rgba(0,0,0,0.22)'; ctx.lineWidth = 1.5;
+    for (let i = -1; i <= 1; i++) {
+      ctx.beginPath(); ctx.moveTo(i * e.r * 0.3, -e.r * 0.6); ctx.quadraticCurveTo(i * e.r * 0.45, e.r * 0.1, i * e.r * 0.25, e.r * 0.6); ctx.stroke();
+    }
+    // tête enfoncée + mâchoire prognathe
+    ctx.fillStyle = dark;
+    ctx.beginPath(); ctx.ellipse(0, -e.r * 0.5, e.r * 0.45, e.r * 0.36, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#ffb74d';
+    ctx.beginPath(); ctx.arc(-e.r * 0.17, -e.r * 0.55, e.r * 0.07, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(e.r * 0.17, -e.r * 0.55, e.r * 0.07, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#3e2723';
+    ctx.beginPath(); ctx.ellipse(0, -e.r * 0.32, e.r * 0.3, e.r * 0.14, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#fff';
+    for (const s of [-1, 1]) {
+      ctx.beginPath(); ctx.moveTo(s * e.r * 0.16 - 2.5, -e.r * 0.36); ctx.lineTo(s * e.r * 0.16, -e.r * 0.24); ctx.lineTo(s * e.r * 0.16 + 2.5, -e.r * 0.36); ctx.closePath(); ctx.fill();
+    }
+    // os de trophée en collier
+    ctx.fillStyle = '#d7ccc8';
+    for (let i = -2; i <= 2; i++) {
+      ctx.beginPath(); ctx.arc(i * e.r * 0.16, e.r * 0.18 - Math.abs(i) * -e.r * 0.02, e.r * 0.055, 0, TAU); ctx.fill();
+    }
+    // bras : masses pendantes animées
+    const st = Math.sin(e.wobble * 2.2) * e.r * 0.12;
+    ctx.fillStyle = dark;
+    for (const s of [-1, 1]) {
+      ctx.beginPath();
+      ctx.ellipse(s * e.r * 0.95, e.r * 0.25 + (s > 0 ? st : -st) * 0.4, e.r * 0.3, e.r * 0.55, s * 0.25, 0, TAU);
+      ctx.fill();
+      // poing
+      ctx.beginPath(); ctx.arc(s * e.r * 0.95, e.r * 0.75 + (s > 0 ? st : -st) * 0.4, e.r * 0.22, 0, TAU); ctx.fill();
+    }
+  } else if (e.type === 'miniboss') {
+    // mini-boss : brute blindée — épaulières de fer, crête, œil unique
+    ctx.fillStyle = dark;
+    ctx.beginPath(); ctx.ellipse(0, e.r * 0.15, e.r * 0.85, e.r * 0.9, 0, 0, TAU); ctx.fill();
+    ctx.strokeStyle = '#4e342e'; ctx.lineWidth = 3; ctx.stroke();
+    // armure : plaques thoraciques
+    ctx.fillStyle = '#8d6e63';
+    ctx.beginPath(); ctx.ellipse(0, -e.r * 0.15, e.r * 0.6, e.r * 0.55, 0, Math.PI, 0); ctx.fill();
+    ctx.strokeStyle = '#4e342e'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(-e.r * 0.55, -e.r * 0.15); ctx.lineTo(e.r * 0.55, -e.r * 0.15); ctx.stroke();
+    // tête + œil unique cyclopéen
+    ctx.fillStyle = dark;
+    ctx.beginPath(); ctx.arc(0, -e.r * 0.7, e.r * 0.4, 0, TAU); ctx.fill();
+    ctx.fillStyle = flash ? '#ff5252' : '#ffd740';
+    ctx.beginPath(); ctx.arc(0, -e.r * 0.72, e.r * 0.16, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#1a1a1a';
+    ctx.beginPath(); ctx.arc(0, -e.r * 0.72, e.r * 0.07, 0, TAU); ctx.fill();
+    // cornes courtes + crête
+    ctx.fillStyle = '#5d4037';
+    for (const s of [-1, 1]) {
+      ctx.beginPath(); ctx.moveTo(s * e.r * 0.3, -e.r * 0.95); ctx.lineTo(s * e.r * 0.55, -e.r * 1.3); ctx.lineTo(s * e.r * 0.45, -e.r * 0.85); ctx.closePath(); ctx.fill();
+    }
+    ctx.fillStyle = '#ff7043';
+    for (let i = 0; i < 4; i++) {
+      ctx.beginPath(); ctx.moveTo(-e.r * 0.3 + i * e.r * 0.2, -e.r * 0.95); ctx.lineTo(-e.r * 0.2 + i * e.r * 0.2, -e.r * 1.15); ctx.lineTo(-e.r * 0.1 + i * e.r * 0.2, -e.r * 0.95); ctx.closePath(); ctx.fill();
+    }
+    // épaulières
+    ctx.fillStyle = '#6d4c41';
+    for (const s of [-1, 1]) {
+      ctx.beginPath(); ctx.ellipse(s * e.r * 0.8, -e.r * 0.35, e.r * 0.3, e.r * 0.22, s * 0.4, 0, TAU); ctx.fill();
+      ctx.strokeStyle = '#3e2723'; ctx.lineWidth = 1.5; ctx.stroke();
+    }
+  } else if (e.type === 'golem') {
+    // golem : empilement de rochers, mousse, cœur d'ambre, fissures
+    const g = ctx.createLinearGradient(0, -e.r, 0, e.r);
+    g.addColorStop(0, '#a1887f'); g.addColorStop(0.5, '#795548'); g.addColorStop(1, '#4e342e');
+    ctx.fillStyle = g;
+    // trois rochers superposés
+    ctx.beginPath(); ctx.ellipse(0, -e.r * 0.45, e.r * 0.75, e.r * 0.55, 0, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(0, e.r * 0.05, e.r * 0.95, e.r * 0.6, 0, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(0, e.r * 0.55, e.r * 0.7, e.r * 0.45, 0, 0, TAU); ctx.fill();
+    ctx.strokeStyle = '#3e2723'; ctx.lineWidth = 2.5; ctx.stroke();
+    // mousse sur le sommet
+    ctx.fillStyle = 'rgba(102,187,106,0.6)';
+    ctx.beginPath(); ctx.ellipse(-e.r * 0.2, -e.r * 0.85, e.r * 0.3, e.r * 0.14, -0.3, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(e.r * 0.25, -e.r * 0.8, e.r * 0.22, e.r * 0.11, 0.3, 0, TAU); ctx.fill();
+    // cœur d'ambre pulsé
+    const gp = 1 + Math.sin(G.time * 3) * 0.12;
+    const gg = ctx.createRadialGradient(0, -e.r * 0.1, 1, 0, -e.r * 0.1, e.r * 0.3 * gp);
+    gg.addColorStop(0, '#ffe082'); gg.addColorStop(0.6, '#ff8f00'); gg.addColorStop(1, 'rgba(62,39,35,0)');
+    ctx.fillStyle = gg;
+    ctx.beginPath(); ctx.arc(0, -e.r * 0.1, e.r * 0.3 * gp, 0, TAU); ctx.fill();
+    // yeux : fentes incandescentes
+    ctx.fillStyle = flash ? '#ff5252' : '#ffab00';
+    ctx.fillRect(-e.r * 0.28, -e.r * 0.5, e.r * 0.16, e.r * 0.06);
+    ctx.fillRect(e.r * 0.12, -e.r * 0.5, e.r * 0.16, e.r * 0.06);
+    // fissures
+    ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(-e.r * 0.5, e.r * 0.3); ctx.lineTo(-e.r * 0.1, e.r * 0.55); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(e.r * 0.55, e.r * 0.2); ctx.lineTo(e.r * 0.2, e.r * 0.5); ctx.stroke();
+  } else if (e.type === 'boss' || e.type === 'bossFoudre' || e.type === 'bossGivre') {
+    // seigneurs de guerre : armure massive, heaume cornu, cape, emblème
+    const frosty = e.type === 'bossGivre', stormy = e.type === 'bossFoudre';
+    const pal = frosty ? ['#eceff1', '#90a4ae', '#37474f'] : stormy ? ['#b0bec5', '#546e7a', '#263238'] : ['#a1887f', '#6d4c41', '#3e2723'];
+    // cape
+    ctx.fillStyle = frosty ? 'rgba(179,229,252,0.55)' : stormy ? 'rgba(144,202,249,0.45)' : 'rgba(62,39,35,0.8)';
+    ctx.beginPath();
+    ctx.moveTo(-e.r * 0.7, -e.r * 0.5);
+    ctx.quadraticCurveTo(-e.r * 1.15, e.r * 0.3, -e.r * 0.85, e.r * 0.95);
+    ctx.lineTo(e.r * 0.85, e.r * 0.95);
+    ctx.quadraticCurveTo(e.r * 1.15, e.r * 0.3, e.r * 0.7, -e.r * 0.5);
+    ctx.closePath(); ctx.fill();
+    // armure : corselet facetté
+    const g = ctx.createLinearGradient(0, -e.r, 0, e.r);
+    g.addColorStop(0, pal[0]); g.addColorStop(0.55, pal[1]); g.addColorStop(1, pal[2]);
     ctx.fillStyle = g;
     ctx.beginPath();
-    for (let i = 0; i < 6; i++) {
-      const a = i / 6 * TAU - Math.PI / 2;
-      const px = Math.cos(a) * e.r, py = Math.sin(a) * e.r;
-      i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
-    }
+    ctx.moveTo(-e.r * 0.8, e.r * 0.85);
+    ctx.lineTo(-e.r * 0.7, -e.r * 0.2);
+    ctx.quadraticCurveTo(0, -e.r * 0.55, e.r * 0.7, -e.r * 0.2);
+    ctx.lineTo(e.r * 0.8, e.r * 0.85);
     ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = dark; ctx.lineWidth = 3; ctx.stroke();
-    // noyau
-    ctx.fillStyle = flash ? '#ff5252' : (e.isBoss ? '#ff1744' : '#ffb300');
-    ctx.beginPath(); ctx.arc(0, 0, e.r * 0.35, 0, TAU); ctx.fill();
-    // couronne du boss / cornes du mini-boss
-    if (e.isBoss || e.isMini) {
-      ctx.fillStyle = e.isBoss ? '#ffd740' : '#ffb300';
+    ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 3; ctx.stroke();
+    // plaques d'armure
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(-e.r * 0.55, -e.r * 0.05); ctx.lineTo(e.r * 0.55, -e.r * 0.05); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, -e.r * 0.4); ctx.lineTo(0, e.r * 0.75); ctx.stroke();
+    // heaume + cornes
+    ctx.fillStyle = pal[1];
+    ctx.beginPath(); ctx.arc(0, -e.r * 0.62, e.r * 0.38, 0, TAU); ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = pal[2];
+    for (const s of [-1, 1]) {
       ctx.beginPath();
-      ctx.moveTo(-e.r * 0.5, -e.r * 0.7);
-      for (let i = 0; i < 5; i++) {
-        const cx = -e.r * 0.5 + i * e.r * 0.25;
-        const top = e.isBoss ? -e.r * 1.0 : -e.r * 0.95;
-        ctx.lineTo(cx + e.r * 0.12, top);
-        ctx.lineTo(cx + e.r * 0.25, -e.r * 0.7);
-      }
+      ctx.moveTo(s * e.r * 0.25, -e.r * 0.85);
+      ctx.quadraticCurveTo(s * e.r * 0.75, -e.r * 1.35, s * e.r * 0.55, -e.r * 1.55);
+      ctx.quadraticCurveTo(s * e.r * 0.4, -e.r * 0.95, s * e.r * 0.12, -e.r * 0.78);
       ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = e.isBoss ? '#b8860b' : '#e65100'; ctx.lineWidth = 1.5; ctx.stroke();
     }
-    // fissures
-    ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(-e.r * 0.6, -e.r * 0.2); ctx.lineTo(-e.r * 0.1, e.r * 0.15); ctx.lineTo(-e.r * 0.4, e.r * 0.55); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(e.r * 0.55, -e.r * 0.3); ctx.lineTo(e.r * 0.2, e.r * 0.1); ctx.stroke();
-    // sourcils méchants
-    ctx.strokeStyle = 'rgba(0,0,0,0.6)'; ctx.lineWidth = 2.5;
-    ctx.beginPath(); ctx.moveTo(-e.r * 0.6, -e.r * 0.6); ctx.lineTo(-e.r * 0.2, -e.r * 0.45); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(e.r * 0.6, -e.r * 0.6); ctx.lineTo(e.r * 0.2, -e.r * 0.45); ctx.stroke();
-    // reflet métallique en arc
-    ctx.strokeStyle = 'rgba(255,255,255,0.22)'; ctx.lineWidth = 2.5;
-    ctx.beginPath(); ctx.arc(0, 0, e.r * 0.88, Math.PI * 1.15, Math.PI * 1.6); ctx.stroke();
-    // rivets
-    ctx.fillStyle = 'rgba(0,0,0,0.35)';
-    for (const [rx, ry] of [[-0.55, -0.35], [0.55, -0.35], [0, -0.6]]) {
-      ctx.beginPath(); ctx.arc(e.r * rx, e.r * ry, e.r * 0.07, 0, TAU); ctx.fill();
-    }
-    // emblème spécifique au type de boss
-    if (e.type === 'bossFoudre') {
-      // antenne + orbe électrique
-      ctx.strokeStyle = '#b388ff'; ctx.lineWidth = 2.5;
-      ctx.beginPath(); ctx.moveTo(0, -e.r * 0.8); ctx.lineTo(0, -e.r * 1.2); ctx.stroke();
-      ctx.fillStyle = '#e1bee7';
-      ctx.beginPath(); ctx.arc(0, -e.r * 1.28, e.r * 0.15, 0, TAU); ctx.fill();
-      ctx.strokeStyle = '#fff59d'; ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.arc(0, -e.r * 1.28, e.r * 0.24, 0, TAU); ctx.stroke();
-    } else if (e.type === 'bossGivre') {
-      // flocon de givre sur la carapace
-      ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 2;
+    // visière + yeux
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(-e.r * 0.28, -e.r * 0.68, e.r * 0.56, e.r * 0.12);
+    ctx.fillStyle = stormy ? '#ffab40' : frosty ? '#4fc3f7' : '#ff5252';
+    ctx.fillRect(-e.r * 0.22, -e.r * 0.66, e.r * 0.16, e.r * 0.08);
+    ctx.fillRect(e.r * 0.06, -e.r * 0.66, e.r * 0.16, e.r * 0.08);
+    // épée géante sur l'épaule
+    ctx.strokeStyle = '#eceff1'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(e.r * 0.85, e.r * 0.7); ctx.lineTo(e.r * 1.15, -e.r * 1.1); ctx.stroke();
+    ctx.fillStyle = '#ffd740';
+    ctx.beginPath(); ctx.arc(e.r * 1.15, -e.r * 1.1, 4, 0, TAU); ctx.fill();
+    // spécificités
+    if (stormy) { // arcs électriques
+      ctx.strokeStyle = 'rgba(255,241,118,0.7)'; ctx.lineWidth = 1.5;
+      for (let i = 0; i < 3; i++) {
+        const lx = -e.r * 0.5 + i * e.r * 0.5;
+        ctx.beginPath(); ctx.moveTo(lx, -e.r * 0.9); ctx.lineTo(lx + 5, -e.r * 0.6); ctx.lineTo(lx - 4, -e.r * 0.4); ctx.stroke();
+      }
+      ctx.fillStyle = '#b388ff';
+      ctx.beginPath(); ctx.arc(0, -e.r * 1.5, e.r * 0.09, 0, TAU); ctx.fill();
+    } else if (frosty) { // couronne de glace + flocon
+      ctx.fillStyle = 'rgba(224,245,254,0.9)';
+      for (const s of [-1, 0, 1]) {
+        ctx.beginPath();
+        ctx.moveTo(s * e.r * 0.3 - 6, -e.r * 0.95);
+        ctx.lineTo(s * e.r * 0.3, -e.r * 1.35);
+        ctx.lineTo(s * e.r * 0.3 + 6, -e.r * 0.95);
+        ctx.closePath(); ctx.fill();
+      }
+      ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 1.5;
       for (let i = 0; i < 3; i++) {
         const a = i * Math.PI / 3 - Math.PI / 2;
         ctx.beginPath();
-        ctx.moveTo(-Math.cos(a) * e.r * 0.45, e.r * 0.1 - Math.sin(a) * e.r * 0.45);
-        ctx.lineTo(Math.cos(a) * e.r * 0.45, e.r * 0.1 + Math.sin(a) * e.r * 0.45);
+        ctx.moveTo(-Math.cos(a) * e.r * 0.4, e.r * 0.15 - Math.sin(a) * e.r * 0.4);
+        ctx.lineTo(Math.cos(a) * e.r * 0.4, e.r * 0.15 + Math.sin(a) * e.r * 0.4);
         ctx.stroke();
       }
-      ctx.fillStyle = '#e1f5fe';
-      ctx.beginPath(); ctx.arc(0, e.r * 0.1, e.r * 0.12, 0, TAU); ctx.fill();
-    }
-    // pics d'épaule pour le boss
-    if (e.isBoss) {
-      ctx.fillStyle = dark;
-      for (const s of [-1, 1]) {
-        ctx.beginPath();
-        ctx.moveTo(s * e.r * 0.75, -e.r * 0.55);
-        ctx.lineTo(s * e.r * 1.25, -e.r * 0.15);
-        ctx.lineTo(s * e.r * 0.8, -e.r * 0.05);
-        ctx.closePath(); ctx.fill();
-        ctx.strokeStyle = '#b8860b'; ctx.lineWidth = 1.5; ctx.stroke();
+    } else { // couronne du seigneur terrestre
+      ctx.fillStyle = '#ffd740';
+      ctx.beginPath();
+      ctx.moveTo(-e.r * 0.4, -e.r * 0.9);
+      for (let i = 0; i < 5; i++) {
+        const cx = -e.r * 0.4 + i * e.r * 0.2;
+        ctx.lineTo(cx + e.r * 0.1, -e.r * 1.15); ctx.lineTo(cx + e.r * 0.2, -e.r * 0.9);
       }
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = '#b8860b'; ctx.lineWidth = 1.5; ctx.stroke();
     }
   }
 

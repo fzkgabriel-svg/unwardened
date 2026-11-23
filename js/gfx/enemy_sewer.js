@@ -182,34 +182,77 @@ export function drawSewerEnemy(e) {
         const sx = e.r * 0.9 - t * e.r * 1.6, sy = Math.sin(e.wobble * 1.4 - t * 3) * e.r * 0.3;
         ctx.beginPath(); ctx.moveTo(sx - e.r * 0.1, sy - e.r * 0.22); ctx.lineTo(sx + e.r * 0.1, sy + e.r * 0.22); ctx.stroke();
       }
-    } else {
-      // chanter des égouts : capuchon, larve, chant
-      ctx.fillStyle = '#4e342e';
+    } else if (e.type === 'chanter') {
+      // Chanteur des Profondeurs : prêcheur des égouts — robe en haillon,
+      // cage thoracique exposée, gorge amplifiée, antennes à resonateurs.
+      // Télégraphie : les notes convergent vers la gorge pendant shotCharge.
+      const charging = e.shotCharge > 0;
+      const tremble = charging ? Math.sin(G.time * 40) * 1.5 : 0;
+      ctx.translate(tremble, 0);
+      // robe : haillon asymétrique, ourlet déchiré
+      const g = ctx.createLinearGradient(0, -e.r * 1.1, 0, e.r);
+      g.addColorStop(0, '#5d4037'); g.addColorStop(0.6, '#3e2723'); g.addColorStop(1, '#241611');
+      ctx.fillStyle = g;
       ctx.beginPath();
-      ctx.moveTo(0, -e.r * 1.1);
-      ctx.quadraticCurveTo(e.r * 0.9, -e.r * 0.3, e.r * 0.75, e.r * 0.95);
-      ctx.lineTo(-e.r * 0.75, e.r * 0.95);
-      ctx.quadraticCurveTo(-e.r * 0.9, -e.r * 0.3, 0, -e.r * 1.1);
+      ctx.moveTo(-e.r * 0.15, -e.r * 1.15);
+      ctx.quadraticCurveTo(e.r * 0.95, -e.r * 0.3, e.r * 0.8, e.r * 0.95);
+      ctx.lineTo(e.r * 0.35, e.r * 1.05); // ourlet déchiré
+      ctx.lineTo(-e.r * 0.55, e.r * 0.9);
+      ctx.lineTo(-e.r * 0.9, e.r * 0.4);
+      ctx.quadraticCurveTo(-e.r * 0.95, -e.r * 0.3, -e.r * 0.15, -e.r * 1.15);
       ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = '#1c0f0c'; ctx.lineWidth = 2.5; ctx.stroke();
-      // visage larvaire
-      ctx.fillStyle = '#c5e1a5';
-      ctx.beginPath(); ctx.ellipse(0, -e.r * 0.4, e.r * 0.3, e.r * 0.38, 0, 0, TAU); ctx.fill();
-      ctx.fillStyle = '#33691e';
-      ctx.beginPath(); ctx.arc(-e.r * 0.12, -e.r * 0.45, e.r * 0.07, 0, TAU); ctx.fill();
-      ctx.beginPath(); ctx.arc(e.r * 0.12, -e.r * 0.45, e.r * 0.07, 0, TAU); ctx.fill();
-      // antennes
-      ctx.strokeStyle = '#a1887f'; ctx.lineWidth = 2; ctx.lineCap = 'round';
-      for (const s of [-1, 1]) {
-        ctx.beginPath(); ctx.moveTo(s * e.r * 0.15, -e.r * 1.0);
-        ctx.quadraticCurveTo(s * e.r * 0.5, -e.r * 1.4, s * e.r * 0.65, -e.r * 1.2); ctx.stroke();
-      }
-      // notes de chant
-      ctx.fillStyle = 'rgba(165,214,167,0.7)';
+      ctx.strokeStyle = '#120a06'; ctx.lineWidth = 2.5; ctx.stroke();
+      // cage thoracique : arcs osseux verdâtres
+      ctx.strokeStyle = 'rgba(200,230,180,0.55)'; ctx.lineWidth = 1.8;
       for (let i = 0; i < 3; i++) {
-        const nx = Math.sin(G.time * 2 + i * 2) * e.r * 0.5 + e.r * 0.4;
-        const ny = -e.r * 1.4 - i * e.r * 0.3 - (G.time * 12 + i * 20) % e.r * 0.5;
-        ctx.beginPath(); ctx.arc(nx, ny, e.r * 0.08, 0, TAU); ctx.fill();
+        const yy = -e.r * 0.55 + i * e.r * 0.22;
+        ctx.beginPath(); ctx.moveTo(-e.r * 0.55, yy); ctx.quadraticCurveTo(0, yy - e.r * 0.12, e.r * 0.5, yy); ctx.stroke();
+      }
+      // gorge amplifiée (sac de résonance)
+      const gp = charging ? 1 + Math.sin(G.time * 18) * 0.12 : 1 + Math.sin(G.time * 2.5) * 0.04;
+      const gg = ctx.createRadialGradient(0, -e.r * 0.35, 1, 0, -e.r * 0.35, e.r * 0.3 * gp);
+      gg.addColorStop(0, charging ? '#fffde7' : '#dcedc8'); gg.addColorStop(0.6, '#9ccc65'); gg.addColorStop(1, 'rgba(51,105,30,0)');
+      ctx.fillStyle = gg;
+      ctx.beginPath(); ctx.ellipse(0, -e.r * 0.35, e.r * 0.3 * gp, e.r * 0.26 * gp, 0, 0, TAU); ctx.fill();
+      // capuche effondrée + visage larvaire
+      ctx.fillStyle = '#4e342e';
+      ctx.beginPath(); ctx.ellipse(0, -e.r * 0.62, e.r * 0.42, e.r * 0.36, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = charging ? '#827717' : '#c5e1a5';
+      ctx.beginPath(); ctx.ellipse(0, -e.r * 0.58, e.r * 0.24, e.r * 0.3, 0, 0, TAU); ctx.fill();
+      // yeux sans pupille, fixes
+      ctx.fillStyle = '#1b2e0b';
+      ctx.beginPath(); ctx.arc(-e.r * 0.1, -e.r * 0.62, e.r * 0.06, 0, TAU); ctx.fill();
+      ctx.beginPath(); ctx.arc(e.r * 0.1, -e.r * 0.62, e.r * 0.06, 0, TAU); ctx.fill();
+      // antennes à resonateurs (symétriques, animées)
+      ctx.strokeStyle = '#8d6e63'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+      for (const s of [-1, 1]) {
+        const sway = Math.sin(G.time * 3 + s) * e.r * 0.12;
+        ctx.beginPath(); ctx.moveTo(s * e.r * 0.2, -e.r * 0.95);
+        ctx.quadraticCurveTo(s * e.r * 0.55, -e.r * 1.35 + sway, s * e.r * 0.7, -e.r * 1.15 + sway * 1.5); ctx.stroke();
+        ctx.fillStyle = charging ? '#f9fbe7' : '#aed581';
+        ctx.beginPath(); ctx.arc(s * e.r * 0.7, -e.r * 1.15 + sway * 1.5, charging ? e.r * 0.09 : e.r * 0.06, 0, TAU); ctx.fill();
+      }
+      // ---- télégraphie du tir : notes qui convergent vers la gorge ----
+      if (charging) {
+        const k = 1 - e.shotCharge / 0.75; // 0 -> 1
+        ctx.strokeStyle = `rgba(200,255,150,${0.35 + k * 0.6})`; ctx.lineWidth = 2;
+        for (let i = 0; i < 6; i++) {
+          const a = i * TAU / 6 + G.time * 6;
+          const rr = e.r * (1.5 - k * 1.0) * (0.8 + (i % 3) * 0.15);
+          const nx = Math.cos(a) * rr, ny = Math.sin(a) * rr * 0.7 - e.r * 0.3;
+          ctx.beginPath(); ctx.arc(nx, ny, 3 + k * 2, 0, TAU); ctx.stroke();
+        }
+        // aura sonore croissante autour de la gorge
+        ctx.fillStyle = `rgba(198,230,120,${0.10 + k * 0.22})`;
+        ctx.beginPath(); ctx.ellipse(0, -e.r * 0.35, e.r * (0.5 + k * 0.5), e.r * (0.45 + k * 0.45), 0, 0, TAU); ctx.fill();
+      } else {
+        // notes de chant ambiantes qui s'éloignent
+        ctx.fillStyle = 'rgba(165,214,167,0.55)';
+        for (let i = 0; i < 3; i++) {
+          const nx = Math.sin(G.time * 2 + i * 2) * e.r * 0.5 + e.r * 0.5;
+          const ny = -e.r * 1.4 - i * e.r * 0.3 - (G.time * 10 + i * 20) % (e.r * 0.5);
+          ctx.beginPath(); ctx.arc(nx, ny, e.r * 0.07, 0, TAU); ctx.fill();
+        }
       }
     }
 }

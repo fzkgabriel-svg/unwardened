@@ -9,7 +9,7 @@ import { drawHUD, drawAchToast, drawWarnToast } from './hud.js';
 import { drawMenu, drawGameOver, drawPauseMenu, drawVictory, recordRun, drawAdminMenu, drawAdminButton, drawDurWarnPopup } from './menu.js';
 import { initWorlds, updateCamera, worldW, worldH, checkWavePortal, syncCamera, resolveObstacles, curWorld } from './world.js';
 import { CAMPAIGNS } from './world_data.js';
-import { drawMusicButton, sfxHurt, sfxWave, sfxPickup, sfxBreak, sfxBoss, sfxWarn, sfxPhase, sfxBossAtk, sfxTitanEnd, sfxVictory } from './audio.js';
+import { drawMusicButton, sfxHurt, sfxWave, sfxPickup, sfxBreak, sfxBoss, sfxWarn, sfxPhase, sfxBossAtk, sfxTitanEnd, sfxVictory, sfxSonicCharge, sfxSonicShot, sfxSonicHit } from './audio.js';
 import { updateTutorial, drawTutorial } from './tutorial.js';
 import { tickPlaytime } from './chars.js';
 import { updateHellEvents, updateFrozenEvents, updateSewerEvents, updateSpaceEvents, updateStormEvents } from './events.js';
@@ -471,6 +471,41 @@ function update(dt) {
         } else if (e.lunging <= 0) {
           e.lungeCd = 3.5 + Math.random() * 1.5;
         }
+      } else if (e.type === 'chanter') {
+        // Chanteur des Profondeurs : artillerie à distance — garde ses
+        // distances, recule si le joueur s'approche, orbite en bande moyenne,
+        // prépare son chant (télégraphe) puis crache une orbe sonique
+        e.faceX = nx; e.faceY = ny;
+        if (e.shotCharge > 0) {
+          e.shotCharge -= dt;
+          if (e.shotCharge <= 0) {
+            const a = Math.atan2(p.y - e.y, p.x - e.x);
+            G.projectiles.push({
+              x: e.x + Math.cos(a) * e.r * 0.7, y: e.y + Math.sin(a) * e.r * 0.7,
+              vx: Math.cos(a) * 4.9, vy: Math.sin(a) * 4.9,
+              life: 2.6, r: 8, dmg: e.damage * 0.8, color: '#dcedc8', sonic: true
+            });
+            sfxSonicShot();
+            spawnParticles(e.x, e.y, '#c5e1a5', 8, 4);
+            e.specialCd = 3.1 + Math.random() * 0.9;
+          }
+        } else {
+          e.specialCd -= dt;
+          const wantMin = 250, wantMax = 430;
+          let mx = nx, my = ny;
+          if (dist < wantMin) { mx = -nx; my = -ny; } // trop proche : recule
+          else if (dist > wantMax) { /* approche */ }
+          else { // bande idéale : orbite lente pour désorienter
+            const sa = Math.sin(G.time * 0.55 + e.wobble) > 0 ? 1 : -1;
+            mx = -ny * sa * 0.85; my = nx * sa * 0.85;
+          }
+          e.x += mx * e.speed * 0.85 * eSlow;
+          e.y += my * e.speed * 0.85 * eSlow;
+          if (e.specialCd <= 0 && dist < 560 && dist > 130 && e.spawnT <= 0) {
+            e.shotCharge = 0.75; // télégraphe : les notes convergent
+            sfxSonicCharge();
+          }
+        }
       } else {
         e.x += nx * e.speed * (1 + wob) * eSlow;
         e.y += ny * e.speed * eSlow;
@@ -703,6 +738,11 @@ function update(dt) {
     }
     if (Math.hypot(p.x - pr.x, p.y - pr.y) < p.r + pr.r) {
       damagePlayer(pr.dmg, 1.0); // la glace ralentit le joueur
+      if (pr.sonic) { // orbe du Chanteur : onde sonore + débris verts
+        sfxSonicHit();
+        G.rings.push({ x: pr.x, y: pr.y, r: 4, maxR: 44, life: 16, maxLife: 16, color: '#c5e1a5' });
+        spawnParticles(pr.x, pr.y, '#e8f5e9', 10, 4);
+      }
       if (pr.hex || pr.acid) { // sort de la sorcière / bille de vase : poison (3s, plancher 15%)
         p.poisonT = 3;
         p.poisonDps = Math.max(p.poisonDps, pr.dmg * 0.5);
