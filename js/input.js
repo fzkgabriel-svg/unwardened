@@ -8,7 +8,7 @@ import { ensureAudio, audioButtonAt, audioPanelClickAt, audioPanelDragAt, audioP
 import { shopButtonAt, shopClickAt, shopDay } from './shop.js';
 import { startTutorial, tutorialEnter, tutorialClickAt } from './tutorial.js';
 import { bowUnlocked } from './bow.js';
-import { modeKey, weaponAllowed } from './inventory.js';
+import { weaponAllowed, loadoutOf, WEAPON_MODES } from './inventory.js';
 import { activateModule, modulesUnlocked } from './modules.js';
 import { modClickAt, modWheel } from './menu/modules.js';
 
@@ -84,21 +84,15 @@ export function initInput() {
       sfxClick();
     }
     if (k === 'f' && G.state === 'playing') G.ultQueued = true;
-    // modes d'attaque : & = épée, é = lance (ou arc si la lance n'est pas équipée)
-    // " = arc en priorité quand les deux sont possédés — le X est réservé aux modules
-    const meleeKeys = { '&': 1, '1': 1 };
-    if (meleeKeys[k] && G.state === 'playing' && G.player.attackMode !== meleeKeys[k]
-        && G.player.ultActive <= 0 // titan de feu : arme scellée pendant la transformation
-        && weaponAllowed(G.inv, modeKey(meleeKeys[k]))) {
-      G.player.attackMode = meleeKeys[k];
-      G.player.switchLock = 1.25; // 1,25s sans attaque après le changement d'arme
-    }
-    const heavyKeys = { 'é': 3, '3': 3, "'": 3 };
-    if (heavyKeys[k] && G.state === 'playing' && G.player.ultActive <= 0) {
-      const target = weaponAllowed(G.inv, 'lance') ? 3 : weaponAllowed(G.inv, 'arc') ? 5 : null;
-      if (target && G.player.attackMode !== target) {
+    // armes du loadout : & = arme principale (emplacement 1), é = deuxième arme (emplacement 2)
+    // 1/3/' = alias ; " = arc en priorité, 7/è = jugement du gardien en raccourci
+    const slotKeys = { '&': 's1', '1': 's1', 'é': 's2', '3': 's2', "'": 's2' };
+    if (slotKeys[k] && G.state === 'playing' && G.player.ultActive <= 0) { // titan de feu : armes scellées
+      const wk = loadoutOf(G.inv)[slotKeys[k]];
+      const target = wk ? WEAPON_MODES[wk] : null;
+      if (target && G.player.attackMode !== target && weaponAllowed(G.inv, wk)) {
         G.player.attackMode = target;
-        G.player.switchLock = 1.25;
+        G.player.switchLock = 1.25; // 1,25s sans attaque après le changement d'arme
       }
     }
     if (k === '"' && G.state === 'playing' && G.player.ultActive <= 0) {
