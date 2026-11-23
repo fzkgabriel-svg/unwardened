@@ -1,0 +1,19 @@
+# Blueprint Render — déploiement en un clic :
+# Render Dashboard → New → Blueprint → repo Project-Unwardened → Apply
+services:
+  - type: web
+    name: tesseract-studio
+    runtime: node
+    plan: free
+    rootDir: site
+    buildCommand: ""
+    startCommand: "node server.js"
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: ADMIN_PSEUDO
+        sync: false   # à renseigner dans le dashboard Render
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASS
+        sync: false

@@ -9,5 +9,8 @@ Thumbs.db
 Desktop.ini
 
 # Site Tesseract Studio : donnees locales (BDD, downloads, avatars)
-site/data/
+site/data/*
+!site/data/downloads/
+site/data/downloads/*
+!site/data/downloads/*.zip
 site/node_modules/

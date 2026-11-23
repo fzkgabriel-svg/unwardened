@@ -2,7 +2,7 @@
 // Node.js natif : HTTP + SQLite (node:sqlite) + crypto (scrypt, sessions).
 // Aucune dépendance externe. Lancement : node server.js [port]
 import http from 'node:http';
-import { readFileSync, writeFileSync, existsSync, statSync, createReadStream, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, statSync, createReadStream, mkdirSync, readdirSync } from 'node:fs';
 import { join, extname, normalize } from 'node:path';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -349,4 +349,37 @@ const server = http.createServer(async (req, res) => {
   }
 });
 mkdirSync(join(DATA, 'news'), { recursive: true });
+
+// ---------- seed au premier démarrage (utile pour les déploiements éphémères) ----------
+function seed() {
+  try {
+    // 1) admin depuis les variables d'environnement (ADMIN_PSEUDO/EMAIL/PASS)
+    if (process.env.ADMIN_PSEUDO && process.env.ADMIN_EMAIL && process.env.ADMIN_PASS
+        && process.env.ADMIN_PASS.length >= 8 && q.countUsers.get().c === 0) {
+      const salt = crypto.randomBytes(16).toString('hex');
+      const h = crypto.scryptSync(process.env.ADMIN_PASS, salt, 64, SCRYPT).toString('hex');
+      const r = q.insertUser.run(process.env.ADMIN_PSEUDO, process.env.ADMIN_EMAIL.toLowerCase(),
+        `scrypt$${SCRYPT.N}$${SCRYPT.r}$${SCRYPT.p}$${salt}$${h}`);
+      q.setRole.run('admin', Number(r.lastInsertRowid));
+      q.setVerified.run(Number(r.lastInsertRowid));
+      console.log(`[seed] admin créé : ${process.env.ADMIN_PSEUDO}`);
+    }
+    // 2) releases : si la table est vide, enregistrer les ZIP présents dans data/downloads
+    if (q.allReleases.all().length === 0) {
+      for (const f of readdirSync(join(DATA, 'downloads'))) {
+        if (!/^[\w.\-]+\.zip$/.test(f)) continue;
+        const p = join(DATA, 'downloads', f);
+        const m = /v(\d+\.\d+\.\d+)/.exec(f);
+        const version = m ? m[1] : f.replace(/\.zip$/, '');
+        const sha = crypto.createHash('sha256').update(readFileSync(p)).digest('hex');
+        q.insRelease.run(version, f, statSync(p).size, sha, '', '', '', 0);
+        console.log(`[seed] release enregistrée : ${f}`);
+      }
+      const rel = q.allReleases.all();
+      if (rel.length) q.setCurId.run(rel[rel.length - 1].id);
+    }
+  } catch (e) { console.error('[seed]', e.message); }
+}
+seed();
+
 server.listen(PORT, () => console.log(`Tesseract Studio — http://localhost:${PORT}`));
