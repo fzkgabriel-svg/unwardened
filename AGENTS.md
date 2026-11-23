@@ -1,6 +1,6 @@
 # RPG 2D - Les Terres Oubliées
 
-Jeu HTML5 Canvas / JavaScript ES modules. Servi en HTTP (ES modules incompatibles avec `file://`) via `Jouer.bat` ou `python -m http.server`.
+Jeu HTML5 Canvas / JavaScript ES modules. Servi en HTTP (ES modules incompatibles avec `file://`) via `python -m http.server` ou le lanceur « Lancer les Terres Oubliees.bat » sur le Bureau (chemin absolu vers ce dossier, port 8000).
 
 ## Versioning (règle utilisateur)
 - `VERSION` dans `js/state.js`, format `MAJEUR.MINEUR.PATCH`.
