@@ -3,7 +3,7 @@
 // animations de disponibilité. + plaque de l'arme active (nom, niveau, XP).
 import { G, ctx, W, H, TAU } from '../state.js';
 import { roundRect, drawFlaskIcon } from '../utils.js';
-import { ITEMS, modeInfo, modeKey, modeMult, weaponAllowed } from '../inventory.js';
+import { ITEMS, modeInfo, modeKey, modeMult, weaponAllowed, loadoutOf } from '../inventory.js';
 import { drawBowIcon } from '../gfx/bow_draw.js';
 import { SENT_CD } from '../attacks.js';
 import { HPAL, parchment, engraved, gem, crisp, HUD_CINZEL } from './frame.js';
@@ -152,6 +152,45 @@ const MODE_STYLE = {
 // max connus des jauges de recharge (secondes)
 const CD_MAX = { atk: 0.9, spin: 5, shield: 10, hand: 2.6, sing: 12.5 };
 
+// ---------- emplacements d'armes du loadout ----------
+// La barre affiche toujours 2 slots : & = emplacement 1, é = emplacement 2,
+// peu importe l'arme qui y est équipée.
+const WPN_SLOT = {
+  epee:    { icon: 'sword',    mode: 1, sub: 'D', subColor: '#ff9100' },
+  lance:   { icon: 'lance',    mode: 3, sub: 'D', subColor: '#4fc3f7' },
+  gardien: { icon: 'judgment', mode: 7, sub: 'D', subColor: '#a7ffeb' },
+  arc:     { icon: 'bow',      mode: 5, sub: 'D', subColor: '#b388ff' }
+};
+function weaponSlotVisible(wkey) {
+  if (!WPN_SLOT[wkey] || !weaponAllowed(G.inv, wkey)) return false;
+  if (wkey === 'gardien' && !(G.stats && G.stats.gardienUnlocked)) return false;
+  if (wkey === 'arc' && !(G.stats && G.stats.bowUnlocked)) return false;
+  return true;
+}
+function weaponSlotCd2(wkey, p) {
+  if (wkey === 'epee')    return [p.spinCooldown, CD_MAX.spin];
+  if (wkey === 'lance')   return [p.shieldCd, CD_MAX.shield];
+  if (wkey === 'gardien') return [p.sentenceT > 0 ? SENT_CD : p.sentenceCd, SENT_CD];
+  if (wkey === 'arc')     return [G.bow ? G.bow.singCd : 0, CD_MAX.sing];
+  return [0, 0];
+}
+function loadoutSlots(p) {
+  const lo = loadoutOf(G.inv);
+  const out = [];
+  [['&', 's1'], ['é', 's2']].forEach(([key, sk]) => {
+    const wk = lo[sk];
+    if (!wk || !weaponSlotVisible(wk)) return;
+    const d = WPN_SLOT[wk];
+    const [cd2, cd2Max] = weaponSlotCd2(wk, p);
+    out.push({
+      icon: d.icon, key, mode: d.mode,
+      cd: p.attackCooldown, cdMax: CD_MAX.atk,
+      cd2, cd2Max, sub: d.sub, subColor: d.subColor
+    });
+  });
+  return out;
+}
+
 function slotFrame(cx, cy, r, active, accent, spent, cdFrac, subFrac, subColor) {
   const now = G.time || 0;
   // ombre + corps : anneau métallique (or si actif, acier sinon)
@@ -216,14 +255,7 @@ export function drawSkillBar() {
     { icon: 'volcano', key: 'D', mode: -2, cd: 0, cdMax: 1, cd2: p.handUsed ? 0 : p.handCd, cd2Max: CD_MAX.hand, used: p.handUsed },
     { icon: 'potion', key: 'W', mode: -3, cd: p.potionCooldown, cdMax: 2.5, cd2: 0, cd2Max: 0, potion: true }
   ] : [
-    ...(weaponAllowed(G.inv, 'epee') ? [{ icon: 'sword', key: '&', mode: 1, cd: p.attackCooldown, cdMax: CD_MAX.atk, cd2: p.spinCooldown, cd2Max: CD_MAX.spin, sub: 'D', subColor: '#ff9100' }] : []),
-    ...(weaponAllowed(G.inv, 'lance') ? [{ icon: 'lance', key: 'é', mode: 3, cd: p.attackCooldown, cdMax: CD_MAX.atk, cd2: p.shieldCd, cd2Max: CD_MAX.shield, sub: 'D', subColor: '#4fc3f7' }] : []),
-    ...(G.stats && G.stats.gardienUnlocked && weaponAllowed(G.inv, 'gardien') ? [{
-      icon: 'judgment', key: '7', mode: 7, cd: p.attackCooldown, cdMax: CD_MAX.atk, cd2: (p.sentenceT > 0 ? SENT_CD : p.sentenceCd), cd2Max: SENT_CD, sub: 'D', subColor: '#a7ffeb'
-    }] : []),
-    ...(G.stats && G.stats.bowUnlocked && weaponAllowed(G.inv, 'arc') ? [{
-      icon: 'bow', key: 'X', mode: 5, cd: p.attackCooldown, cdMax: CD_MAX.atk, cd2: (G.bow ? G.bow.singCd : 0), cd2Max: CD_MAX.sing, sub: 'D', subColor: '#b388ff'
-    }] : []),
+    ...loadoutSlots(p),
     { icon: 'potion', key: 'W', mode: -3, cd: p.potionCooldown, cdMax: 2.5, cd2: 0, cd2Max: 0, potion: true }
   ];
 

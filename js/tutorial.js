@@ -117,7 +117,7 @@ const STEPS = [
   },
   {
     icon: '🎯', kind: 'action', title: 'Changer d\'arme',
-    text: 'Appuie sur É pour passer en mode LANCE.\nChaque arme a ses propres attaques — tu en essaieras d\'autres plus tard.', max: 20,
+    text: 'Appuie sur É pour sortir ton arme secondaire (et & pour l\'arme principale).\nChaque arme a ses propres attaques — tu en essaieras d\'autres plus tard.', max: 20,
     onStart() { clearAdds(); },
     check() { return G.player.attackMode === 3; }
   },
