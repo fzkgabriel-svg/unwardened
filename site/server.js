@@ -25,6 +25,9 @@ try {
 } catch (e) { /* .env absent ou illisible : ignoré */ }
 const PUB = join(ROOT, 'public');
 const DATA = join(ROOT, 'data');
+// zips de release versionnés dans le repo : contrairement à data/ (éphémère
+// sur Render), ils survivent aux redéploiements
+const PKG_DL = join(ROOT, 'downloads');
 const PORT = parseInt(process.argv[2] || process.env.PORT || '8080', 10);
 const DEV = !process.env.NODE_ENV || process.env.NODE_ENV === 'development';
 const SESSION_DAYS = 30;
@@ -371,8 +374,8 @@ route('POST', '/api/admin/releases', needAdmin((req, res, b) => {
   const version = clean(b.version), filename = clean(b.filename);
   if (!/^\d+\.\d+\.\d+$/.test(version) || !/^[\w.\-]+\.zip$/.test(filename))
     return json(res, 400, { error: 'version x.y.z et filename.zip requis' });
-  const path = join(DATA, 'downloads', filename);
-  if (!existsSync(path)) return json(res, 400, { error: 'Fichier absent de data/downloads — lancez tools/package.js' });
+  const path = [join(DATA, 'downloads', filename), join(PKG_DL, filename)].find(existsSync);
+  if (!path) return json(res, 400, { error: 'Fichier absent de data/downloads ou downloads/ — lancez tools/package.js' });
   const st = statSync(path);
   const sha = crypto.createHash('sha256').update(readFileSync(path)).digest('hex');
   const cur = b.current ? 1 : 0;
@@ -402,8 +405,8 @@ route('GET', '/api/game/releases', (req, res) => {
 route('GET', '/download/:file', (req, res) => {
   const fn = normalize(req.url.split('/download/')[1] || '').replace(/\\/g, '/');
   if (!/^[\w.\-]+\.zip$/.test(fn)) return json(res, 400, { error: 'Fichier invalide' });
-  const path = join(DATA, 'downloads', fn);
-  if (!existsSync(path)) return json(res, 404, { error: 'Version introuvable' });
+  const path = [join(DATA, 'downloads', fn), join(PKG_DL, fn)].find(existsSync);
+  if (!path) return json(res, 404, { error: 'Version introuvable' });
   const rel = q.allReleases.all().find(r => r.filename === fn);
   q.logDownload.run(getSession(req)?.id || null, rel?.version || null, clientIp(req));
   const st = statSync(path);
@@ -625,17 +628,23 @@ function seed() {
       q.setVerified.run(Number(r.lastInsertRowid));
       console.log(`[seed] admin créé : ${process.env.ADMIN_PSEUDO}`);
     }
-    // 2) releases : si la table est vide, enregistrer les ZIP présents dans data/downloads
-    if (q.allReleases.all().length === 0) {
-      for (const f of readdirSync(join(DATA, 'downloads'))) {
-        if (!/^[\w.\-]+\.zip$/.test(f)) continue;
-        const p = join(DATA, 'downloads', f);
+    // 2) releases : enregistrer les ZIP de data/downloads ET du dossier
+    // versionné downloads/ (persistant sur les hébergements éphémères)
+    const seen = new Set(q.allReleases.all().map(r => r.filename));
+    for (const dir of [join(DATA, 'downloads'), PKG_DL]) {
+      if (!existsSync(dir)) continue;
+      for (const f of readdirSync(dir)) {
+        if (!/^[\w.\-]+\.zip$/.test(f) || seen.has(f)) continue;
+        seen.add(f);
+        const p = join(dir, f);
         const m = /v(\d+\.\d+\.\d+)/.exec(f);
         const version = m ? m[1] : f.replace(/\.zip$/, '');
         const sha = crypto.createHash('sha256').update(readFileSync(p)).digest('hex');
         q.insRelease.run(version, f, statSync(p).size, sha, '', '', '', 0);
         console.log(`[seed] release enregistrée : ${f}`);
       }
+    }
+    if (!q.curRelease.get()) {
       const rel = q.allReleases.all();
       if (rel.length) q.setCurId.run(rel[rel.length - 1].id);
     }
