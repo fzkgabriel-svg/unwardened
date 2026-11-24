@@ -1,0 +1,52 @@
+<!DOCTYPE html><html><body><canvas id="game" width="1280" height="720"></canvas><pre id="out">RUN…</pre>
+<script type="module">
+const out = [];
+const ok = (n, c) => out.push((c ? 'PASS' : 'FAIL') + ' ' + n);
+try {
+  const { G } = await import('./js/state.js');
+  const { spawnEnemy, damageEnemy } = await import('./js/enemies.js');
+
+  // état minimal de partie
+  G.campaign = 0; G.wave = 4; G.difficulty = 0; G.mods = {};
+  G.player = { x: 640, y: 360, hp: 100, maxHp: 100, level: 5, alive: true, attackMode: 1, ultCharge: 0 };
+  G.inv = { items: {}, mats: {}, dur: {} };
+  G.equip = { weaponMult: 1 };
+  G.stats = {}; G.runMats = {}; G.runWmode = {};
+  G.enemies = []; G.drops = []; G.portals = []; G.projectiles = [];
+  G.particles = []; G.damageTexts = []; G.rings = [];
+  G.kills = 0; G.waveKills = 0; G.typeKills = {}; G.dmgDealt = 0;
+  G.bossesKilled = 0;
+
+  // mini-boss de la vague 3/×3 encore en vie en vague 4
+  spawnEnemy('miniboss', 700, 400);
+  const e = G.enemies[G.enemies.length - 1];
+  e.hp = 1; e.maxHp = 1; e.graceT = 0; e.spawnT = 0;
+
+  // force TOUS les drops (émeraude incluse : table miniboss emeraude 0.35)
+  const origRandom = Math.random;
+  Math.random = () => 0.01;
+  let threw = null;
+  try { damageEnemy(e, 1, 0); } catch (err) { threw = err; }
+  Math.random = origRandom;
+
+  ok('damageEnemy mini-boss + émeraude : pas d\'exception', threw === null);
+  if (threw) out.push('  -> ' + threw.message);
+  ok('émeraude reçue dans l\'inventaire', (G.inv.mats.emeraude || 0) > 0);
+  ok('runMats mis à jour', (G.runMats.emeraude || 0) > 0);
+  ok('ennemi retiré', !G.enemies.includes(e));
+  ok('waveKills incrémenté', G.waveKills === 1);
+
+  //idem sur un boss normal (emeraude 0.50)
+  spawnEnemy('boss', 900, 400);
+  const b = G.enemies[G.enemies.length - 1];
+  b.hp = 1; b.maxHp = 1; b.graceT = 0; b.spawnT = 0;
+  Math.random = () => 0.01;
+  threw = null;
+  try { damageEnemy(b, 1, 0); } catch (err) { threw = err; }
+  Math.random = origRandom;
+  ok('damageEnemy boss + émeraude : pas d\'exception', threw === null);
+  if (threw) out.push('  -> ' + threw.message);
+
+} catch (e) { out.push('FAIL ' + e.message + ' ' + (e.stack || '').split('\n')[1]); }
+document.getElementById('out').textContent = out.join('\n');
+</script></body></html>

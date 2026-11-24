@@ -277,6 +277,7 @@ export function damageEnemy(e, dmg, angle) {
     // compensent, et les boss gardent leurs loots complets
     const table = MATERIAL_DROPS[e.type] || {};
     const matMult = (e.isBoss || e.isMini || e.type.startsWith('finalBoss')) ? 1 : 0.6;
+    const df = DIFFS[G.difficulty] || DIFFS[0]; // multiplicateur de butin (Normal/Difficile/Expert)
     let mi = 0;
     let gotEmerald = false;
     for (const m in table) {
