@@ -52,15 +52,7 @@
 
 <section id="download"><div class="wrap">
   <div class="sec-head"><h2>JOUER</h2><div class="orn">✦ ✦ ✦</div></div>
-  <div class="dl-opts">
-    <div class="card dl-opt">
-      <h3>EN LIGNE</h3>
-      <p>Aucun téléchargement — le jeu démarre instantanément dans votre navigateur.
-        Progression synchronisée avec votre compte Kaeloryen.</p>
-      <a class="btn" href="https://unwardened.netlify.app" target="_blank" rel="noopener">▶ JOUER GRATUITEMENT</a>
-    </div>
-    <div class="card dl-opt" id="dlbox"><div class="empty">Chargement de la version…</div></div>
-  </div>
+  <div class="card dl-hero" id="dlbox"><div class="empty">Chargement…</div></div>
 </div></section>
 
 <section><div class="wrap">
@@ -94,14 +86,12 @@ async function loadVersion() {
     const v = await api('/api/game/version');
     if (!v.available) { el.innerHTML = '<div class="empty">Aucune version disponible pour le moment.</div>'; return; }
     el.innerHTML = `
-      <h3>HORS LIGNE · v${esc(v.version)}</h3>
-      <div class="dl-file">⬇ LES-TERRES-OUBLIEES-v${esc(v.version)}.zip — ${fmtSize(v.size)}</div>
-      <div class="dl-meta">
-        <div class="m"><b>${v.sha256 ? v.sha256.slice(0, 12) + '…' : '—'}</b><span>SHA-256</span></div>
-        <div class="m"><b>${fmtDate(v.updated)}</b><span>Publié</span></div>
-      </div>
-      <a class="btn" href="${v.url}" download>⬇ TÉLÉCHARGER v${esc(v.version)}</a>
-      <p class="form-ok" style="margin-top:14px">1. Décompressez le ZIP<br>2. Double-cliquez sur <b>Jouer.bat</b> — le jeu s'ouvre dans votre navigateur.</p>
+      <h3>LE JEU EST EN LIGNE</h3>
+      <p>Jouez instantanément dans votre navigateur — aucune installation,
+        sauvegardes synchronisées avec votre compte.</p>
+      <a class="btn" href="https://unwardened.netlify.app" target="_blank" rel="noopener">▶ JOUER v${esc(v.version)}</a>
+      <p class="form-ok" style="margin-top:14px">Version actuelle : <b>v${esc(v.version)}</b> — ${fmtDate(v.updated)}</p>
+      <a href="${v.url}" download style="font-size:11px;color:var(--ink-dim);letter-spacing:1px">ou télécharger le ZIP hors-ligne (${fmtSize(v.size)})</a>`;
       ${v.notes ? `<div class="card changelog" style="margin-top:26px;text-align:left"><h3 style="font-size:14px">Notes de cette version</h3><p style="white-space:pre-line;color:var(--ink-dim);font-size:13.5px;margin-top:8px">${esc(v.notes)}</p></div>` : ''}`;
   } catch (e) { el.innerHTML = '<div class="empty">Service de téléchargement indisponible.</div>'; }
 }

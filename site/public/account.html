@@ -238,8 +238,9 @@ async function loadDash(u) {
     const v = await api('/api/game/version');
     $('dVer').textContent = v.available ? 'v' + v.version : '—';
     $('dDl').innerHTML = v.available
-      ? `<div class="dl-row"><span class="k">v${esc(v.version)}</span><span>${esc(v.sha256?.slice(0,10) || '')}</span></div>
-         <a class="btn small" style="margin-top:14px" href="${v.url}" download>TÉLÉCHARGER</a>`
+      ? `<div class="dl-row"><span class="k">Version en ligne</span><span>v${esc(v.version)}</span></div>
+         <a class="btn small" style="margin-top:14px" href="https://unwardened.netlify.app" target="_blank" rel="noopener">▶ JOUER EN LIGNE</a>
+         <div style="margin-top:10px"><a href="${v.url}" download style="font-size:11px;color:var(--ink-dim)">ou ZIP hors-ligne (${esc(v.sha256?.slice(0,10) || '')}…)</a></div>`
       : '<div class="empty">Aucune version.</div>';
   } catch (e) { $('dDl').innerHTML = '<div class="empty">—</div>'; }
   try {

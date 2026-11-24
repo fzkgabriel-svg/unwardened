@@ -81,9 +81,9 @@ export async function mountChrome(active) {
   const auth = document.getElementById('navauth');
   if (auth) auth.innerHTML = user
     ? `<a class="btn small ghost" href="/account.html">${esc(user.pseudo)}</a>
-       <a class="btn small" href="/game.html#download">TÉLÉCHARGER</a>`
+       <a class="btn small" href="https://unwardened.netlify.app" target="_blank" rel="noopener">▶ JOUER</a>`
     : `<a class="btn small ghost" href="/account.html">CONNEXION</a>
-       <a class="btn small" href="/game.html#download">TÉLÉCHARGER</a>`;
+       <a class="btn small" href="https://unwardened.netlify.app" target="_blank" rel="noopener">▶ JOUER</a>`;
   const yr = document.getElementById('yr');
   if (yr) yr.textContent = new Date().getFullYear();
 }
