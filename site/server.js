@@ -181,6 +181,11 @@ function smtpSend({ to, subject, html }) {
   });
 }
 
+// URL publique du site : PUBLIC_URL si définie, sinon dérivée de la requête
+// (Render termine le TLS et transmet x-forwarded-proto/host)
+const publicBase = req => process.env.PUBLIC_URL
+  || `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers.host}`;
+
 // sans SMTP configuré : le lien est journalisé (mode dev) — jamais affiché en prod
 const mailNote = (kind, email, link) => {
   const tag = kind === 'verify' ? 'Vérification email' : 'Réinitialisation mot de passe';
@@ -199,6 +204,8 @@ const mailNote = (kind, email, link) => {
       .catch(e => console.error(`[smtp] échec ${tag} → ${email} :`, e.message));
   } else if (DEV) {
     console.log(`[mail:dev] ${tag} -> ${email}\n  ${link}`);
+  } else {
+    console.warn(`[smtp] SMTP_URL non configuré — ${tag} pour ${email} NON envoyé`);
   }
 };
 
@@ -220,7 +227,7 @@ route('POST', '/api/register', async (req, res, b) => {
   const r = q.insertUser.run(pseudo, email, hashPass(pass));
   const uid = Number(r.lastInsertRowid);
   const tok = makeToken(uid, 'verify', 24);
-  mailNote('verify', email, `http://localhost:${PORT}/account.html?verify=${tok}`);
+  mailNote('verify', email, `${publicBase(req)}/account.html?verify=${tok}`);
   newSession(uid, res);
   json(res, 201, { ok: true, user: pubUser(q.userById.get(uid)), verifyToken: DEV ? tok : undefined });
 });
@@ -274,7 +281,7 @@ route('POST', '/api/forgot', async (req, res, b) => {
   let tok;
   if (u) {
     tok = makeToken(u.id, 'reset', 1);
-    mailNote('reset', u.email, `http://localhost:${PORT}/account.html?reset=${tok}`);
+    mailNote('reset', u.email, `${publicBase(req)}/account.html?reset=${tok}`);
   }
   await new Promise(r => setTimeout(r, 100));
   json(res, 200, { ok: true, devToken: DEV && u ? tok : undefined });
@@ -303,7 +310,7 @@ route('POST', '/api/resend-verify', needAuth(async (req, res, b, s) => {
   const u = q.userById.get(s.id);
   if (u.verified) return json(res, 400, { error: 'E-mail déjà vérifié' });
   const tok = makeToken(s.id, 'verify', 24);
-  mailNote('verify', u.email, `http://localhost:${PORT}/account.html?verify=${tok}`);
+  mailNote('verify', u.email, `${publicBase(req)}/account.html?verify=${tok}`);
   json(res, 200, { ok: true, devToken: DEV ? tok : undefined });
 }));
 
