@@ -620,17 +620,17 @@ function drawFiche(c, t) {
   if (unlocked) {
     ctx.fillStyle = '#7d8fa3';
     ctx.font = `11px ${UI}`;
-    ctx.fillText(`Boss : ${info.boss}  ·  ${BASE_WAVES[c]} vagues (Normal)`, tx, f.y + 96);
+    ctx.fillText(`Boss : ${info.boss}  ·  ${BASE_WAVES[c]} vagues (Normal)`, tx, f.y + 76);
     ctx.fillStyle = hexA(TERR[c].part, 0.95);
     ctx.font = `600 11px ${UI}`;
-    ctx.fillText(`🎁 ${info.reward}`, tx, f.y + 114);
+    ctx.fillText(`🎁 ${info.reward}`, tx, f.y + 94);
     ctx.fillStyle = '#8fa3b8';
     ctx.font = `10.5px ${UI}`;
-    wrapFiche(info.desc, tx, f.y + 108, f.x + f.w - 60 - tx, 12, 2);
+    wrapFiche(info.desc, tx, f.y + 106, f.x + f.w - 60 - tx, 11, 2);
   } else {
     ctx.fillStyle = 'rgba(255,255,255,0.3)';
     ctx.font = `600 11px ${UI}`;
-    ctx.fillText('🔒  BIOME INEXPLORÉ — terminez la campagne précédente pour découvrir ses secrets', tx, f.y + 116);
+    ctx.fillText('🔒  BIOME INEXPLORÉ — terminez la campagne précédente pour découvrir ses secrets', tx, f.y + 96);
   }
   // les trois cartes de difficulté
   for (const cd of campaignDiffCards(c)) drawDiffCard(cd, c, t);
