@@ -109,11 +109,15 @@ function useToken(tok, kind) {
   if (!t || t.kind !== kind || t.used || t.expires_at < new Date().toISOString()) return null;
   q.useToken.run(tok); return t;
 }
-// ---------- envoi d'e-mails : client SMTP minimal (node:net/tls, zéro dépendance) ----------
-// SMTP_URL=smtps://user:pass@hote:465  (TLS implicite — recommandé)
-// SMTP_URL=smtp://user:pass@hote:25    (clair ; STARTTLS non géré)
+// ---------- envoi d'e-mails ----------
+// Priorité : API HTTP Brevo (BREVO_API_KEY) — Render bloque les ports SMTP
+// sortants (25/465/587), donc SMTP_URL ne marche qu'en local/hors Render.
+// SMTP_URL=smtps://user:pass@hote:465 reste supporté pour le dev local.
 // MAIL_FROM="Kaeloryn Studio <no-reply@domaine>" pour l'expéditeur.
 const MAIL_FROM = process.env.MAIL_FROM || 'Kaeloryn Studio <no-reply@kaeloryn.studio>';
+const mailAddr = MAIL_FROM.match(/<([^>]+)>/)?.[1] || (MAIL_FROM.includes('@') ? MAIL_FROM.trim() : 'no-reply@kaeloryn.studio');
+const mailName = MAIL_FROM.match(/^([^<]+)</)?.[1]?.trim() || 'Kaeloryn Studio';
+const brevoKey = process.env.BREVO_API_KEY || '';
 let smtpCfg = null;
 try {
   if (process.env.SMTP_URL) {
@@ -136,6 +140,8 @@ function smtpSend({ to, subject, html }) {
     let buf = '', waiter = null, done = false;
     const finish = (err, r) => { if (!done) { done = true; try { sock.destroy(); } catch (e) {} err ? reject(err) : resolve(r); } };
     sock.on('error', finish);
+    sock.on('close', () => finish(done ? null : new Error('connexion SMTP fermée par le serveur')));
+    sock.on('end', () => finish(done ? null : new Error('connexion SMTP coupée (FIN reçu)')));
     sock.on('data', d => {
       buf += d.toString('utf8');
       let i;
@@ -181,6 +187,25 @@ function smtpSend({ to, subject, html }) {
   });
 }
 
+// envoi unifié : API HTTP Brevo en priorité (Render bloque SMTP), SMTP en repli (dev local)
+const sendMail = ({ to, subject, html }) => {
+  if (brevoKey) {
+    return fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: { 'api-key': brevoKey, 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({
+        sender: { email: mailAddr, name: mailName },
+        to: [{ email: to }],
+        subject, htmlContent: html,
+      }),
+    }).then(async r => {
+      if (!r.ok) throw new Error(`Brevo HTTP ${r.status} : ${(await r.text()).slice(0, 160)}`);
+    });
+  }
+  if (smtpCfg) return smtpSend({ to, subject, html });
+  return Promise.reject(new Error('aucun fournisseur e-mail configuré (BREVO_API_KEY ou SMTP_URL)'));
+};
+
 // URL publique du site : PUBLIC_URL si définie, sinon dérivée de la requête
 // (Render termine le TLS et transmet x-forwarded-proto/host)
 const publicBase = req => process.env.PUBLIC_URL
@@ -199,18 +224,19 @@ const mailNote = async (kind, email, link) => {
     <p style="color:#888;font-size:12px">Ou copiez ce lien :<br><a href="${link}">${link}</a></p>
     <p style="color:#888;font-size:12px">Ce lien expire dans 24 h. Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail.</p>
   </div>`;
-  if (smtpCfg) {
+  if (brevoKey || smtpCfg) {
     try {
-      await smtpSend({ to: email, subject: `${tag} — Kaeloryn Studio`, html });
-      console.log(`[smtp] ${tag} envoyé à ${email}`);
+      await sendMail({ to: email, subject: `${tag} — Kaeloryn Studio`, html });
+      console.log(`[mail] ${tag} envoyé à ${email}`);
       return 'sent';
     } catch (e) {
-      console.error(`[smtp] échec ${tag} → ${email} :`, e.message);
-      return 'err: ' + e.message;
+      const detail = (e && (e.message || e.code || e.reason)) || String(e);
+      console.error(`[smtp] échec ${tag} → ${email} :`, e && (e.stack || e.message || e));
+      return 'err: ' + detail;
     }
   }
   if (DEV) { console.log(`[mail:dev] ${tag} -> ${email}\n  ${link}`); return 'dev'; }
-  console.warn(`[smtp] SMTP_URL non configuré — ${tag} pour ${email} NON envoyé`);
+  console.warn(`[mail] aucun fournisseur configuré (BREVO_API_KEY/SMTP_URL) — ${tag} pour ${email} NON envoyé`);
   return 'no-smtp';
 };
 
