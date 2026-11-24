@@ -55,7 +55,25 @@ try {
   V.drawQuestsView();
   ok('drawQuestsView ok', true);
   const act = V.questsClickAt(20, 20);
-  ok('questsClickAt ne crash pas', act === null || act === 'back' || act === 'claim' || act === 'deny');
+  ok('questsClickAt ne crash pas', act === null || act === 'back' || act === 'claim' || act === 'deny' || act === 'chest');
+
+  // ---------- quêtes hebdomadaires ----------
+  const w1 = Q.weeklyQuests(), w2 = Q.weeklyQuests();
+  ok('3 quêtes hebdo', w1.length === 3);
+  ok('tirage hebdo déterministe', w1.map(q => q.id).join() === w2.map(q => q.id).join());
+  ok('toutes dans WQPOOL', w1.every(q => Q.WQPOOL.includes(q)));
+  const wq = Q.weeklyQuests()[0];
+  Q.qAdd('kills', 0); // force l'init de qweek
+  const wkKey = G.stats.qweek.week;
+  G.stats.qweek = { week: wkKey, c: { kills: 9e9, dmg: 9e9, bosses: 9e9, emerald: 9e9, mats: 9e9, mods: 9e9, victories: 9e9, potions: 9e9, time: 9e9 }, mx: { wave: 99, level: 99 }, claimed: [] };
+  const modsBefore = (G.inv.modules && G.inv.modules.owned || []).length;
+  const wr = Q.claimWeekly(wq.id);
+  ok('claim hebdo ok', wr.ok === true);
+  ok('coffre → module ajouté', (G.inv.modules.owned || []).length === modsBefore + 1);
+  ok('chestFx posé', !!G.chestFx && G.chestFx.until > G.time);
+  ok('double claim hebdo refusé', Q.claimWeekly(wq.id).ok === false);
+  ok('weekCountdown positif', Q.weekCountdown() > 0);
+  ok('drawQuestsView avec hebdo ok', (V.drawQuestsView(), true));
 
 } catch (e) { out.push('FAIL ' + e.message + ' ' + (e.stack || '').split('\n')[1]); }
 document.getElementById('out').textContent = out.join('\n');

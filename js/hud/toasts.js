@@ -118,6 +118,85 @@ export function drawLevelToast() {
   ctx.restore();
 }
 
+// coffre hebdomadaire : secoue puis s'ouvre en revealing le module gagné
+export function drawChestFx() {
+  const t = G.chestFx;
+  if (!t) return;
+  const rem = (t.until ?? G.time + 3) - G.time;
+  if (rem <= 0) { G.chestFx = null; return; }
+  const DUR = 3.0;
+  const el = DUR - rem;                              // temps écoulé
+  const k = Math.min(1, el / 0.5);                   // apparition
+  const openK = Math.max(0, Math.min(1, (el - 0.9) / 0.6)); // ouverture après 0,9 s
+  const a = rem < 0.6 ? rem / 0.6 : 1;               // fade out final
+  ctx.save();
+  ctx.globalAlpha = a;
+  const cx = W / 2, cy = H / 2 - 40;
+  const shake = openK < 1 ? Math.sin(G.time * 40) * (1 - openK) * 10 : 0;
+  // halo
+  ctx.shadowColor = t.col || '#ffd54f'; ctx.shadowBlur = 30;
+  // coffre : corps + couvercle qui se soulève
+  const bw = 150, bh = 96;
+  const bx = cx - bw / 2 + shake * 0.4, by = cy - bh / 2;
+  // corps
+  const bg = ctx.createLinearGradient(bx, by, bx, by + bh);
+  bg.addColorStop(0, '#6d4c41'); bg.addColorStop(1, '#3e2723');
+  ctx.fillStyle = bg;
+  roundRect(bx, by + 26, bw, bh - 26, 8); ctx.fill();
+  ctx.strokeStyle = '#ffd54f'; ctx.lineWidth = 2.5;
+  roundRect(bx + 1, by + 27, bw - 2, bh - 28, 7); ctx.stroke();
+  // couvercle
+  ctx.save();
+  ctx.translate(bx + bw / 2, by + 28);
+  ctx.rotate(-openK * 0.9);
+  ctx.translate(-bw / 2, 0);
+  const lg = ctx.createLinearGradient(0, -18, 0, 28);
+  lg.addColorStop(0, '#8d6e63'); lg.addColorStop(1, '#5d4037');
+  ctx.fillStyle = lg;
+  roundRect(0, -18, bw, 46, 10); ctx.fill();
+  ctx.strokeStyle = '#ffd54f'; ctx.lineWidth = 2.5;
+  roundRect(1, -17, bw - 2, 44, 9); ctx.stroke();
+  ctx.restore();
+  // serrures
+  ctx.fillStyle = '#ffd54f';
+  ctx.fillRect(cx - 8 + shake * 0.4, by + 34, 16, 18);
+  ctx.strokeStyle = '#3e2723'; ctx.lineWidth = 2;
+  ctx.strokeRect(cx - 8 + shake * 0.4, by + 34, 16, 18);
+  ctx.beginPath(); ctx.arc(cx + shake * 0.4, by + 42, 3, 0, Math.PI * 2); ctx.stroke();
+  // lumière dorée qui jaillit à l'ouverture
+  if (openK > 0) {
+    const lg2 = ctx.createRadialGradient(cx, by + 20, 4, cx, by + 20, 120 * openK);
+    lg2.addColorStop(0, 'rgba(255,213,79,' + (0.8 * openK) + ')');
+    lg2.addColorStop(1, 'transparent');
+    ctx.fillStyle = lg2;
+    ctx.fillRect(cx - 140, by - 120, 280, 280);
+  }
+  ctx.shadowBlur = 0;
+  // module révélé
+  if (openK > 0.5) {
+    const mk = Math.min(1, (openK - 0.5) * 2);
+    const my = by - 60 - (1 - mk) * 30;
+    ctx.globalAlpha = a * mk;
+    ctx.font = '52px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.shadowColor = t.col || '#ffd54f'; ctx.shadowBlur = 24;
+    ctx.fillText(t.icon || '📦', cx + shake, my);
+    ctx.shadowBlur = 0;
+    ctx.font = `bold 20px Georgia, serif`; ctx.fillStyle = '#ffd740';
+    ctx.fillText(t.name, cx, my + 52);
+    ctx.font = `700 13px Inter, sans-serif`; ctx.fillStyle = t.col || '#ffd54f';
+    ctx.fillText(`MODULE ${t.rar ? '· ' + t.rar.toUpperCase() : ''}`, cx, my + 74);
+    // étincelles
+    ctx.font = '16px serif';
+    for (let i = 0; i < 8; i++) {
+      const ang = i * Math.PI / 4 + G.time;
+      const rr = 60 + Math.sin(G.time * 3 + i) * 12;
+      ctx.globalAlpha = a * mk * 0.7;
+      ctx.fillText('✦', cx + Math.cos(ang) * rr + shake, my - 30 + Math.sin(ang) * rr * 0.6);
+    }
+  }
+  ctx.restore();
+}
+
 // avertissement orange (ex. équipement à moins de 20 % de durabilité)
 export function drawWarnToast() {
   const t = G.warnToast;

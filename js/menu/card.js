@@ -6,31 +6,31 @@ import { COSMETIC_CATS, gLevel, gXp, gXpNeed, isOwned, cosmeticUnlocked, equipCo
 import { inR, overlineCentered, drawMenuButton, menuButtons, hexA, UI, SERIF, C_TEXT, C_MUTED, C_GOLD } from './common.js';
 import { sfxConfirm, sfxDeny } from '../audio.js';
 
-const PW = 900, PH = 580;
+const PW = 920, PH = 640;
 let curTab = 'portrait';
 
 export function cardButtons() {
-  const cx = W / 2 - PW / 2, cy = H / 2 - PH / 2 - 10;
-  const tabY = cy + 208;
+  const cx = W / 2 - PW / 2, cy = H / 2 - PH / 2 - 16;
+  const tabY = cy + 292;
   const tabs = COSMETIC_CATS.map((c, i) => ({
-    id: c.id, x: cx + 30 + i * ((PW - 60) / 5), y: tabY, w: (PW - 60) / 5 - 8, h: 34,
+    id: c.id, x: cx + 40 + i * ((PW - 80) / 5), y: tabY, w: (PW - 80) / 5 - 8, h: 32,
   }));
   const cat = COSMETIC_CATS.find(c => c.id === curTab);
-  const gridY = tabY + 46;
-  const gw = (PW - 60) / 4, gh = 62;
+  const gridY = tabY + 42;
+  const cols = 5, gw = (PW - 80) / cols, gh = 50;
   const items = (cat ? cat.list : []).map((c, i) => ({
     id: c.id,
-    x: cx + 30 + (i % 4) * gw,
-    y: gridY + Math.floor(i / 4) * (gh + 8),
+    x: cx + 40 + (i % cols) * gw,
+    y: gridY + Math.floor(i / cols) * (gh + 6),
     w: gw - 8, h: gh,
   }));
-  const rows = Math.ceil(items.length / 4);
-  const footY = gridY + rows * (gh + 8) + 12;
+  const rows = Math.ceil(items.length / cols);
+  const footY = gridY + rows * (gh + 6) + 10;
   return {
     cx, cy, tabs, items,
     reset: { x: cx + PW - 210, y: footY, w: 180, h: 36 },
-    back: { x: cx + 30, y: footY, w: 160, h: 36 },
-    cardRect: { x: cx + 30, y: cy + 66, w: PW - 60, h: 132 },
+    back: { x: cx + 40, y: footY, w: 160, h: 36 },
+    cardRect: { x: cx + 40, y: cy + 84, w: PW - 80, h: 140 },
   };
 }
 
@@ -83,8 +83,8 @@ export function drawCardView() {
   const lvl = gLevel(), xp = gXp(), need = gXpNeed();
   ctx.textAlign = 'center'; ctx.font = `600 13px ${UI}`;
   ctx.fillStyle = C_GOLD;
-  ctx.fillText(`NIVEAU ${lvl} / ${MAX_LEVEL}`, W / 2, cy + 216);
-  const nbx = cx + 60, nbw = PW - 120, nby = cy + 224;
+  ctx.fillText(`NIVEAU ${lvl} / ${MAX_LEVEL}`, W / 2, cy + 246);
+  const nbx = cx + 60, nbw = PW - 120, nby = cy + 254;
   ctx.fillStyle = 'rgba(255,255,255,0.08)';
   roundRect(nbx, nby, nbw, 8, 4); ctx.fill();
   const pct = need ? Math.min(1, xp / need) : 1;
@@ -133,8 +133,8 @@ export function drawCardView() {
     ctx.font = `700 15px ${UI}`; ctx.fillStyle = unlocked ? item.col : C_MUTED;
     ctx.fillText(`${item.icon} ${item.nom}`, it.x + 12, it.y + 24);
     ctx.font = `10px ${UI}`; ctx.fillStyle = unlocked ? C_MUTED : '#666';
-    const status = equipped ? '✔ ÉQUIPÉ' : owned ? `possédé · ${item.rar.toUpperCase()}` : `NV ${item.lv} · ${item.rar}`;
-    ctx.fillText(status.length > 26 ? status.slice(0, 25) + '…' : status, it.x + 12, it.y + 44);
+    const status = equipped ? '✔ ÉQUIPÉ' : owned ? `${item.rar}` : `NV ${item.lv} · ${item.rar}`;
+    ctx.fillText(status.length > 22 ? status.slice(0, 21) + '…' : status, it.x + 10, it.y + 40);
     ctx.globalAlpha = 1;
     if (!unlocked) {
       ctx.textAlign = 'right'; ctx.font = `700 11px ${UI}`; ctx.fillStyle = '#555';
@@ -142,14 +142,7 @@ export function drawCardView() {
     }
   });
 
-  // ---- pied : prochaine récompense + boutons ----
-  const nr = nextReward();
-  const rw = rewardsAtLevel(nr);
-  ctx.font = `600 11px ${UI}`; ctx.fillStyle = C_MUTED; ctx.textAlign = 'center';
-  ctx.fillText(`Prochaine récompense : niveau ${nr} → ${rw.map(r => `${r.icon} ${r.nom}`).join(', ') || '—'}`,
-    W / 2, b.reset.y - 14);
-
-  // bouton reset
+  // ---- pied : bouton reset ----
   const rh = inR(b.reset, G.mouse.x, G.mouse.y);
   ctx.fillStyle = rh ? 'rgba(198,40,40,0.25)' : 'rgba(198,40,40,0.12)';
   roundRect(b.reset.x, b.reset.y, b.reset.w, b.reset.h, 8); ctx.fill();

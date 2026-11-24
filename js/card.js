@@ -82,7 +82,7 @@ export function drawPlayerCard(x, y, w, h, opts = {}) {
   roundRect(x - fr.w / 2 - 3, y - fr.w / 2 - 3, w + fr.w + 6, h + fr.w + 6, 18); ctx.stroke();
   ctx.restore();
 
-  const s = w / 480; // échelle de mise en page
+  const s = Math.min(w / 480, h / 300); // échelle : la carte reste lisible à tout ratio
   // ---- portrait ----
   const px = x + 78 * s, py = y + h / 2;
   const pr = 44 * s;

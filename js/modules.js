@@ -52,6 +52,7 @@ export function modulesUnlocked() { return !!(G.stats && G.stats.campaignDone &&
 export function modState(inv) {
   inv.modules = inv.modules || { owned: [], eq: { act: null, pass: null }, passUnlocked: false };
   const m = inv.modules;
+  m.owned = m.owned || [];
   m.eq = m.eq || {};
   if (m.eq.pass2 === undefined) m.eq.pass2 = null;
   if (m.pass2Unlocked === undefined) m.pass2Unlocked = false;

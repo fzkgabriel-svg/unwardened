@@ -121,8 +121,8 @@ function update(dt) {
     G.deathT -= dt;
     G.screenFlash = Math.max(0, G.screenFlash - dt);
     G.screenShake = Math.max(0, G.screenShake - dt * 45);
-    if (G.achToast) { G.achToast.t -= dt; if (G.achToast.t <= 0) G.achToast = null; }
     if (G.levelToast) { G.levelToast.t -= dt; if (G.levelToast.t <= 0) G.levelToast = null; }
+    if (G.achToast) { G.achToast.t -= dt; if (G.achToast.t <= 0) G.achToast = null; }
     if (G.warnToast) { G.warnToast.t -= dt; if (G.warnToast.t <= 0) G.warnToast = null; }
     updateEffects(dt);
     if (G.deathT <= 0) { G.deathT = 0; G.state = 'gameover'; }
