@@ -16,6 +16,7 @@ import { drawAdmin } from './menu/admin.js';
 import { drawCampaign } from './menu/campaign.js';
 import { drawModulesView } from './menu/modules.js';
 import { drawQuestsView } from './menu/quests.js';
+import { drawCardView } from './menu/card.js';
 import { questsClaimable } from './quests.js';
 import { modulesUnlocked } from './modules.js';
 import { drawAccountCard, drawLeaderboardCard, openLeaderboard, acctClick, acctKey, lbClickAt, lbKey } from './menu/online.js';
@@ -31,6 +32,7 @@ export * from './menu/admin.js';
 export * from './menu/campaign.js';
 export * from './menu/modules.js';
 export * from './menu/quests.js';
+export * from './menu/card.js';
 export * from './menu/online.js';
 
 // fond commun des écrans de menu : voile sombre + poussières discrètes
@@ -84,6 +86,10 @@ export function drawMenu() {
   }
   if (G.menuView === 'quests') {
     drawQuestsView();
+    return;
+  }
+  if (G.menuView === 'card') {
+    drawCardView();
     return;
   }
   if (G.menuView === 'account') {
@@ -166,6 +172,7 @@ export function drawMenu() {
   // boutons vers le site officiel et le Discord
   drawMenuButton(siteWebButton(), 'SITE WEB ↗', '#2e4a6b', '#9fc3e8', false);
   drawMenuButton(discordButton(), 'DISCORD ↗', '#3b4a8c', '#a8b8ff', false);
+  drawMenuButton(cardButton(), '🃏 CARTE DE JOUEUR', '#5d4037', '#d7ccc8', false);
   ctx.textAlign = 'center';
 }
 // zone cliquable du bouton site web (partagée dessin/clic)
@@ -174,6 +181,9 @@ export function siteWebButton() {
 }
 export function discordButton() {
   return { x: 690, y: 598, w: 414, h: 36 };
+}
+export function cardButton() {
+  return { x: 690, y: 640, w: 414, h: 36 };
 }
 
 // entrée de navigation du menu principal (liste verticale)
@@ -246,6 +256,7 @@ function drawStatsCard() {
     return `${Math.floor(t / 60)}m ${String(t % 60).padStart(2, '0')}s`;
   };
   const rows = [
+    ['Niveau global', `${s.glevel || 1}/1000`],
     ['Meilleure vague', s.bestWave || 0],
     ['Niveau max', s.bestLevel || 1],
     ['Ennemis vaincus (record)', s.bestKills || 0],

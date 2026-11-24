@@ -64,6 +64,60 @@ export function drawAchToast() {
   ctx.restore();
 }
 
+// notification de niveau global (NIVEAU X + récompense de palier éventuelle)
+export function drawLevelToast() {
+  const t = G.levelToast;
+  if (!t) return;
+  const a = Math.min(1, t.t / 0.4, (t.t < 1 ? t.t : 1));
+  ctx.save();
+  ctx.globalAlpha = Math.max(0, Math.min(1, a));
+  const k = Math.min(1, (5 - t.t) / 0.35);
+  const rise = (1 - k) * -16;
+  ctx.font = 'bold 17px Georgia, serif';
+  const label = `✦ NIVEAU ${t.lvl} ✦`;
+  const lw = ctx.measureText(label).width;
+  const hasRw = t.rewards && t.rewards.length;
+  const bw = Math.max(lw + 130, hasRw ? 330 : 260), bh = hasRw ? 92 : 58;
+  const bx = W / 2 - bw / 2, by = 60 + rise;
+  ctx.shadowColor = 'rgba(255,213,79,0.55)'; ctx.shadowBlur = 22;
+  const bg = ctx.createLinearGradient(bx, by, bx, by + bh);
+  bg.addColorStop(0, 'rgba(30,24,10,0.97)'); bg.addColorStop(1, 'rgba(12,10,6,0.97)');
+  ctx.fillStyle = bg;
+  roundRect(bx, by, bw, bh, 12); ctx.fill();
+  ctx.strokeStyle = '#ffd54f'; ctx.lineWidth = 2;
+  roundRect(bx + 1, by + 1, bw - 2, bh - 2, 11); ctx.stroke();
+  ctx.shadowBlur = 0;
+  const fg = ctx.createLinearGradient(bx + 20, 0, bx + bw - 20, 0);
+  fg.addColorStop(0, 'transparent'); fg.addColorStop(0.5, '#ffd54f'); fg.addColorStop(1, 'transparent');
+  ctx.fillStyle = fg;
+  roundRect(bx + 20, by + 2, bw - 40, 3, 1.5); ctx.fill();
+  // étoile animée
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const tw2 = Math.sin(G.time * 5) * 0.15;
+  ctx.save();
+  ctx.translate(bx + 40, by + bh / 2 - (hasRw ? 10 : 0));
+  ctx.rotate(tw2);
+  ctx.font = '34px serif';
+  ctx.fillText('⭐', 0, 0);
+  ctx.restore();
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = '#ffd740';
+  ctx.font = 'bold 17px Georgia, serif';
+  ctx.fillText(label, bx + 66, by + 30 - (hasRw ? 10 : 0));
+  ctx.fillStyle = '#efe8d6';
+  ctx.font = '12px Inter, sans-serif';
+  ctx.fillText(t.lvl >= 1000 ? 'Niveau maximum atteint — Transcendant !' : 'Le monde te reconnaît…', bx + 66, by + 48 - (hasRw ? 10 : 0));
+  if (hasRw) {
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 12px Inter, sans-serif';
+    ctx.fillStyle = '#ffd54f';
+    ctx.fillText('RÉCOMPENSE DÉBLOQUÉE', bx + bw / 2, by + 62);
+    ctx.font = '15px serif';
+    ctx.fillText(t.rewards.map(r => `${r.icon} ${r.nom}`).join('   '), bx + bw / 2, by + 82);
+  }
+  ctx.restore();
+}
+
 // avertissement orange (ex. équipement à moins de 20 % de durabilité)
 export function drawWarnToast() {
   const t = G.warnToast;

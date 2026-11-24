@@ -5,7 +5,7 @@ import { updateEffects, addDamageText, spawnParticles } from './effects.js';
 import { drawBackground, drawEnemy, drawDrops, drawPlayer, drawSlashArc, drawUltFlash, drawMushroom, drawBomber, drawEffects, drawFireZones, drawCraters, drawPortals, drawProjectiles, drawLightnings, drawGrain, drawClouds, dayNight, drawTerrain, drawBuildings, drawWorldPortals, drawObstacle, drawIceStorm, drawLasers, drawHands, drawVolcanoes, drawAcidZones, drawBlackHoles, drawVoidHole, drawWindZones, drawStormTornado, drawBowShots, drawSingZones, drawBowReveal, drawGardienAura, drawSentenceCharge, drawKnifeShots, drawGardienReveal, drawAmbient, drawFalls, drawBiomeGrade, drawCloudShadows, drawSnowCover } from './graphics.js';
 import { checkAchievements } from './achievements.js';
 import { wearEquipment, addMaterial } from './inventory.js';
-import { drawHUD, drawAchToast, drawWarnToast } from './hud.js';
+import { drawHUD, drawAchToast, drawWarnToast, drawLevelToast } from './hud.js';
 import { drawSecrets, drawSwayDecor, drawDecorLights, drawLakeGlints } from './gfx/terrain.js';
 import { drawMenu, drawGameOver, drawPauseMenu, drawVictory, recordRun, drawAdminMenu, drawAdminButton, drawDurWarnPopup } from './menu.js';
 import { initWorlds, updateCamera, worldW, worldH, checkWavePortal, syncCamera, resolveObstacles, curWorld } from './world.js';
@@ -141,6 +141,7 @@ export function draw() {
   drawModuleHUD(); // icône du module actif + cooldown (X)
   if (G.tutorial) drawTutorial(); // panneau d'objectif + flèche de cible
   drawAchToast(); // notification de succès débloqué
+  drawLevelToast(); // notification de niveau global
   drawWarnToast(); // avertissement équipement fragile
   if (G.screenFlash > 0) {
     ctx.fillStyle = `rgba(255,60,40,${G.screenFlash * 0.8})`;

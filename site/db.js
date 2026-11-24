@@ -147,7 +147,7 @@ export const q = {
                                  FROM player_stats ps JOIN users u ON u.id = ps.user_id
                                  WHERE u.suspended = 0 AND ps.score > 0 AND u.pseudo LIKE ? ESCAPE '\\'
                                  ORDER BY ps.score DESC LIMIT 20`),
-  publicStats: db.prepare(`SELECT ps.score, ps.level, ps.worlds_done, ps.bosses, ps.achievements,
+  publicStats: db.prepare(`SELECT ps.user_id, ps.score, ps.level, ps.worlds_done, ps.bosses, ps.achievements,
                            ps.playtime, ps.updated_at, u.pseudo, u.avatar, u.created_at
                            FROM player_stats ps JOIN users u ON u.id = ps.user_id
                            WHERE u.pseudo = ? COLLATE NOCASE AND u.suspended = 0`)

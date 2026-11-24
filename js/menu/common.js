@@ -25,7 +25,7 @@ export function menuButtons() {
 
 export function menuButtonAt(x, y) {
   const b = menuButtons();
-  if (G.menuView === 'stats' || G.menuView === 'achievements' || G.menuView === 'modules' || G.menuView === 'quests') {
+  if (G.menuView === 'stats' || G.menuView === 'achievements' || G.menuView === 'modules' || G.menuView === 'quests' || G.menuView === 'card') {
     return inR(b.back, x, y) ? 'back' : null;
   }
   for (const [k] of MENU_ITEMS) if (inR(b[k], x, y)) return k;

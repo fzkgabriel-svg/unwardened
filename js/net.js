@@ -109,6 +109,9 @@ function buildPayload() {
       level: st.bestLevel || 1, worldsDone,
       bosses: st.totalBossKills || 0, achievements: achv,
       playtime: st.totalPlayTime || 0,
+      // carte de joueur : niveau global + cosmétiques équipés (publics par design)
+      glevel: st.glevel || 1, gxp: st.gxp || 0,
+      card: st.card || null, cardOwned: (st.cardOwned || []).length,
     },
   };
 }

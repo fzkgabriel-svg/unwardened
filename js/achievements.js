@@ -3,6 +3,7 @@ import { sfxAchievement } from './audio.js';
 import { addMaterial, loadInv, saveInv, ITEMS, MATS, DUR_MAX, durMaxOf } from './inventory.js';
 import { storeKey } from './chars.js';
 import { diffProg } from './difficulty.js';
+import { gainGlobalXp, XP_ACHIEVEMENT } from './levelup.js';
 
 // Succès persistés par personnage (localStorage 'rpg2d_c{slot}_achievements')
 const KEY = () => storeKey('achievements');
@@ -324,6 +325,7 @@ export function claimReward(id) {
   if (!a || !u || isClaimed(id)) return false;
   const rw = (REWARDS[id] || [])[1] || {};
   for (const m in rw) addMaterial(G.inv, m, rw[m]);
+  gainGlobalXp(XP_ACHIEVEMENT); // niveau global : un succès compte
   const prev = unlocked[id];
   unlocked[id] = { claimed: true, t: (prev && typeof prev === 'object' && prev.t) || Date.now() };
   save(unlocked);

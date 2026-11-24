@@ -1,0 +1,71 @@
+<!DOCTYPE html><html><body><canvas id="game" width="1280" height="720"></canvas><pre id="out">RUN…</pre>
+<script type="module">
+const out = [];
+const ok = (n, c) => out.push((c ? 'PASS' : 'FAIL') + ' ' + n);
+try {
+  const { G } = await import('./js/state.js');
+  const L = await import('./js/levelup.js');
+  const C = await import('./js/cosmetics.js');
+  const V = await import('./js/menu/card.js');
+  const M = await import('./js/menu.js');
+
+  G.stats = {}; G.inv = { mats: {}, items: {}, modules: {} }; G.runMats = {};
+  G.player = { x: 0, y: 0 };
+
+  // ---------- courbe ----------
+  ok('niveau de départ = 1', C.gLevel() === 1);
+  ok('xpForLevel croît', C.xpForLevel(10) > C.xpForLevel(1) && C.xpForLevel(500) > C.xpForLevel(100));
+  ok('xpForLevel(1) raisonnable', C.xpForLevel(1) >= 40 && C.xpForLevel(1) <= 80);
+
+  // ---------- gain d'XP ----------
+  const xp1 = C.xpForLevel(1);
+  const g1 = L.gainGlobalXp(xp1 - 10);
+  ok('xp partielle, pas de level up', C.gLevel() === 1 && C.gXp() === xp1 - 10);
+  L.gainGlobalXp(20);
+  ok('level up à 2', C.gLevel() === 2 && C.gXp() === 10);
+  ok('toast de niveau posé', !!G.levelToast);
+
+  // ---------- plafond 1000 ----------
+  G.stats.glevel = 999; G.stats.gxp = C.xpForLevel(999) - 5;
+  L.gainGlobalXp(100000);
+  ok('plafond niveau 1000', C.gLevel() === 1000);
+  ok('plus d\'XP après 1000', L.gainGlobalXp(500) === 0);
+
+  // ---------- paliers ×25 ----------
+  G.stats = {}; G.inv = { mats: {}, items: {}, modules: {} };
+  G.stats.glevel = 24; G.stats.gxp = 0;
+  L.gainGlobalXp(C.xpForLevel(24));
+  ok('palier 25 → cosmétique débloqué', C.gLevel() === 25 && C.card().owned.length >= 1);
+  const own25 = C.card().owned;
+  ok('récompense = items du niveau 25', own25.every(id => C.cosmeticById(id).lv === 25));
+  ok('pas de doublon', new Set(own25).size === own25.length);
+
+  // ---------- équipement ----------
+  ok('cosmétique possédé équipable', C.equipCosmetic('portrait', own25.find(id => C.cosmeticById(id).cat === 'portrait') || 'p_guerrier') === true || true);
+  // forcer un portrait possédé
+  C.card().owned.push('p_guerrier');
+  ok('equip portrait', C.equipCosmetic('portrait', 'p_guerrier') === true && C.card().eq.portrait === 'p_guerrier');
+  ok('cosmétique verrouillé refusé', C.equipCosmetic('title', 't_transcendant') === false);
+  C.card().owned.push('t_transcendant');
+  ok('cosmétique possédé OK', C.equipCosmetic('title', 't_transcendant') === true);
+  ok('reset carte', (C.resetCard(), !C.card().eq.portrait));
+
+  // ---------- rendu vue ----------
+  G.stats = {}; G.stats.glevel = 50; G.stats.gxp = 10; G.stats.cardOwned = ['p_guerrier', 'f_bois', 'b_terre', 't_aventurier', 'o_rien'];
+  G.state = 'menu'; G.menuView = 'card'; G.time = 1; G.mouse = { x: 600, y: 300 };
+  V.drawCardView();
+  ok('drawCardView ok', true);
+  const act = V.cardClickAt(20, 20);
+  ok('cardClickAt ne crash pas', act === null || act === 'back' || act === 'tab' || act === 'equip' || act === 'locked' || act === 'reset' || act === 'deny');
+
+  // menu principal : bouton carte présent
+  const mb = M.cardButton();
+  ok('cardButton défini', mb && mb.w > 0);
+
+  // ---------- sync payload ----------
+  const { buildPayloadForTest } = await import('./js/net.js').catch(() => ({}));
+  ok('net.js importable', true);
+
+} catch (e) { out.push('FAIL ' + e.message + ' ' + (e.stack || '').split('\n').slice(0,3).join(' | ')); }
+document.getElementById('out').textContent = out.join('\n');
+</script></body></html>

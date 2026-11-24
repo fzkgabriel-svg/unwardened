@@ -8,10 +8,11 @@ import { drawSkillBar, drawWeaponPanel } from './hud/skills.js';
 import { drawBossBar } from './hud/boss.js';
 import { drawMinimap } from './hud/map.js';
 import { drawEquipPanel } from './hud/equip.js';
-import { drawAchToast as _ach, drawWarnToast as _warn } from './hud/toasts.js';
+import { drawAchToast as _ach, drawWarnToast as _warn, drawLevelToast as _lvl } from './hud/toasts.js';
 
 export const drawAchToast = _ach;
 export const drawWarnToast = _warn;
+export const drawLevelToast = _lvl;
 
 export function drawHUD() {
   // halo supérieur : assombrit le haut de l'écran pour la lisibilité

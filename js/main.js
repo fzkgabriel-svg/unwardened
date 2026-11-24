@@ -5,7 +5,8 @@ import { updateEffects, addDamageText, spawnParticles } from './effects.js';
 import { drawBackground, drawEnemy, drawDrops, drawPlayer, drawSlashArc, drawUltFlash, drawMushroom, drawBomber, drawEffects, drawFireZones, drawCraters, drawPortals, drawProjectiles, drawLightnings, drawGrain, drawClouds, dayNight, drawTerrain, drawBuildings, drawWorldPortals, drawObstacle, drawIceStorm, drawLasers, drawHands, drawVolcanoes, drawAcidZones, drawBlackHoles, drawVoidHole } from './graphics.js';
 import { checkAchievements } from './achievements.js';
 import { wearEquipment, addMaterial, getDur, durMaxOf, ITEMS } from './inventory.js';
-import { drawHUD, drawAchToast, drawWarnToast } from './hud.js';
+import { drawHUD, drawAchToast, drawWarnToast, drawLevelToast } from './hud.js';
+import { gainGlobalXp, xpForVictory, XP_WORLD } from './levelup.js';
 import { drawMenu, drawGameOver, drawPauseMenu, drawVictory, recordRun, drawAdminMenu, drawAdminButton, drawDurWarnPopup } from './menu.js';
 import { initWorlds, updateCamera, worldW, worldH, checkWavePortal, syncCamera, resolveObstacles, curWorld } from './world.js';
 import { CAMPAIGNS } from './world_data.js';
@@ -121,6 +122,7 @@ function update(dt) {
     G.screenFlash = Math.max(0, G.screenFlash - dt);
     G.screenShake = Math.max(0, G.screenShake - dt * 45);
     if (G.achToast) { G.achToast.t -= dt; if (G.achToast.t <= 0) G.achToast = null; }
+    if (G.levelToast) { G.levelToast.t -= dt; if (G.levelToast.t <= 0) G.levelToast = null; }
     if (G.warnToast) { G.warnToast.t -= dt; if (G.warnToast.t <= 0) G.warnToast = null; }
     updateEffects(dt);
     if (G.deathT <= 0) { G.deathT = 0; G.state = 'gameover'; }
@@ -280,6 +282,7 @@ function update(dt) {
   G.screenFlash = Math.max(0, G.screenFlash - dt);
   G.screenShake = Math.max(0, G.screenShake - dt * 45);
   if (G.achToast) { G.achToast.t -= dt; if (G.achToast.t <= 0) G.achToast = null; }
+  if (G.levelToast) { G.levelToast.t -= dt; if (G.levelToast.t <= 0) G.levelToast = null; }
   if (G.warnToast) { G.warnToast.t -= dt; if (G.warnToast.t <= 0) G.warnToast = null; }
 
   // Spawn : cadence en temps réel même pendant le ralenti (les monstres arrivent)
@@ -796,6 +799,9 @@ function update(dt) {
     // débloque la difficulté suivante et mémorise les records — campaignDone reste
     // la condition de déblocage du niveau suivant (le Normal l'implique toujours)
     G.lastScore = runScore();
+    // niveau global : victoire de campagne (difficulté pondérée) + bonus premier monde
+    const firstWin = !(G.stats.campaignDone && G.stats.campaignDone[G.campaign]);
+    gainGlobalXp(xpForVictory(G.campaign, G.difficulty || 0) + (firstWin ? XP_WORLD : 0));
     recordDiffWin(G.campaign, G.difficulty || 0, G.lastScore, G.runTime);
     if (G.campaign === 1) G.stats.iceUlt = true; // coffre : débloque la Pluie de Glace
     if (G.campaign === 2) G.stats.hellUlt = true; // trône : débloque la Colère Infernale

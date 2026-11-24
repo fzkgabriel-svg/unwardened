@@ -584,12 +584,32 @@ route('GET', '/api/player/:pseudo', (req, res, b, s, m) => {
     ? db.prepare(`SELECT COUNT(*) c FROM player_stats ps JOIN users u ON u.id = ps.user_id
                   WHERE u.suspended = 0 AND ps.score > ?`).get(st.score).c + 1
     : null;
+  // carte de joueur : lue depuis la sauvegarde cloud (payload.stats, borné côté jeu)
+  let card = null, glevel = null, gxp = null, rewards = 0;
+  try {
+    const sv = q.saveByUser.get(st.user_id);
+    if (sv && sv.payload) {
+      const pl = JSON.parse(sv.payload);
+      const ps = pl.stats || {};
+      glevel = Math.min(1000, Math.max(1, +ps.glevel || 1));
+      gxp = Math.max(0, Math.floor(+ps.gxp || 0));
+      rewards = Math.max(0, Math.floor(+ps.cardOwned || 0));
+      if (ps.card && typeof ps.card === 'object') {
+        const ALLOWED = { portrait: 1, frame: 1, background: 1, title: 1, ornament: 1 };
+        card = {};
+        for (const k of Object.keys(ALLOWED)) {
+          const v = ps.card[k];
+          if (typeof v === 'string' && v.length <= 40 && /^[a-z0-9_]+$/.test(v)) card[k] = v;
+        }
+      }
+    }
+  } catch (e) { /* carte indisponible : on sert le reste */ }
   json(res, 200, { player: {
     pseudo: st.pseudo, avatar: st.avatar ? `/avatar/${st.avatar}` : null,
     score: st.score, level: st.level, worlds_done: st.worlds_done,
     bosses: st.bosses, achievements: st.achievements,
     playtime: st.playtime, updated_at: st.updated_at, member_since: st.created_at,
-    rank
+    glevel, gxp, rewards, card, rank
   }});
 });
 

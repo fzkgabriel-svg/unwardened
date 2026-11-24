@@ -1,5 +1,5 @@
 import { G, canvas, W, H } from './state.js';
-import { startGame, menuButtonAt, gameOverButtonAt, victoryButtonAt, pauseButtonAt, playAgain, nextWorld, resetToMenu, toCampaign, requestResume, forgeClickAt, forgeWheel, achClickAt, achWheel, charClickAt, adminClickAt, switchCharacter, reloadPersistence, durWarnClickAt, durWarnAction, campaignClickAt, campaignDiffCards, questsClickAt } from './menu.js';
+import { startGame, menuButtonAt, gameOverButtonAt, victoryButtonAt, pauseButtonAt, playAgain, nextWorld, resetToMenu, toCampaign, requestResume, forgeClickAt, forgeWheel, achClickAt, achWheel, charClickAt, adminClickAt, switchCharacter, reloadPersistence, durWarnClickAt, durWarnAction, campaignClickAt, campaignDiffCards, questsClickAt, cardClickAt, cardButton } from './menu.js';
 import { checkAdminPass, createChar } from './chars.js';
 import { adminMenuClickAt, adminButtonAt, adminUnlocked } from './menu.js';
 import { usePotion } from './player.js';
@@ -229,6 +229,13 @@ export function initInput() {
         if (act === 'back') { G.menuView = 'main'; sfxClick(); }
         return;
       }
+      if (G.menuView === 'card') {
+        const act = cardClickAt(G.mouse.x, G.mouse.y);
+        if (act === 'back') { G.menuView = 'main'; sfxClick(); }
+        else if (act === 'tab' || act === 'equip') sfxClick();
+        else if (act === 'locked' || act === 'deny' || act === 'reset') sfxClick();
+        return;
+      }
       if (G.menuView === 'modules') {
         const act = modClickAt(G.mouse.x, G.mouse.y);
         if (act) sfxClick();
@@ -259,6 +266,9 @@ export function initInput() {
       }
       if (inR(discordButton(), G.mouse.x, G.mouse.y)) {
         window.open(DISCORD_URL, '_blank'); sfxConfirm(); return;
+      }
+      if (inR(cardButton(), G.mouse.x, G.mouse.y)) {
+        G.menuView = 'card'; sfxClick(); return;
       }
       if (btn === 'perso') { switchCharacter(); sfxClick(); return; }
       if (btn === 'tutoriel') { startTutorial(); sfxConfirm(); return; }

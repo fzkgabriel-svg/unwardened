@@ -7,6 +7,7 @@ import { sfxHit, sfxDie, sfxBoss, sfxBossRoar, sfxBossDie, sfxBossHit, sfxGem } 
 import { modDmgMult, modCritBonus, modLifesteal } from './modules.js';
 import { DIFFS } from './difficulty.js';
 import { qAdd } from './quests.js';
+import { gainGlobalXp, XP_BOSS, XP_MINIBOSS, XP_FINAL_BOSS } from './levelup.js';
 
 export const enemyTypes = {
   slime:    { name: 'Slime',        hp: 30,  speed: 0.75, damage: 8,  xp: 10,  r: 13, aggro: Infinity, range: 17, color: '#4caf50', glow: '#69f0ae' },
@@ -259,6 +260,9 @@ export function damageEnemy(e, dmg, angle) {
     gainXp(e.xp);
     qAdd('kills', 1); qAdd('dmg', real); // quêtes du jour
     if (e.isBoss || e.isMini) qAdd('bosses', 1);
+    // niveau global : les boss sont une vraie étape de progression
+    if (e.isBoss) gainGlobalXp(e.type && e.type.startsWith('finalBoss') ? XP_FINAL_BOSS : XP_BOSS);
+    else if (e.isMini) gainGlobalXp(XP_MINIBOSS);
     // charge de l'ultime selon la sélection : Titan de Feu très lent (×0,22),
     // Pluie de Glace nettement plus difficile (×0,3 — ~3× plus de cibles que la bombe)
     const sel = G.stats.ultSel || 'nuke';
