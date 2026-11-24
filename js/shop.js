@@ -23,9 +23,9 @@ export function modsUnlocked() {
 export const SHOP = {
   cuir:    { price: 1,  stock: null, maxQty: 99, tag: 'Commun',     tagCol: '#b0bec5', desc: 'Cuir tanné des Terres Oubliées. Résiste à l\'usure, imperméable à la boue.' },
   fer:     { price: 2,  stock: null, maxQty: 99, tag: 'Commun',     tagCol: '#b0bec5', desc: 'Minerai brut.forger en lames et armures. La base de tout artisanat.' },
-  or:      { price: 4,  stock: 25,   maxQty: 25,  tag: 'Peu commun', tagCol: '#ffd740', desc: 'Lingots précieux aux reflets chauds. Prisés des nobles et des temples.' },
-  essence: { price: 8,  stock: 15,   maxQty: 15,  tag: 'Rare',       tagCol: '#ce93d8', desc: 'Sève condensée des mondes profonds. Pulse doucement, presque vivante.' },
-  cristal: { price: 10, stock: 12,   maxQty: 12,  tag: 'Rare',       tagCol: '#4fc3f7', desc: 'Gemmes de glace et de foudre. Conduisent la lumière comme un cœur.' },
+  or:      { price: 8,  stock: 25,   maxQty: 25,  tag: 'Peu commun', tagCol: '#ffd740', desc: 'Lingots précieux aux reflets chauds. Prisés des nobles et des temples.' },
+  essence: { price: 16, stock: 15,   maxQty: 15,  tag: 'Rare',       tagCol: '#ce93d8', desc: 'Sève condensée des mondes profonds. Pulse doucement, presque vivante.' },
+  cristal: { price: 20, stock: 12,   maxQty: 12,  tag: 'Rare',       tagCol: '#4fc3f7', desc: 'Gemmes de glace et de foudre. Conduisent la lumière comme un cœur.' },
 };
 
 // bouton 💰 BOUTIQUE à côté des pastilles MUSIQUE / EFFETS (coin haut-droit)
