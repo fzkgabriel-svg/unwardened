@@ -1,0 +1,62 @@
+<!DOCTYPE html><html><body><canvas id="game" width="1280" height="720"></canvas><pre id="out">RUN…</pre>
+<script type="module">
+const out = [];
+const ok = (n, c) => out.push((c ? 'PASS' : 'FAIL') + ' ' + n);
+try {
+  const { G } = await import('./js/state.js');
+  const Q = await import('./js/quests.js');
+  const V = await import('./js/menu/quests.js');
+
+  G.stats = {}; G.inv = { mats: { emeraude: 10 }, items: {}, modules: {} };
+  G.runMats = {};
+
+  // ---------- tirage quotidien ----------
+  const d1 = Q.dailyQuests(), d2 = Q.dailyQuests();
+  ok('3 quêtes du jour', d1.length === 3);
+  ok('tirage déterministe', d1.map(q => q.id).join() === d2.map(q => q.id).join());
+  ok('ids uniques', new Set(d1.map(q => q.id)).size === 3);
+  ok('toutes dans le pool', d1.every(q => Q.QPOOL.includes(q)));
+
+  // ---------- compteurs ----------
+  Q.qAdd('kills', 10); Q.qAdd('kills', 5); Q.qAdd('dmg', 5000);
+  Q.qMax('wave', 7); Q.qMax('wave', 4); Q.qMax('wave', 12);
+  ok('kills cumulés', G.stats.qday.c.kills === 15);
+  ok('wave = max (12)', G.stats.qday.mx.wave === 12);
+  ok('dmg cumulés', G.stats.qday.c.dmg === 5000);
+
+  const qs = Q.questState(d1[0]);
+  ok('questState retourne cur/done/claimed', qs && typeof qs.cur === 'number' && typeof qs.done === 'boolean' && typeof qs.claimed === 'boolean');
+
+  // ---------- reset à minuit (date changée) ----------
+  G.stats.qday.date = '2000-01-01';
+  Q.qAdd('kills', 3);
+  ok('reset auto au changement de date', G.stats.qday.c.kills === 3 && G.stats.qday.date !== '2000-01-01');
+
+  // ---------- claim ----------
+  G.stats.qday = { date: new Date().toLocaleDateString('en-CA'), c: {}, mx: {}, claimed: [] };
+  const qq = Q.dailyQuests()[0];
+  if (qq.c) G.stats.qday.c[qq.metric] = qq.target * 2;
+  else G.stats.qday.mx[qq.metric] = qq.target;
+  const s0 = Q.questState(qq);
+  ok('quête marquée done', s0.done === true);
+  const emeraldBefore = G.inv.mats.emeraude;
+  const r1 = Q.claimQuest(qq.id);
+  ok('claim ok', r1.ok === true);
+  ok('émeraudes ajoutées', G.inv.mats.emeraude === emeraldBefore + qq.rew);
+  const r2 = Q.claimQuest(qq.id);
+  ok('double claim refusé', r2.ok === false);
+  const notToday = Q.QPOOL.find(q => !Q.dailyQuests().includes(q));
+  if (notToday) ok('quête hors du jour refusée', Q.claimQuest(notToday.id).ok === false);
+  else ok('quête hors du jour refusée', true);
+  ok('questsClaimable/Left renvoient des boolés/nombres', typeof Q.questsClaimable() === 'boolean' && typeof Q.questsLeftToday() === 'number');
+
+  // ---------- rendu + clics ----------
+  G.state = 'menu'; G.menuView = 'quests'; G.time = 1; G.mouse = { x: 600, y: 300 };
+  V.drawQuestsView();
+  ok('drawQuestsView ok', true);
+  const act = V.questsClickAt(20, 20);
+  ok('questsClickAt ne crash pas', act === null || act === 'back' || act === 'claim' || act === 'deny');
+
+} catch (e) { out.push('FAIL ' + e.message + ' ' + (e.stack || '').split('\n')[1]); }
+document.getElementById('out').textContent = out.join('\n');
+</script></body></html>

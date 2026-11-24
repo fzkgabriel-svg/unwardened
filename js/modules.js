@@ -8,6 +8,7 @@ import { spawnParticles, addDamageText } from './effects.js';
 import { damageEnemy } from './enemies.js';
 import { worldW, worldH } from './world.js';
 import { sfxPickup } from './audio.js';
+import { qAdd } from './quests.js';
 
 // id → définition. type: 'actif'|'passif' · price: émeraudes (0 = offert)
 export const MODULES = {
@@ -216,6 +217,7 @@ export function activateModule() {
   if ((cds[id] || 0) > G.time) return false; // en recharge
   const ml = modLevel(id); // niveau du module : améliore effets ET réduit le cooldown
   cds[id] = G.time + m.cd * (1 - 0.07 * (ml - 1));
+  qAdd('mods', 1); // quête du jour : utilisation de module
   const lvl = p.level || 1;
   switch (id) {
     case 'ruee': {

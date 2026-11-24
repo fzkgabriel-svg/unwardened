@@ -6,6 +6,7 @@ import { MATS, MATERIAL_DROPS, addMaterial, modeKey, modeMult } from './inventor
 import { sfxHit, sfxDie, sfxBoss, sfxBossRoar, sfxBossDie, sfxBossHit, sfxGem } from './audio.js';
 import { modDmgMult, modCritBonus, modLifesteal } from './modules.js';
 import { DIFFS } from './difficulty.js';
+import { qAdd } from './quests.js';
 
 export const enemyTypes = {
   slime:    { name: 'Slime',        hp: 30,  speed: 0.75, damage: 8,  xp: 10,  r: 13, aggro: Infinity, range: 17, color: '#4caf50', glow: '#69f0ae' },
@@ -256,6 +257,8 @@ export function damageEnemy(e, dmg, angle) {
     spawnParticles(e.x, e.y, e.color, 18, 6);
     addDamageText(e.x, e.y - 16, `+${e.xp} XP`, '#40c4ff');
     gainXp(e.xp);
+    qAdd('kills', 1); qAdd('dmg', real); // quêtes du jour
+    if (e.isBoss || e.isMini) qAdd('bosses', 1);
     // charge de l'ultime selon la sélection : Titan de Feu très lent (×0,22),
     // Pluie de Glace nettement plus difficile (×0,3 — ~3× plus de cibles que la bombe)
     const sel = G.stats.ultSel || 'nuke';
@@ -286,7 +289,8 @@ export function damageEnemy(e, dmg, angle) {
         const qty = m === 'emeraude'
           ? Math.round(((e.type.startsWith('finalBoss') ? 8 : e.isBoss ? 5 : e.isMini ? 3 : 1)) * ((G.mods && G.mods.lootMult) || 1) * df.loot)
           : 1;
-        if (m === 'emeraude') gotEmerald = true;
+        if (m === 'emeraude') { gotEmerald = true; qAdd('emerald', qty); }
+        else qAdd('mats', qty);
         addMaterial(G.inv, m, qty);
         G.runMats[m] = (G.runMats[m] || 0) + qty; // résumé de fin de partie
         addDamageText(e.x + (mi % 3 - 1) * 14, e.y - e.r - 26 - mi * 10, `+${qty} ${MATS[m].name}`, MATS[m].color);
@@ -296,6 +300,7 @@ export function damageEnemy(e, dmg, angle) {
     // butin bonus des monstres ÉLITES (Expert) : une poignée d'émeraudes en prime
     if (e.elite && Math.random() < 0.6) {
       addMaterial(G.inv, 'emeraude', 2);
+      qAdd('emerald', 2);
       G.runMats.emeraude = (G.runMats.emeraude || 0) + 2;
       addDamageText(e.x, e.y - e.r - 40, '+2 ÉMERAUDE', '#2ecc71');
     }

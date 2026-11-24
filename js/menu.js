@@ -15,6 +15,8 @@ import { drawCharacters } from './menu/heros.js';
 import { drawAdmin } from './menu/admin.js';
 import { drawCampaign } from './menu/campaign.js';
 import { drawModulesView } from './menu/modules.js';
+import { drawQuestsView } from './menu/quests.js';
+import { questsClaimable } from './quests.js';
 import { modulesUnlocked } from './modules.js';
 import { drawAccountCard, drawLeaderboardCard, openLeaderboard, acctClick, acctKey, lbClickAt, lbKey } from './menu/online.js';
 
@@ -28,6 +30,7 @@ export * from './menu/end.js';
 export * from './menu/admin.js';
 export * from './menu/campaign.js';
 export * from './menu/modules.js';
+export * from './menu/quests.js';
 export * from './menu/online.js';
 
 // fond commun des écrans de menu : voile sombre + poussières discrètes
@@ -79,6 +82,10 @@ export function drawMenu() {
     drawModulesView();
     return;
   }
+  if (G.menuView === 'quests') {
+    drawQuestsView();
+    return;
+  }
   if (G.menuView === 'account') {
     drawAccountCard();
     return;
@@ -100,7 +107,7 @@ export function drawMenu() {
   const b = menuButtons();
   MENU_ITEMS.forEach(([k, label], i) => {
     const locked = (k === 'modules' && !modulesUnlocked()) || (k === 'forge' && !forgeUnlocked());
-    drawNavItem(b[k], locked ? `🔒 ${label}` : label, i === 0, k === 'ach' && unclaimedInTab(-1));
+    drawNavItem(b[k], locked ? `🔒 ${label}` : label, i === 0, (k === 'ach' && unclaimedInTab(-1)) || (k === 'quests' && questsClaimable()));
   });
 
   // ==== colonne droite : héros actif + contrôles ====

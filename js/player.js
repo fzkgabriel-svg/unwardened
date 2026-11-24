@@ -1,6 +1,7 @@
 import { G } from './state.js';
 import { addDamageText, spawnParticles } from './effects.js';
 import { sfxPotion, sfxLevel, sfxPickup } from './audio.js';
+import { qAdd, qMax } from './quests.js';
 
 export function gainXp(amount) {
   const p = G.player;
@@ -10,6 +11,7 @@ export function gainXp(amount) {
   while (p.xp >= p.xpNext) {
     p.xp -= p.xpNext;
     p.level++;
+    qMax('level', p.level); // quête du jour : niveau max
     p.xpNext = Math.floor(p.xpNext * 1.34); // croissance assouplie : ×1,34/niv au lieu de ×1,5
     p.maxHp += 30;
     p.hp = p.maxHp;
@@ -43,6 +45,7 @@ export function usePotion() {
   const heal = Math.round((50 + waveBonus + campBonus) * (G.equip ? G.equip.potionMult : 1));
   p.potions--;
   G.potionsUsed++;
+  qAdd('potions', 1); // quête du jour
   sfxPotion();
   p.potionCooldown = 2.5;
   p.hp = Math.min(p.maxHp, p.hp + heal);

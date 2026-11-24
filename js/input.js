@@ -1,5 +1,5 @@
 import { G, canvas, W, H } from './state.js';
-import { startGame, menuButtonAt, gameOverButtonAt, victoryButtonAt, pauseButtonAt, playAgain, nextWorld, resetToMenu, toCampaign, requestResume, forgeClickAt, forgeWheel, achClickAt, achWheel, charClickAt, adminClickAt, switchCharacter, reloadPersistence, durWarnClickAt, durWarnAction, campaignClickAt, campaignDiffCards } from './menu.js';
+import { startGame, menuButtonAt, gameOverButtonAt, victoryButtonAt, pauseButtonAt, playAgain, nextWorld, resetToMenu, toCampaign, requestResume, forgeClickAt, forgeWheel, achClickAt, achWheel, charClickAt, adminClickAt, switchCharacter, reloadPersistence, durWarnClickAt, durWarnAction, campaignClickAt, campaignDiffCards, questsClickAt } from './menu.js';
 import { checkAdminPass, createChar } from './chars.js';
 import { adminMenuClickAt, adminButtonAt, adminUnlocked } from './menu.js';
 import { usePotion } from './player.js';
@@ -224,6 +224,11 @@ export function initInput() {
         else if (act === 'search') sfxClick();
         return;
       }
+      if (G.menuView === 'quests') {
+        const act = questsClickAt(G.mouse.x, G.mouse.y);
+        if (act === 'back') { G.menuView = 'main'; sfxClick(); }
+        return;
+      }
       if (G.menuView === 'modules') {
         const act = modClickAt(G.mouse.x, G.mouse.y);
         if (act) sfxClick();
@@ -258,6 +263,7 @@ export function initInput() {
       if (btn === 'perso') { switchCharacter(); sfxClick(); return; }
       if (btn === 'tutoriel') { startTutorial(); sfxConfirm(); return; }
       if (btn === 'stats') { G.menuView = 'stats'; sfxClick(); return; }
+      if (btn === 'quests') { G.menuView = 'quests'; sfxClick(); return; }
       if (btn === 'ach') { G.menuView = 'achievements'; sfxClick(); return; }
       if (btn === 'forge') {
         if (forgeUnlocked()) { G.menuView = 'forge'; sfxClick(); }

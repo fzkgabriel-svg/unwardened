@@ -20,6 +20,7 @@ import { initInput } from './input.js';
 import { updateModules, moduleAbsorb, modSpeedMult, grantPass2 } from './modules.js';
 import { maybeAutoSync } from './net.js';
 import { DIFFS, waveModFor, recordDiffWin, runScore } from './difficulty.js';
+import { qAdd, qMax } from './quests.js';
 
 // polices de l'interface (canvas) : chargement explicite au démarrage
 if (document.fonts) ['600 16px Inter', '600 38px Cinzel'].forEach(f => document.fonts.load(f));
@@ -136,6 +137,7 @@ function update(dt) {
   }
   if (G.state === 'gameover') G.goT = (G.goT || 0) + dt; // horloge des animations de l'écran de mort
   if (G.state !== 'playing' || G.gameOver) return;
+  if (!G.tutorial) qAdd('time', dt); // quête du jour : temps de survie
   // ralenti entre les vagues (au lieu du freeze) : 2,5s à ~30% de vitesse,
   // les monstres continuent de surgir normalement pendant la transition
   const rawDt = dt;
@@ -291,6 +293,7 @@ function update(dt) {
   if (!G.tutorial && G.waveKills >= G.waveTarget) { // le tutoriel gère ses propres ennemis
     G.wave++;
     G.waveKills = 0;
+    qMax('wave', G.wave); // quête du jour : vague max atteinte
     // modificateur de vague (EXPERT uniquement) : un seul à la fois, progressif
     G.waveMod = waveModFor(G.wave, G.difficulty || 0);
     G.waveTarget = Math.round((6 + G.wave * 2) * ((G.waveMod && G.waveMod.quota) || 1)); // le quota grandit avec la vague
@@ -788,6 +791,7 @@ function update(dt) {
     G.vicT = 0; // horloge de la révélation de l'écran de victoire
     sfxVictory(); // sting triomphal sombre : gong + accords ascendants
     recordRun(); // la victoire compte comme une partie réussie dans les stats
+    qAdd('victories', 1); // quête du jour
     // difficulté de campagne : enregistre la victoire par niveau (Normal/Difficile/Expert),
     // débloque la difficulté suivante et mémorise les records — campaignDone reste
     // la condition de déblocage du niveau suivant (le Normal l'implique toujours)
