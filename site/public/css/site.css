@@ -203,6 +203,12 @@ textarea { min-height: 140px; resize: vertical; }
 
 /* ---------- téléchargement ---------- */
 .dl-hero { text-align: center; padding: 30px; }
+.dl-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+@media (max-width: 760px) { .dl-opts { grid-template-columns: 1fr; } }
+.dl-opt { text-align: center; padding: 30px; }
+.dl-opt h3 { font-family: var(--serif); color: var(--gold); font-size: 18px; letter-spacing: 2px; margin-bottom: 10px; }
+.dl-opt p { color: var(--ink-dim); font-size: 13.5px; margin-bottom: 20px; line-height: 1.6; }
+.dl-opt .btn { display: inline-block; }
 .dl-file {
   display: inline-flex; align-items: center; gap: 14px; margin: 20px 0;
   padding: 18px 30px; border-radius: 12px; border: 1px solid var(--line);

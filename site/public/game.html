@@ -24,7 +24,8 @@
     des armes à forger, des modules mystérieux à maîtriser, six royaumes à conquérir
     et un arsenal d'ultimes dévastateurs — de la bombe atomique au Titan de Feu.</p>
   <div class="cta">
-    <a class="btn" href="#download">TÉLÉCHARGER LE JEU</a>
+    <a class="btn" href="https://unwardened.netlify.app" target="_blank" rel="noopener">▶ JOUER EN LIGNE</a>
+    <a class="btn ghost" href="#download">⬇ TÉLÉCHARGER</a>
     <a class="btn ghost" href="https://github.com/CrimsonAwesomeCode/Project-Unwardened" target="_blank" rel="noopener">CODE SOURCE</a>
   </div>
 </section>
@@ -50,8 +51,16 @@
 </div></section>
 
 <section id="download"><div class="wrap">
-  <div class="sec-head"><h2>TÉLÉCHARGER</h2><div class="orn">✦ ✦ ✦</div></div>
-  <div class="card dl-hero" id="dlbox"><div class="empty">Chargement de la version…</div></div>
+  <div class="sec-head"><h2>JOUER</h2><div class="orn">✦ ✦ ✦</div></div>
+  <div class="dl-opts">
+    <div class="card dl-opt">
+      <h3>EN LIGNE</h3>
+      <p>Aucun téléchargement — le jeu démarre instantanément dans votre navigateur.
+        Progression synchronisée avec votre compte Kaeloryen.</p>
+      <a class="btn" href="https://unwardened.netlify.app" target="_blank" rel="noopener">▶ JOUER GRATUITEMENT</a>
+    </div>
+    <div class="card dl-opt" id="dlbox"><div class="empty">Chargement de la version…</div></div>
+  </div>
 </div></section>
 
 <section><div class="wrap">
@@ -85,15 +94,14 @@ async function loadVersion() {
     const v = await api('/api/game/version');
     if (!v.available) { el.innerHTML = '<div class="empty">Aucune version disponible pour le moment.</div>'; return; }
     el.innerHTML = `
-      <div class="dl-file">⬇ LES-TERRES-OUBLIEES-v${esc(v.version)}.zip</div>
+      <h3>HORS LIGNE · v${esc(v.version)}</h3>
+      <div class="dl-file">⬇ LES-TERRES-OUBLIEES-v${esc(v.version)}.zip — ${fmtSize(v.size)}</div>
       <div class="dl-meta">
-        <div class="m"><b>${esc(v.version)}</b><span>Version</span></div>
-        <div class="m"><b>${fmtSize(v.size)}</b><span>Taille</span></div>
         <div class="m"><b>${v.sha256 ? v.sha256.slice(0, 12) + '…' : '—'}</b><span>SHA-256</span></div>
         <div class="m"><b>${fmtDate(v.updated)}</b><span>Publié</span></div>
       </div>
-      <a class="btn" href="${v.url}" download>TÉLÉCHARGER v${esc(v.version)}</a>
-      <p class="form-ok" style="margin-top:14px">Archive ZIP — extrait et ouvrez index.html dans votre navigateur.</p>
+      <a class="btn" href="${v.url}" download>⬇ TÉLÉCHARGER v${esc(v.version)}</a>
+      <p class="form-ok" style="margin-top:14px">1. Décompressez le ZIP<br>2. Double-cliquez sur <b>Jouer.bat</b> — le jeu s'ouvre dans votre navigateur.</p>
       ${v.notes ? `<div class="card changelog" style="margin-top:26px;text-align:left"><h3 style="font-size:14px">Notes de cette version</h3><p style="white-space:pre-line;color:var(--ink-dim);font-size:13.5px;margin-top:8px">${esc(v.notes)}</p></div>` : ''}`;
   } catch (e) { el.innerHTML = '<div class="empty">Service de téléchargement indisponible.</div>'; }
 }

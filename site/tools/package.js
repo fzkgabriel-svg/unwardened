@@ -30,15 +30,22 @@ mkdirSync(GAME_DIR, { recursive: true });
 for (const item of ['index.html', 'css', 'js', 'fonts']) {
   cpSync(join(ROOT, item), join(GAME_DIR, item), { recursive: true });
 }
-// README dans le zip
 const { writeFileSync } = await import('node:fs');
+// Lanceurs : Jouer.bat ouvre le jeu dans le navigateur par double-clic
+writeFileSync(join(GAME_DIR, 'Jouer.bat'),
+  '@echo off\r\n' +
+  'title Les Terres Oubliees\r\n' +
+  'start "" "%~dp0index.html"\r\n');
+// README dans le zip
 writeFileSync(join(GAME_DIR, 'LISEZMOI.txt'),
   `LES TERRES OUBLIEES v${version}\n============================\n\n` +
   `Kaeloryn Studio — Forge Your Own Legend\n\n` +
-  `INSTALLATION :\n1. Gardez ce dossier entier ensemble.\n` +
-  `2. Ouvrez index.html dans votre navigateur (Chrome/Edge/Firefox recents).\n` +
-  `3. Jouez ! Les sauvegardes sont conservees localement par le navigateur.\n\n` +
-  `Le jeu fonctionne hors-ligne, aucun serveur requis.\n`);
+  `POUR JOUER :\n` +
+  `1. Double-cliquez sur « Jouer.bat » — le jeu s'ouvre dans votre navigateur.\n` +
+  `   (ou ouvrez directement index.html avec Chrome/Edge/Firefox recent)\n` +
+  `2. Jouez ! Les sauvegardes sont conservees localement par le navigateur.\n\n` +
+  `Le jeu fonctionne hors-ligne, aucun serveur requis.\n` +
+  `Garder ce dossier entier ensemble.\n`);
 
 // zip via PowerShell Compress-Archive
 const ps = `$src='${staging.replace(/'/g, "''")}'; $dst='${zipPath.replace(/'/g, "''")}';` +
