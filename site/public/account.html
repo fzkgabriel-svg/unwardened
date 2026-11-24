@@ -4,6 +4,27 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mon Compte — Kaeloryn Studio</title>
 <link rel="stylesheet" href="/css/site.css">
+<style>
+/* ---------- statistiques du compte ---------- */
+.stat-tabs { display: flex; gap: 8px; margin: 14px 0 18px; flex-wrap: wrap; }
+.stat-tab { background: rgba(255,255,255,.05); border: 1px solid var(--line); color: var(--ink-dim);
+  padding: 8px 18px; border-radius: 8px; font: 700 11px Inter, sans-serif; letter-spacing: 1.5px;
+  cursor: pointer; transition: all .18s; }
+.stat-tab:hover { color: var(--gold-hi); border-color: rgba(212,176,98,.5); }
+.stat-tab.act { background: rgba(212,176,98,.16); border-color: var(--gold); color: var(--gold-hi);
+  box-shadow: 0 0 14px rgba(212,176,98,.2); }
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+.stat-cell { background: var(--panel2); border: 1px solid var(--line); border-radius: 10px;
+  padding: 16px 10px; text-align: center; }
+.stat-cell b { display: block; font-family: var(--serif); font-size: 24px; color: var(--gold); }
+.stat-cell span { font-size: 10px; letter-spacing: 1.5px; color: var(--ink-dim); text-transform: uppercase; }
+.stat-hero { text-align: center; padding: 14px 0 6px; }
+.stat-hero .big { font-family: var(--serif); font-size: 52px; color: var(--gold-hi);
+  text-shadow: 0 0 30px rgba(212,176,98,.35); line-height: 1; }
+.stat-hero .lbl { font-size: 11px; letter-spacing: 3px; color: var(--ink-dim); text-transform: uppercase; }
+.stat-hero .rank { display: inline-block; margin-top: 10px; padding: 6px 18px; border-radius: 20px;
+  border: 1px solid var(--gold); color: var(--gold-hi); font: 700 13px Inter, sans-serif; letter-spacing: 1px; }
+</style>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><path d='M32 4 54 18v28L32 60 10 46V18Z' fill='none' stroke='%23d4b062' stroke-width='4'/></svg>">
 </head>
 <body>
@@ -57,10 +78,6 @@
         <a class="btn ghost small" id="dProfile" style="width:100%;margin-top:14px;display:none">VOIR MA FICHE PUBLIQUE ↗</a>
       </div>
       <div class="card mt">
-        <h3>STATISTIQUES</h3>
-        <div id="dStats"><div class="empty">…</div></div>
-      </div>
-      <div class="card mt">
         <h3>PROFIL</h3>
         <label class="f">Pseudo</label>
         <input type="text" id="pPseudo">
@@ -84,6 +101,15 @@
       <div class="card mt">
         <h3>TÉLÉCHARGEMENTS</h3>
         <div id="dDl"><div class="empty">Aucune version publiée.</div></div>
+      </div>
+      <div class="card mt">
+        <h3>STATISTIQUES DU JOUEUR</h3>
+        <div class="stat-tabs" id="statTabs">
+          <button class="stat-tab act" data-stab="overview">APERÇU</button>
+          <button class="stat-tab" data-stab="progress">PROGRESSION</button>
+          <button class="stat-tab" data-stab="activity">ACTIVITÉ</button>
+        </div>
+        <div id="dStats"><div class="empty">…</div></div>
       </div>
     </div>
   </div>
@@ -222,27 +248,68 @@ async function loadDash(u) {
       `<div class="dl-row"><span class="k">${esc(n.title)}</span><span>${fmtDate(n.created_at)}</span></div>`).join('')
       || '<div class="empty">Aucune actualité.</div>';
   } catch (e) {}
-  // statistiques de jeu (progression synchronisée)
+  // statistiques de jeu (progression synchronisée) — 3 onglets
   try {
     const d = await api('/api/player/' + encodeURIComponent(u.pseudo));
-    const p = d.player, fmt = n => (n || 0).toLocaleString('fr-FR');
+    const p = d.player;
     const h = Math.floor((p.playtime || 0) / 3600), m = Math.floor(((p.playtime || 0) % 3600) / 60);
-    const pt = p.playtime >= 3600 ? `${h}h ${String(m).padStart(2, '0')}` : `${m} min`;
-    $('dStats').innerHTML = `
-      <div class="dl-row"><span class="k">Score</span><span>${fmt(p.score)}</span></div>
-      <div class="dl-row"><span class="k">Rang mondial</span><span>${p.rank ? '#' + p.rank : '—'}</span></div>
-      <div class="dl-row"><span class="k">Niveau</span><span>${p.level}</span></div>
-      <div class="dl-row"><span class="k">Mondes conquis</span><span>${p.worlds_done}/6</span></div>
-      <div class="dl-row"><span class="k">Boss vaincus</span><span>${p.bosses}</span></div>
-      <div class="dl-row"><span class="k">Succès débloqués</span><span>${p.achievements}</span></div>
-      <div class="dl-row"><span class="k">Temps de jeu</span><span>${pt}</span></div>
-      <div class="dl-row"><span class="k">Dernière synchro</span><span>${p.updated_at ? fmtDate(p.updated_at) : '—'}</span></div>`;
+    window._pstats = {
+      score: (p.score || 0).toLocaleString('fr-FR'),
+      rank: p.rank ? '#' + p.rank : '—',
+      level: p.level || 1,
+      worlds: `${p.worlds_done || 0}/6`,
+      bosses: p.bosses || 0,
+      achv: p.achievements || 0,
+      playtime: p.playtime >= 3600 ? `${h}h ${String(m).padStart(2, '0')}` : `${m} min`,
+      since: p.member_since ? fmtDate(p.member_since) : '—',
+      sync: p.updated_at ? fmtDate(p.updated_at) : '—',
+    };
     $('dProfile').href = '/joueur/' + encodeURIComponent(p.pseudo);
     $('dProfile').style.display = 'block';
+    renderStats(window._stab || 'overview');
   } catch (e) {
     $('dStats').innerHTML = '<div class="empty">Aucune progression synchronisée.<br>Jouez en ligne et synchronisez depuis le jeu.</div>';
   }
 }
+
+// rend l'onglet de stats demandé (overview / progress / activity)
+function renderStats(tab) {
+  window._stab = tab;
+  document.querySelectorAll('#statTabs .stat-tab').forEach(b =>
+    b.classList.toggle('act', b.dataset.stab === tab));
+  const s = window._pstats; if (!s) return;
+  const cell = (v, l) => `<div class="stat-cell"><b>${v}</b><span>${l}</span></div>`;
+  if (tab === 'overview') {
+    $('dStats').innerHTML = `
+      <div class="stat-hero">
+        <div class="big">${s.score}</div>
+        <div class="lbl">Score Général</div>
+        <div><span class="rank">RANG ${s.rank}</span></div>
+      </div>
+      <div class="stat-grid" style="margin-top:18px">
+        ${cell(s.level, 'Niveau')}${cell(s.worlds, 'Mondes')}${cell(s.bosses, 'Boss')}${cell(s.achv, 'Succès')}
+      </div>`;
+  } else if (tab === 'progress') {
+    $('dStats').innerHTML = `<div class="stat-grid">
+      ${cell(s.level, 'Niveau du personnage')}
+      ${cell(s.worlds, 'Mondes conquis')}
+      ${cell(s.bosses, 'Boss vaincus')}
+      ${cell(s.achv, 'Succès débloqués')}
+      ${cell('6', 'Campagnes disponibles')}
+      ${cell('3', 'Difficultés par niveau')}
+    </div>`;
+  } else {
+    $('dStats').innerHTML = `<div class="stat-grid">
+      ${cell(s.playtime, 'Temps de jeu')}
+      ${cell(s.since, 'Membre depuis')}
+      ${cell(s.sync, 'Dernière synchro')}
+    </div>
+    <p class="sub" style="text-align:center;margin-top:16px">Progression sauvegardée dans le cloud — visible publiquement sur votre fiche joueur.</p>`;
+  }
+}
+document.getElementById('statTabs')?.addEventListener('click', e => {
+  const b = e.target.closest('.stat-tab'); if (b) renderStats(b.dataset.stab);
+});
 $('pSave').addEventListener('click', async () => {
   $('pMsg').textContent = '';
   try {
