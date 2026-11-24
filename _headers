@@ -1,0 +1,12 @@
+# Revalidation systématique des modules ES : évite les écrans noirs
+# causés par un mélange ancien/nouveau cache après un déploiement.
+/js/*
+  Cache-Control: no-cache, must-revalidate
+/*.html
+  Cache-Control: no-cache, must-revalidate
+/index.html
+  Cache-Control: no-cache, must-revalidate
+/css/*
+  Cache-Control: no-cache, must-revalidate
+/assets/*
+  Cache-Control: no-cache, must-revalidate
