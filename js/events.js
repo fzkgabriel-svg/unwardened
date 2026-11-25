@@ -11,7 +11,7 @@ import { initWorlds, updateCamera, worldW, worldH, checkWavePortal, syncCamera, 
 import { drawMusicButton, sfxHurt, sfxWave, sfxPickup, sfxBreak, sfxBoss, sfxWarn, sfxPhase, sfxBossAtk } from './audio.js';
 import { updateTutorial, drawTutorial } from './tutorial.js';
 import { tickPlaytime } from './chars.js';
-import { damagePlayer } from './main.js';
+import { damagePlayer } from './damage.js';
 
 // ---------- ÉVÉNEMENTS DES ENFERS ----------
 // braises flottantes, pluie de cendres, meute de démons, éruption volcanique
