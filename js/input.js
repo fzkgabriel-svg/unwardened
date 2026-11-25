@@ -154,9 +154,17 @@ export function initInput() {
   window.addEventListener('mousemove', e => {
     if (G.audioOpen) { canvasPos(e); audioPanelDragAt(G.mouse.x, G.mouse.y); }
   });
+  // anti double-clic dans les menus : un 2e clic quasi identique <300 ms est ignoré
+  // (sinon le 2e clic tombe sur la nouvelle vue et fait une navigation imprévisible)
+  let lastMenuClick = { x: -1e9, y: -1e9, t: 0 };
   canvas.addEventListener('mousedown', e => {
     ensureAudio();
     canvasPos(e);
+    if (G.state === 'menu') {
+      const now = performance.now();
+      if (Math.abs(G.mouse.x - lastMenuClick.x) < 30 && Math.abs(G.mouse.y - lastMenuClick.y) < 30 && now - lastMenuClick.t < 300) return;
+      lastMenuClick = { x: G.mouse.x, y: G.mouse.y, t: now };
+    }
     // menu de triche admin ouvert : il intercepte tous les clics
     if (G.adminMenu) {
       const act = adminMenuClickAt(G.mouse.x, G.mouse.y);
@@ -293,8 +301,8 @@ export function initInput() {
         else sfxClick(); // verrouillé : boss du monde 4 non vaincu
         return;
       }
-      // JOUER (ou clic ailleurs) : on choisit la campagne AVANT de lancer
-      G.menuView = 'campaign'; G.campaignSel = G.campaign || 0; sfxClick();
+      // JOUER : on choisit la campagne AVANT de lancer — un clic ailleurs ne fait rien
+      if (btn === 'play') { G.menuView = 'campaign'; G.campaignSel = G.campaign || 0; sfxClick(); }
       return;
     }
     if (G.state === 'paused') {
