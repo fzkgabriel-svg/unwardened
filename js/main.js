@@ -105,7 +105,7 @@ function update(dt) {
   if (G.state === 'paused') {
     if (G.resumeTimer > 0) {
       G.resumeTimer -= dt;
-      if (G.resumeTimer <= 0) { G.resumeTimer = 0; G.state = 'playing'; }
+      if (G.resumeTimer <= 0) { G.resumeTimer = 0; G.state = 'playing'; G.audioOpen = false; }
     }
     return;
   }

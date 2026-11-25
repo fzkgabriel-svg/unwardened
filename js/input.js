@@ -123,8 +123,11 @@ export function initInput() {
     if ((k === 'c') && G.state === 'victory') toCampaign();
     if (k === 'escape') {
       if (G.adminMenu) { G.adminMenu = false; sfxClick(); return; }
-      if (G.state === 'playing') G.state = 'paused';
-      else if (G.state === 'paused' && G.resumeTimer <= 0) requestResume();
+      if (G.state === 'playing') { G.state = 'paused'; G.audioOpen = false; }
+      else if (G.state === 'paused') {
+        if (G.resumeTimer > 0) { G.resumeTimer = 0; sfxClick(); } // Échap annule le compte à rebours
+        else requestResume();
+      }
       else if (G.state === 'gameover' || G.state === 'victory') resetToMenu();
     }
   });
