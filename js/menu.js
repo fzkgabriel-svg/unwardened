@@ -17,7 +17,7 @@ import { drawCampaign } from './menu/campaign.js';
 import { drawModulesView } from './menu/modules.js';
 import { drawQuestsView } from './menu/quests.js';
 import { drawCardView } from './menu/card.js';
-import { questsClaimable } from './quests.js';
+import { questsClaimable, weeklyClaimable } from './quests.js';
 import { modulesUnlocked } from './modules.js';
 import { drawAccountCard, drawLeaderboardCard, openLeaderboard, acctClick, acctKey, lbClickAt, lbKey } from './menu/online.js';
 
@@ -113,7 +113,7 @@ export function drawMenu() {
   const b = menuButtons();
   MENU_ITEMS.forEach(([k, label], i) => {
     const locked = (k === 'modules' && !modulesUnlocked()) || (k === 'forge' && !forgeUnlocked());
-    drawNavItem(b[k], locked ? `🔒 ${label}` : label, i === 0, (k === 'ach' && unclaimedInTab(-1)) || (k === 'quests' && questsClaimable()));
+    drawNavItem(b[k], locked ? `🔒 ${label}` : label, i === 0, (k === 'ach' && unclaimedInTab(-1)) || (k === 'quests' && (questsClaimable() || weeklyClaimable())));
   });
 
   // ==== colonne droite : héros actif + contrôles ====
@@ -177,13 +177,13 @@ export function drawMenu() {
 }
 // zone cliquable du bouton site web (partagée dessin/clic)
 export function siteWebButton() {
-  return { x: 690, y: 556, w: 414, h: 36 };
+  return { x: 690, y: 546, w: 200, h: 30 };
 }
 export function discordButton() {
-  return { x: 690, y: 598, w: 414, h: 36 };
+  return { x: 904, y: 546, w: 200, h: 30 };
 }
 export function cardButton() {
-  return { x: 690, y: 640, w: 414, h: 36 };
+  return { x: 690, y: 584, w: 414, h: 32 };
 }
 
 // entrée de navigation du menu principal (liste verticale)

@@ -66,6 +66,7 @@ export function initInput() {
       if (G.menuView === 'characters') return; // écran de sélection : clics uniquement
       if (G.menuView === 'admin') { G.menuView = 'characters'; sfxClick(); return; }
       if (G.menuView === 'campaign') {
+        if (k === 'escape') { G.menuView = 'main'; sfxClick(); return; }
         // flèches : naviguer entre les territoires ; Entrée/Espace : lancer la campagne
         if (k === 'arrowleft' || k === 'arrowright' || k === 'arrowup' || k === 'arrowdown') {
           const d = (k === 'arrowleft' || k === 'arrowup') ? -1 : 1;
@@ -79,7 +80,11 @@ export function initInput() {
         }
         return;
       }
-      if (G.menuView !== 'main') { G.menuView = 'main'; sfxClick(); return; }
+      // dans une sous-vue, seule Échap ramène au menu principal (les autres touches sont ignorées)
+      if (G.menuView !== 'main') {
+        if (k === 'escape') { G.menuView = 'main'; sfxClick(); }
+        return;
+      }
       if ((k === 'enter' || k === ' ')) { G.menuView = 'campaign'; G.campaignSel = G.campaign || 0; sfxConfirm(); }
     }
     if (k === 'enter' && G.tutorial && G.state === 'playing') { if (tutorialEnter()) sfxClick(); }

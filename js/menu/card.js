@@ -6,7 +6,7 @@ import { COSMETIC_CATS, gLevel, gXp, gXpNeed, isOwned, cosmeticUnlocked, equipCo
 import { inR, overlineCentered, drawMenuButton, menuButtons, hexA, UI, SERIF, C_TEXT, C_MUTED, C_GOLD } from './common.js';
 import { sfxConfirm, sfxDeny } from '../audio.js';
 
-const PW = 920, PH = 640;
+const PW = 920, PH = 596;
 let curTab = 'portrait';
 
 export function cardButtons() {

@@ -103,7 +103,9 @@ export function hexA(hex, a) {
 
 export function fmtTime(t) {
   t = Math.floor(t);
-  return `${Math.floor(t / 60)}m ${String(t % 60).padStart(2, '0')}s`;
+  const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60);
+  if (h > 0) return `${h}h ${String(m).padStart(2, '0')}`;
+  return `${m} min`;
 }
 
 export function overlineCentered(text, x, y, color = C_GOLD) {
