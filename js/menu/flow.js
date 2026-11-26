@@ -226,7 +226,7 @@ export function resetToMenu() {
   G.attackQueued = false; G.attackHeld = false; G.spinQueued = false; G.ultQueued = false; G.shieldQueued = false; G.handQueued = false; G.singQueued = false; G.judgQueued = false;
   G.sentenceWaves.length = 0; G.knifeShots.length = 0;
   G.bowShots.length = 0; G.singZones.length = 0; G.bow = null; // arc cinétique : état propre
-  G.spawnTimer = 0; G.wave = 1; G.waveKills = 0; G.waveTarget = 8; G.kills = 0;
+  G.spawnTimer = 0; G.wave = 1; G.waveKills = 0; G.waveTarget = 7; G.kills = 0;
   G.waveMod = null; G.runXp = 0; G.lastScore = 0; G.diffJustUnlocked = null;
   G.gameOver = false; G.resumeTimer = 0; G.cloudT = 0; G.screenFlash = 0; G.screenShake = 0;
   G.pendingVictory = false;

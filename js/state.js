@@ -12,7 +12,7 @@ export const ctx = canvas.getContext('2d');
 ctx.scale(SS, SS);
 export const W = 1200, H = 640;
 export const TAU = Math.PI * 2;
-export const VERSION = '5.4.10';
+export const VERSION = '5.4.11';
 export const FINAL_WAVE = 20; // vague du boss final (campagne 1) // incrémenter à chaque mise à jour du jeu
 // vagues finales : campagne 2 -> 25, 3 -> 30, 4 (Égouts) -> 35, 5 (Espace) -> 40, 6 (Tempêtes) -> 45
 // + bonus de difficulté : Difficile +2 vagues, Expert +5 vagues (voir js/difficulty.js)
@@ -102,7 +102,7 @@ export const G = {
   spawnTimer: 0,
   wave: 1,
   waveKills: 0,     // monstres tués dans la vague en cours
-  waveTarget: 8,    // quota à atteindre pour passer à la vague suivante
+  waveTarget: 7,    // quota à atteindre pour passer à la vague suivante
   wavePause: 0,     // pause de 2,5s entre deux vagues
   kills: 0,
 

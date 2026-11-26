@@ -226,8 +226,8 @@ function update(dt) {
 
   // Spawn : cadence en temps réel même pendant le ralenti (les monstres arrivent)
   G.spawnTimer -= rawDt;
-  const interval = Math.max(0.4, (2.0 - G.wave * 0.13) * ((G.waveMod && G.waveMod.spawn) || 1)); // spawn légèrement plus rapide
-  if (G.spawnTimer <= 0 && G.enemies.length < 20 && G.wave < finalWave() && !G.tutorial) {
+  const interval = Math.max(0.5, (2.3 - G.wave * 0.12) * ((G.waveMod && G.waveMod.spawn) || 1)); // spawn plus espacé : moins de pression
+  if (G.spawnTimer <= 0 && G.enemies.length < 16 && G.wave < finalWave() && !G.tutorial) {
     spawnEnemy();
     G.spawnTimer = interval;
   }
@@ -238,7 +238,7 @@ function update(dt) {
     qMax('wave', G.wave); // quête du jour : vague max atteinte
     // modificateur de vague (EXPERT uniquement) : un seul à la fois, progressif
     G.waveMod = waveModFor(G.wave, G.difficulty || 0);
-    G.waveTarget = Math.round((6 + G.wave * 2) * ((G.waveMod && G.waveMod.quota) || 1)); // le quota grandit avec la vague
+    G.waveTarget = Math.round((5 + G.wave * 1.8) * ((G.waveMod && G.waveMod.quota) || 1)); // quota un peu réduit : vagues plus courtes
     G.wavePause = 2.5; // pause entre les vagues
     p.maxHp += 15;
     p.hp = Math.min(p.maxHp, p.hp + 30);
