@@ -904,7 +904,12 @@ export function drawStormTornado() {
 }
 
 export function drawEffects() {
+  // culling : les effets sont en coords monde — on saute ce qui est hors
+  // de la fenêtre caméra (arc/fillText sont les appels canvas les plus coûteux)
+  const vx0 = (G.camX || 0) - 80, vy0 = (G.camY || 0) - 80;
+  const vx1 = vx0 + W + 160, vy1 = vy0 + H + 160;
   for (const r of G.rings) {
+    if (r.x + r.maxR < vx0 || r.x - r.maxR > vx1 || r.y + r.maxR < vy0 || r.y - r.maxR > vy1) continue;
     ctx.globalAlpha = r.life / r.maxLife;
     ctx.strokeStyle = r.color; ctx.lineWidth = 5;
     ctx.beginPath(); ctx.arc(r.x, r.y, r.r, 0, TAU); ctx.stroke();
@@ -914,6 +919,7 @@ export function drawEffects() {
     ctx.globalAlpha = 1;
   }
   for (const p of G.particles) {
+    if (p.x < vx0 || p.x > vx1 || p.y < vy0 || p.y > vy1) continue;
     ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
     ctx.fillStyle = p.color;
     ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, TAU); ctx.fill();
@@ -921,6 +927,7 @@ export function drawEffects() {
   }
   ctx.textAlign = 'center';
   for (const t of G.damageTexts) {
+    if (t.x < vx0 || t.x > vx1 || t.y < vy0 || t.y > vy1) continue;
     ctx.globalAlpha = Math.min(1, t.life / (t.maxLife * 0.5));
     ctx.font = 'bold 15px Inter, sans-serif';
     ctx.strokeStyle = 'rgba(0,0,0,0.8)'; ctx.lineWidth = 3;

@@ -253,10 +253,10 @@ export function drawSkillBar() {
   const slots = titan ? [
     { icon: 'laser', key: 'G', mode: -1, cd: p.attackCooldown, cdMax: CD_MAX.atk, cd2: 0, cd2Max: 0 },
     { icon: 'volcano', key: 'D', mode: -2, cd: 0, cdMax: 1, cd2: p.handUsed ? 0 : p.handCd, cd2Max: CD_MAX.hand, used: p.handUsed },
-    { icon: 'potion', key: 'W', mode: -3, cd: p.potionCooldown, cdMax: 2.5, cd2: 0, cd2Max: 0, potion: true }
+    { icon: 'potion', key: 'W', mode: -3, cd: p.potionCooldown, cdMax: 1.5, cd2: 0, cd2Max: 0, potion: true }
   ] : [
     ...loadoutSlots(p),
-    { icon: 'potion', key: 'W', mode: -3, cd: p.potionCooldown, cdMax: 2.5, cd2: 0, cd2Max: 0, potion: true }
+    { icon: 'potion', key: 'W', mode: -3, cd: p.potionCooldown, cdMax: 1.5, cd2: 0, cd2Max: 0, potion: true }
   ];
 
   const n = slots.length, r = 26, gap = 68;

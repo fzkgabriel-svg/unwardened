@@ -247,6 +247,12 @@ export function toggleUi() {
 }
 
 // ---------- synthèse ----------
+// quand la source s'arrête, toute sa chaîne est déconnectée des bus : sans ça
+// chaque son laisse ses nœuds attachés au graphe -> fuite mémoire et moteur
+// audio qui sature en longue session (micro-freezes aléatoires)
+function killChain(src, ...nodes) {
+  src.onended = () => { for (const n of nodes) { try { n.disconnect(); } catch (e) {} } };
+}
 function tone(freq, t, dur, type, vol, dest, detune = 0) {
   const o = AC.createOscillator(), g = AC.createGain();
   o.type = type; o.frequency.value = freq; o.detune.value = detune;
@@ -255,6 +261,7 @@ function tone(freq, t, dur, type, vol, dest, detune = 0) {
   g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
   o.connect(g); g.connect(dest || musicBus);
   o.start(t); o.stop(t + dur + 0.05);
+  killChain(o, o, g);
 }
 
 function padChord(notes, t, dur, type) {
@@ -271,6 +278,7 @@ function padChord(notes, t, dur, type) {
       g.gain.linearRampToValueAtTime(0.0001, t + dur);
       o.connect(f); f.connect(g); g.connect(musicBus);
       o.start(t); o.stop(t + dur + 0.1);
+      killChain(o, o, g, f);
     }
   }
 }
@@ -285,6 +293,7 @@ function voice(type, f, t, dur, vol, lp) {
   g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
   o.connect(fl); fl.connect(g); g.connect(musicBus);
   o.start(t); o.stop(t + dur + 0.05);
+  killChain(o, o, g, fl);
 }
 // violon : deux cordes désaccordées + vibrato léger
 function violin(n, t, dur = 0.9, vol = 0.05) {
@@ -298,6 +307,7 @@ function violin(n, t, dur = 0.9, vol = 0.05) {
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     o.connect(fl); fl.connect(g); g.connect(musicBus);
     o.start(t); o.stop(t + dur + 0.05);
+    killChain(o, o, g, fl);
   }
 }
 // violoncelle : fondamentale grave + harmonique douce
@@ -316,6 +326,7 @@ function horn(n, t, dur = 1.6, vol = 0.06) {
   g.gain.linearRampToValueAtTime(0.0001, t + dur);
   o.connect(fl); fl.connect(g); g.connect(musicBus);
   o.start(t); o.stop(t + dur + 0.05);
+  killChain(o, o, g, fl);
 }
 // flûte : sine clair avec vibrato
 function flute(n, t, dur = 0.8, vol = 0.045) {
@@ -325,11 +336,13 @@ function flute(n, t, dur = 0.8, vol = 0.045) {
   const lfo = AC.createOscillator(), lg = AC.createGain();
   lfo.frequency.value = 5.2; lg.gain.value = f * 0.006;
   lfo.connect(lg); lg.connect(o.frequency); lfo.start(t); lfo.stop(t + dur + 0.1);
+  lfo.onended = () => { try { lfo.disconnect(); lg.disconnect(); } catch (e) {} };
   g.gain.setValueAtTime(0.0001, t);
   g.gain.linearRampToValueAtTime(vol, t + 0.12);
   g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
   o.connect(g); g.connect(musicBus);
   o.start(t); o.stop(t + dur + 0.05);
+  killChain(o, o, g);
 }
 // chœur : nappe "ahh" — deux voix désaccordées, attaque très douce
 function choir(n, t, dur = 2.6, vol = 0.028) {
@@ -342,6 +355,7 @@ function choir(n, t, dur = 2.6, vol = 0.028) {
     g.gain.linearRampToValueAtTime(0.0001, t + dur);
     o.connect(fl); fl.connect(g); g.connect(musicBus);
     o.start(t); o.stop(t + dur + 0.1);
+    killChain(o, o, g, fl);
   }
 }
 // basse : fondamentale + quinte, profil par instrument
@@ -357,6 +371,7 @@ function bassNote(n, t, kind = 'cello') {
   g.gain.exponentialRampToValueAtTime(0.0001, t + beatLen() * 3.2);
   o.connect(fl); fl.connect(g); g.connect(musicBus);
   o.start(t); o.stop(t + beatLen() * 3.3);
+  killChain(o, o, g, fl);
   if (kind === 'cello') voice('sine', f * 1.5, t + beatLen() * 0.5, beatLen() * 2, 0.05, 400);
 }
 
@@ -389,6 +404,7 @@ function kick(t, big = false) {
   g.gain.exponentialRampToValueAtTime(0.001, t + 0.24);
   o.connect(g); g.connect(musicBus);
   o.start(t); o.stop(t + 0.26);
+  killChain(o, o, g);
 }
 // charleston : bruit filtré très court sur les contretemps
 function hat(t, open = false) {
@@ -399,6 +415,7 @@ function hat(t, open = false) {
   g.gain.exponentialRampToValueAtTime(0.001, t + (open ? 0.14 : 0.05));
   s.connect(f); f.connect(g); g.connect(musicBus);
   s.start(t); s.stop(t + (open ? 0.15 : 0.06));
+  killChain(s, s, f, g);
 }
 // caisse claire : bruit medium + ton
 function snare(t) {
@@ -409,6 +426,7 @@ function snare(t) {
   g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
   s.connect(f); f.connect(g); g.connect(musicBus);
   s.start(t); s.stop(t + 0.13);
+  killChain(s, s, f, g);
   tone(190, t, 0.09, 'triangle', 0.065);
 }
 // grosse caisse de guerre (taiko) : membrane grave + claquement bois
@@ -421,6 +439,7 @@ function taiko(t, v = 0.2) {
   g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
   o.connect(g); g.connect(musicBus);
   o.start(t); o.stop(t + 0.32);
+  killChain(o, o, g);
   const s = AC.createBufferSource(); s.buffer = getNoise();
   const f = AC.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 900; f.Q.value = 1.5;
   const ng = AC.createGain();
@@ -428,6 +447,7 @@ function taiko(t, v = 0.2) {
   ng.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
   s.connect(f); f.connect(ng); ng.connect(musicBus);
   s.start(t); s.stop(t + 0.06);
+  killChain(s, s, f, ng);
 }
 
 // ---------- orchestrateur de pas : couches par intensité ----------
@@ -519,6 +539,7 @@ function stinger() {
       g.gain.exponentialRampToValueAtTime(0.0001, t + dt + (st === 'victory' ? 0.9 : 1.6));
       o.connect(fl); fl.connect(g); g.connect(musicBus);
       o.start(t + dt); o.stop(t + dt + 2);
+      killChain(o, o, g, fl);
     }
   }
 }
@@ -821,7 +842,7 @@ function oscA(type, f0, f1, t, dur, vol, atk = 0.006, dest) {
     o.type = type; o.frequency.setValueAtTime(f0, t);
     if (f1 && f1 !== f0) o.frequency.exponentialRampToValueAtTime(Math.max(1, f1), t + dur * 0.85);
     o.connect(g); g.connect(dest || sfxBus || master);
-    voices++; o.onended = () => { voices--; };
+    voices++; o.onended = () => { voices--; try { o.disconnect(); g.disconnect(); } catch (e) {} };
     o.start(t); o.stop(t + dur + 0.08);
   } catch (e) {}
 }
@@ -835,7 +856,7 @@ function nzSweep(t, dur, vol, type, f0, f1, q = 1, atk = 0.004, dest) {
     if (f1 && f1 !== f0) f.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur * 0.9);
     const g = env(t, dur, vol, atk);
     s.connect(f); f.connect(g); g.connect(dest || sfxBus || master);
-    voices++; s.onended = () => { voices--; };
+    voices++; s.onended = () => { voices--; try { s.disconnect(); f.disconnect(); g.disconnect(); } catch (e) {} };
     s.start(t); s.stop(t + dur + 0.08);
   } catch (e) {}
 }
@@ -855,7 +876,7 @@ function crackle(t, dur, n, vol, fMin = 2000, fMax = 8000, dest) {
       g.gain.setValueAtTime(vv, tt);
       g.gain.exponentialRampToValueAtTime(0.001, tt + dv);
       s.connect(f); f.connect(g); g.connect(nd);
-      voices++; s.onended = () => { voices--; };
+      voices++; s.onended = () => { voices--; try { s.disconnect(); f.disconnect(); g.disconnect(); } catch (e) {} };
       s.start(tt); s.stop(tt + dv + 0.02);
     } catch (e) {}
   }

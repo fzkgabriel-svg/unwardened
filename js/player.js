@@ -47,7 +47,7 @@ export function usePotion() {
   G.potionsUsed++;
   qAdd('potions', 1); // quête du jour
   sfxPotion();
-  p.potionCooldown = 2.5;
+  p.potionCooldown = 1.5;
   p.hp = Math.min(p.maxHp, p.hp + heal);
   addDamageText(p.x, p.y - 24, `+${heal} PV`, '#69f0ae');
   // effet de guérison : anneau vert + étincelles montantes
