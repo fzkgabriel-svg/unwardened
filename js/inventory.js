@@ -315,14 +315,19 @@ export function wearWeaponUse(inv, pts) {
 }
 
 // ---------- RÉPARATION ----------
-// coût : ~50 % du coût de forge, proportionnel à l'usure (réparation complète = 50 %)
+// coût quadratique en l'usure : frac = missing/dmax
+//   presque neuf (5 %)  → ~0,2 % du coût de forge  (réparation quasi gratuite)
+//   mi-usure   (50 %)  → ~22 % du coût de forge
+//   cassé      (100 %) → ~90 % du coût de forge  (presque reforger)
+// Plus l'équipement est endommagé, plus la réparation coûte cher.
 export function repairCost(inv, id) {
   const dmax = durMaxOf(id);
   const missing = dmax - getDur(inv, id);
   if (missing <= 0) return null;
+  const frac = missing / dmax;
   const cost = {};
   for (const m in ITEMS[id].cost) {
-    cost[m] = Math.max(1, Math.ceil(ITEMS[id].cost[m] * (missing / dmax) * 0.5));
+    cost[m] = Math.max(1, Math.ceil(ITEMS[id].cost[m] * frac * frac * 0.9));
   }
   return cost;
 }
