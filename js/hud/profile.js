@@ -5,7 +5,6 @@ import { G, ctx, TAU } from '../state.js';
 import { roundRect } from '../utils.js';
 import { curWorld } from '../world.js';
 import { activeSlot, slotMeta } from '../chars.js';
-import { weaponAllowed } from '../inventory.js';
 import { HPAL, metalFrame, medBar, engraved, gem } from './frame.js';
 import { modShieldMax } from '../modules.js';
 
@@ -135,28 +134,14 @@ export function drawProfile() {
     ctx.globalAlpha = 1;
   }
 
-  // ---- bouclier de la lance sous la barre d'ultime (D : -85 % dégâts, 3 s / 10 s) ----
-  if (weaponAllowed(G.inv, 'lance')) {
-    const sY = uY + 17, sH = 7;
-    const active = p.shieldT > 0;
-    const frac = active ? 1 : 1 - Math.min(1, (p.shieldCd || 0) / 10);
-    medBar(barX, sY, barW, sH, frac, null,
-      active ? '#9be7ff' : '#4fc3f7', active ? '#0277bd' : '#0d3a52',
-      { glow: active ? '#4fc3f7' : null });
-    engraved('🛡 BOUCLIER', barX + 6, sY + sH / 2 + 2.5, 8.5, 'rgba(216,196,154,0.85)', 'left', 'Georgia, serif');
-    engraved(active ? `ACTIF ${p.shieldT.toFixed(0)}s` : (frac >= 1 ? 'PRÊT [D]' : `${Math.ceil(p.shieldCd || 0)}s`),
-      barX + barW - 6, sY + sH / 2 + 2.5, 8.5, active ? '#9be7ff' : frac >= 1 ? '#4fc3f7' : 'rgba(216,196,154,0.6)', 'right', 'Consolas, monospace');
-  }
-
-  // ---- bouclier du module énergétique : jauge de PV de bouclier dédiée ----
-  // visible dès que le module est possédé/équipé (même à 0 PV de bouclier)
+  // ---- bouclier du module énergétique : visible uniquement quand le bouclier est actif ----
   const sMax = modShieldMax();
-  if (sMax > 0) {
-    const mY = uY + 24, mH = 6;
-    const mFrac = Math.max(0, Math.min(1, (p.modShield || 0) / sMax));
-    medBar(barX, mY, barW, mH, mFrac, null, '#5fd4ff', '#0a4a66', { glow: mFrac > 0 ? '#4fc3f7' : null });
+  if (sMax > 0 && (p.modShield || 0) > 0) {
+    const mY = uY + 17, mH = 7;
+    const mFrac = Math.max(0, Math.min(1, p.modShield / sMax));
+    medBar(barX, mY, barW, mH, mFrac, null, '#5fd4ff', '#0a4a66', { glow: '#4fc3f7' });
     engraved('🛡 MODULE', barX + 6, mY + mH / 2 + 2.5, 8.5, 'rgba(216,196,154,0.85)', 'left', 'Georgia, serif');
-    engraved(`${Math.ceil(p.modShield || 0)}/${sMax}`, barX + barW - 6, mY + mH / 2 + 2.5, 8.5, '#9be7ff', 'right', 'Consolas, monospace');
+    engraved(`${Math.ceil(p.modShield)}/${sMax}`, barX + barW - 6, mY + mH / 2 + 2.5, 8.5, '#9be7ff', 'right', 'Consolas, monospace');
   }
 
   // ---- flèches de feedback PV (bordure qui s'embrase) ----
