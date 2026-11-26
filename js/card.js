@@ -84,19 +84,24 @@ export function drawPlayerCard(x, y, w, h, opts = {}) {
   ctx.globalAlpha = 1;
   ctx.restore();
 
-  // ---- cadre ----
-  const pulse = fr.c1 === '#fff9c4' ? 1 + Math.sin(t * 3) * 0.02 : 1;
-  ctx.save();
-  ctx.translate(x + w / 2, y + h / 2); ctx.scale(pulse, pulse); ctx.translate(-w / 2, -h / 2);
-  const cg = ctx.createLinearGradient(x, y, x + w, y + h);
-  cg.addColorStop(0, fr.c1); cg.addColorStop(1, fr.c2);
-  ctx.strokeStyle = cg; ctx.lineWidth = fr.w;
-  ctx.shadowColor = fr.c1; ctx.shadowBlur = eq.frame === 'f_eternel' ? 18 : 6;
-  roundRect(x - fr.w / 2, y - fr.w / 2, w + fr.w, h + fr.w, 16); ctx.stroke();
-  ctx.shadowBlur = 0;
-  ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 1;
-  roundRect(x - fr.w / 2 - 3, y - fr.w / 2 - 3, w + fr.w + 6, h + fr.w + 6, 18); ctx.stroke();
-  ctx.restore();
+  // ---- cadre : uniquement si un cadre est équipé (sinon fine bordure neutre) ----
+  if (eq.frame) {
+    const pulse = fr.c1 === '#fff9c4' ? 1 + Math.sin(t * 3) * 0.02 : 1;
+    ctx.save();
+    ctx.translate(x + w / 2, y + h / 2); ctx.scale(pulse, pulse); ctx.translate(-w / 2, -h / 2);
+    const cg = ctx.createLinearGradient(x, y, x + w, y + h);
+    cg.addColorStop(0, fr.c1); cg.addColorStop(1, fr.c2);
+    ctx.strokeStyle = cg; ctx.lineWidth = fr.w;
+    ctx.shadowColor = fr.c1; ctx.shadowBlur = eq.frame === 'f_eternel' ? 18 : 6;
+    roundRect(x - fr.w / 2, y - fr.w / 2, w + fr.w, h + fr.w, 16); ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 1;
+    roundRect(x - fr.w / 2 - 3, y - fr.w / 2 - 3, w + fr.w + 6, h + fr.w + 6, 18); ctx.stroke();
+    ctx.restore();
+  } else {
+    ctx.strokeStyle = 'rgba(255,255,255,0.10)'; ctx.lineWidth = 1;
+    roundRect(x + 0.5, y + 0.5, w - 1, h - 1, 14); ctx.stroke();
+  }
 
   const s = Math.min(w / 480, h / 300); // échelle : la carte reste lisible à tout ratio
   // ---- portrait ----
