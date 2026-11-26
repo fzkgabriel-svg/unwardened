@@ -231,12 +231,14 @@ function slotFrame(cx, cy, r, active, accent, spent, cdFrac, subFrac, subColor) 
   // recharge secondaire (anneau extérieur qui se vide, ex. rotation / dôme / singularité)
   // subFrac = fraction RESTANTE (1 = recharge pleine, 0 = prêt)
   if (subFrac !== undefined && subFrac > 0.001) {
-    ctx.strokeStyle = subColor; ctx.lineWidth = 3; ctx.lineCap = 'round';
-    ctx.globalAlpha = 0.9;
+    ctx.save();
+    ctx.strokeStyle = subColor; ctx.lineWidth = 4.5; ctx.lineCap = 'round';
+    ctx.shadowColor = subColor; ctx.shadowBlur = 7;
+    ctx.globalAlpha = 0.95;
     ctx.beginPath();
-    ctx.arc(cx, cy, r + 6, -Math.PI / 2, -Math.PI / 2 + TAU * Math.min(1, subFrac));
+    ctx.arc(cx, cy, r + 6.5, -Math.PI / 2, -Math.PI / 2 + TAU * Math.min(1, subFrac));
     ctx.stroke();
-    ctx.globalAlpha = 1;
+    ctx.restore();
   }
   // animation de disponibilité : anneau qui pulse quand le sort revient
   if (active && cdFrac <= 0) {
@@ -294,16 +296,32 @@ export function drawSkillBar() {
     // lettre de touche sous l'emblème
     engraved(s.key, cx, cy + r - 3, 10, active ? st.col : 'rgba(216,196,154,0.6)', 'center', 'Consolas, monospace');
 
-    // badge secondaire (clic droit) en coin du cercle
+    // badge secondaire (clic droit) en coin du cercle : anneau de progression
+    // + secondes restantes pendant la recharge, lettre quand c'est prêt
     if (s.sub) {
       const bx = cx + r - 2, by = cy + r - 2;
-      const subReady = (s.cd2 || 0) <= 0;
-      ctx.fillStyle = subReady ? (s.subColor || '#fff') + '33' : 'rgba(0,0,0,0.5)';
+      const subCd = (s.cd2 || 0) > 0 && s.cd2Max > 0;
+      const subFracB = subCd ? Math.min(1, s.cd2 / s.cd2Max) : 0;
+      const subCol = s.subColor || '#fff';
+      ctx.fillStyle = subCd ? 'rgba(0,0,0,0.55)' : subCol + '33';
       ctx.beginPath(); ctx.arc(bx, by, 9, 0, TAU); ctx.fill();
-      ctx.strokeStyle = subReady ? (s.subColor || '#fff') : 'rgba(255,255,255,0.25)';
+      if (subCd) {
+        // progression du cooldown directement sur le badge
+        ctx.strokeStyle = subCol; ctx.lineWidth = 2.4; ctx.lineCap = 'round';
+        ctx.shadowColor = subCol; ctx.shadowBlur = 4;
+        ctx.beginPath();
+        ctx.arc(bx, by, 7.5, -Math.PI / 2, -Math.PI / 2 + TAU * subFracB);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+      ctx.strokeStyle = subCd ? subCol : 'rgba(255,255,255,0.25)';
       ctx.lineWidth = 1.2;
       ctx.beginPath(); ctx.arc(bx, by, 9, 0, TAU); ctx.stroke();
-      engraved(s.sub, bx, by + 3.5, 10, subReady ? (s.subColor || '#fff') : '#777', 'center', 'Consolas, monospace');
+      if (subCd) {
+        engraved(String(Math.ceil(s.cd2)), bx, by + 3, 8.5, subCol, 'center', 'Consolas, monospace');
+      } else {
+        engraved(s.sub, bx, by + 3.5, 10, subCol, 'center', 'Consolas, monospace');
+      }
     }
 
     // textes d'état : cooldown / verrou / utilisé
