@@ -140,7 +140,10 @@ export function drawAdminPwInput() {
   ctx.textAlign = 'left'; ctx.fillStyle = '#fff'; ctx.font = 'bold 18px Consolas, monospace';
   const dots = '•'.repeat(inp.text.length) + (Math.floor(G.time * 2.5) % 2 === 0 ? '|' : ' ');
   ctx.fillText(dots || ' ', fx + 14, fy + 28);
-  if (err) {
+  if (G.adminChecking) {
+    ctx.textAlign = 'center'; ctx.fillStyle = '#ffd740'; ctx.font = 'bold 13px Inter, sans-serif';
+    ctx.fillText('VÉRIFICATION AUPRÈS DU SERVEUR…', W / 2, y + h - 42);
+  } else if (err) {
     ctx.textAlign = 'center'; ctx.fillStyle = '#ff5252'; ctx.font = 'bold 14px Inter, sans-serif';
     ctx.fillText('✕ MOT DE PASSE INCORRECT', W / 2, y + h - 42);
   }

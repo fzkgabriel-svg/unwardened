@@ -503,6 +503,36 @@ route('POST', '/api/game/logout', needGame((req, res, b, s) => {
   json(res, 200, { ok: true });
 }));
 
+// ---------- panneau admin du jeu : mot de passe vérifié côté serveur ----------
+// Le mot de passe n'est JAMAIS livré au client : GAME_ADMIN_PASS (env/.env)
+// ou site/data/admin_pass.txt (local, non versionné). Rate-limit strict —
+// un code à 8 chiffres serait sinon brute-forçable.
+const ADMIN_PASS_FILE = join(DATA, 'admin_pass.txt');
+let _adminPassCache; // undefined = pas encore lu
+function gameAdminPass() {
+  if (_adminPassCache !== undefined) return _adminPassCache;
+  let p = process.env.GAME_ADMIN_PASS || '';
+  if (!p && existsSync(ADMIN_PASS_FILE)) {
+    try { p = readFileSync(ADMIN_PASS_FILE, 'utf8').trim(); } catch (e) {}
+  }
+  _adminPassCache = p || null;
+  return _adminPassCache;
+}
+route('POST', '/api/admin/verify', async (req, res, b) => {
+  const ip = clientIp(req);
+  if (!rateLimit('adminpw:' + ip, 6, 600e3)) {
+    return json(res, 429, { error: 'Trop de tentatives — réessayez plus tard' });
+  }
+  const expected = gameAdminPass();
+  if (!expected) return json(res, 503, { error: 'Panneau admin non configuré' });
+  const got = String(b.password || '');
+  const ok = got.length === expected.length &&
+    crypto.timingSafeEqual(Buffer.from(got), Buffer.from(expected));
+  await new Promise(r => setTimeout(r, 150)); // même latence que /api/game/login
+  if (!ok) return json(res, 401, { error: 'Mot de passe incorrect' });
+  json(res, 200, { ok: true });
+});
+
 // ---------- score officiel : calculé côté serveur depuis les stats brutes ----------
 // Le client envoie des compteurs ; le serveur borne chaque valeur puis applique
 // une formule fixe. Le score n'est JAMAIS fourni par le client.
@@ -621,7 +651,7 @@ const server = http.createServer(async (req, res) => {
     // CORS pour les routes consommées par le jeu (autre origine) :
     // préflight OPTIONS + en-têtes sur les réponses
     const isGameApi = pathname.startsWith('/api/game/') || pathname === '/api/leaderboard'
-      || pathname.startsWith('/api/player/');
+      || pathname === '/api/admin/verify' || pathname.startsWith('/api/player/');
     if (isGameApi) {
       gameCors(res, req.headers.origin);
       if (req.method === 'OPTIONS') { res.writeHead(204); return res.end(); }

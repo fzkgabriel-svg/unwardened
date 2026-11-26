@@ -7,9 +7,6 @@ import { saveStats } from './state.js';
 const SLOTS_KEY = 'rpg2d_chars_v1';
 export const MAX_SLOTS = 3;
 
-// mot de passe du panneau admin local — À PERSONNALISER
-export const ADMIN_PASS = 'Gabriel1801';
-
 let slots = [null, null, null]; // { name, created, lastPlayed, playtime }
 // var (et non let) : storeKey() peut être appelé pendant l'évaluation des
 // modules (cycle state.js <-> chars.js) avant cette ligne — undefined >= 0
@@ -120,9 +117,16 @@ export function resetChar(i) {
 }
 
 // ---------- ADMIN ----------
-export function checkAdminPass(pw) {
-  if (pw === ADMIN_PASS) { adminOK = true; return true; }
-  return false;
+// le mot de passe est vérifié par le backend (/api/admin/verify) — jamais
+// présent dans le client. Import dynamique : net.js importe déjà chars.js
+// (cycle évité). Serveur injoignable = accès refusé.
+export async function checkAdminPass(pw) {
+  try {
+    const { verifyAdminPass } = await import('./net.js');
+    const ok = await verifyAdminPass(pw);
+    if (ok) adminOK = true;
+    return ok;
+  } catch (e) { return false; }
 }
 export function adminLock() { adminOK = false; } // re-verrouille : le code sera redemandé
 export function adminList() {

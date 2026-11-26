@@ -179,6 +179,16 @@ export function maybeAutoSync() {
 }
 export function noteLocalSave() { net.lastLocalSave = Date.now(); }
 
+// ---------- panneau admin : le mot de passe est vérifié côté serveur ----------
+// (jamais présent dans le code client — GAME_ADMIN_PASS / data/admin_pass.txt)
+export async function verifyAdminPass(pw) {
+  try {
+    const { status, data } = await api('/api/admin/verify', {
+      method: 'POST', body: JSON.stringify({ password: pw }) });
+    return status === 200 && data.ok === true;
+  } catch (e) { return false; } // serveur injoignable = accès refusé
+}
+
 // ---------- classement + profil (publics) ----------
 export async function fetchLeaderboard(offset = 0, q = '') {
   net.lbLoading = true;

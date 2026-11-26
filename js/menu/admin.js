@@ -2,9 +2,10 @@ import { G, ctx, W, H, TAU, saveStats, finalWave } from '../state.js';
 import { roundRect, drawMatIcon, drawItemIcon, itemTier } from '../utils.js';
 import { regenerateDecor } from '../graphics.js';
 import { ACHIEVEMENTS, unlocked, achievementCount, checkAchievements, achInfo, isClaimed, claimReward, achTabList, unclaimedInTab, adminUnlockAll } from '../achievements.js';
-import { ITEMS, MATS, canCraft, craft, toggleEquip, equipBonuses, getDur, canRepair, repairItem, repairCost, loadInv, addMaterial, modeInfo, addWmodeXp, modeMult, MODE_MAX_LVL, setInvNoSave } from '../inventory.js';
+import { ITEMS, MATS, canCraft, craft, toggleEquip, equipBonuses, getDur, canRepair, repairItem, repairCost, loadInv, saveInv, addMaterial, modeInfo, addWmodeXp, modeMult, MODE_MAX_LVL, setInvNoSave, durMaxOf } from '../inventory.js';
 import { spawnEnemy, spawnFinalBoss } from '../enemies.js';
 import { gainXp } from '../player.js';
+import { gainGlobalXp } from '../levelup.js';
 import { curWorld, syncCamera, regenerateWorld, reloadWorlds, campaignStart } from '../world.js';
 import { sfxCraft, sfxRepair, sfxEquip, sfxConfirm, sfxClick } from '../audio.js';
 import { MAX_SLOTS, activeSlot, allSlots, slotMeta, slotSummary, createChar, selectChar, deselectChar, resetChar, fmtPlaytime, fmtDate, checkAdminPass, adminOK as _adminOK, adminList, adminWipeAll, adminLock } from '../chars.js';
@@ -188,6 +189,14 @@ const ADMIN_BASE = [
   ['unlockall', '🔓 TOUT DÉBLOQUER',   'monde'],
   ['relock',    '🔒 REVERROUILLER',    'monde'],
 ];
+// inventaire / progression : stocks, objets, réparations, XP global, armes
+const ADMIN_OBJ = [
+  ['mats',      '🧱 STOCK ×999',       'obj'],
+  ['items',     '🎒 TOUS OBJETS',      'obj'],
+  ['repair',    '🔧 RÉPARER TOUT',     'obj'],
+  ['gxp',       '✨ +XP GLOBAL',       'obj'],
+  ['weapons',   '⚔️ ARMES NIVEAU MAX', 'obj'],
+];
 // apparitions adaptées à la campagne en cours
 const SPAWN_C0 = [
   ['spawn_slime',   '🟢 Slime',        'spawn'],
@@ -240,7 +249,7 @@ const SPAWN_C4 = [
   ['spawn_final',    '🕳️ L\'ABOMINATION COSMIQUE','spawn']
 ];
 function adminCheats() {
-  return [...ADMIN_BASE, ...(G.campaign === 4 ? SPAWN_C4 : G.campaign === 3 ? SPAWN_C3 : G.campaign === 2 ? SPAWN_C2 : G.campaign === 1 ? SPAWN_C1 : SPAWN_C0)];
+  return [...ADMIN_BASE, ...ADMIN_OBJ, ...(G.campaign === 4 ? SPAWN_C4 : G.campaign === 3 ? SPAWN_C3 : G.campaign === 2 ? SPAWN_C2 : G.campaign === 1 ? SPAWN_C1 : SPAWN_C0)];
 }
 const SPAWN_TYPES = {
   spawn_slime: 'slime', spawn_bat: 'bat', spawn_spider: 'spider',
@@ -260,14 +269,14 @@ const SPAWN_TYPES = {
 };
 
 function adminCheatRects() {
-  // panneau centré : 3 colonnes de catégories
-  const pw = 620, ph = 500, px = W / 2 - pw / 2, py = H / 2 - ph / 2;
+  // panneau centré : 4 colonnes de catégories
+  const pw = 940, ph = 500, px = W / 2 - pw / 2, py = H / 2 - ph / 2;
   const cheats = adminCheats();
-  const cats = ['ress', 'monde', 'spawn'];
-  const cols = cats.map((c, i) => ({ cat: c, x: px + 20 + i * ((pw - 40) / 3), w: (pw - 40) / 3 - 12 }));
+  const cats = ['ress', 'monde', 'obj', 'spawn'];
+  const cols = cats.map((c, i) => ({ cat: c, x: px + 20 + i * ((pw - 40) / cats.length), w: (pw - 40) / cats.length - 12 }));
   const btns = {};
   for (const c of cheats) {
-    const col = cols.find(cc => cc.cat === (c[2] === 'ress' ? 'ress' : c[2] === 'monde' ? 'monde' : 'spawn'));
+    const col = cols.find(cc => cc.cat === c[2]);
     const idx = cheats.filter(o => o[2] === c[2]).indexOf(c);
     const rowH = 40, top = py + 66;
     btns[c[0]] = { x: col.x + 6, y: top + idx * (rowH + 8), w: col.w - 12, h: rowH };
@@ -316,6 +325,38 @@ function applyAdminCheat(id) {
     case 'relock':
       adminLock(); // le mot de passe sera redemandé à la prochaine ouverture
       G.adminMenu = false;
+      break;
+    // ---- inventaire / progression ----
+    case 'mats':
+      if (!G.inv) G.inv = loadInv();
+      G.inv.mats = G.inv.mats || {};
+      for (const m in MATS) G.inv.mats[m] = 999;
+      saveInv(G.inv);
+      break;
+    case 'items':
+      if (!G.inv) G.inv = loadInv();
+      G.inv.items = G.inv.items || {}; G.inv.dur = G.inv.dur || {};
+      for (const id in ITEMS) { G.inv.items[id] = ITEMS[id].conso ? 5 : true; G.inv.dur[id] = durMaxOf(id); }
+      saveInv(G.inv);
+      break;
+    case 'repair':
+      if (G.inv) {
+        G.inv.dur = G.inv.dur || {};
+        for (const id in G.inv.items) G.inv.dur[id] = durMaxOf(id);
+        saveInv(G.inv);
+      }
+      break;
+    case 'gxp':
+      gainGlobalXp(50000); // plusieurs paliers + toasts de récompenses
+      break;
+    case 'weapons':
+      if (!G.inv) G.inv = loadInv();
+      G.inv.wmode = G.inv.wmode || {};
+      for (const k of ['epee', 'lance', 'arc']) {
+        const w = G.inv.wmode[k] = G.inv.wmode[k] || { xp: 0 };
+        w.xp = Math.max(w.xp || 0, 1e9); // niveau 100 (MAX)
+      }
+      saveInv(G.inv);
       break;
     default:
       if (SPAWN_TYPES[id]) {
@@ -428,15 +469,15 @@ export function drawAdminMenu() {
   ctx.fillText(`Triche — ${G.campaign === 4 ? 'L\'ESPACE 🛸' : G.campaign === 3 ? 'LES ÉGOUTS 🗑️' : G.campaign === 2 ? 'LES ENFERS 🔥' : G.campaign === 1 ? 'LA TERRE GELÉE ❄️' : 'LES TERRES OUBLIÉES 🌿'} • jeu en pause • \` pour fermer`, W / 2, L.py + 56);
 
   // titres de colonnes (le premier bouton 'spawn' varie selon la campagne)
-  const catTitles = { ress: '⚡ RESSOURCES', monde: '🌍 MONDE', spawn: '👾 APPARAÎTRE' };
-  const firstSpawn = adminCheats().find(c => c[2] === 'spawn')[0];
-  const colX = [L.btns.xp.x - 6, L.btns.wave.x - 6, L.btns[firstSpawn].x - 6];
-  const colW = [L.btns.xp.w + 12, L.btns.wave.w + 12, L.btns[firstSpawn].w + 12];
-  ['ress', 'monde', 'spawn'].forEach((c, i) => {
+  const catTitles = { ress: '⚡ RESSOURCES', monde: '🌍 MONDE', obj: '🎒 OBJETS', spawn: '👾 APPARAÎTRE' };
+  ['ress', 'monde', 'obj', 'spawn'].forEach(cat => {
+    const first = adminCheats().find(c => c[2] === cat);
+    if (!first) return;
+    const r = L.btns[first[0]];
     ctx.fillStyle = '#ffd740'; ctx.font = 'bold 13px Inter, sans-serif';
-    ctx.fillText(catTitles[c], colX[i] + colW[i] / 2, L.py + 84);
+    ctx.fillText(catTitles[cat], r.x + r.w / 2, L.py + 84);
     ctx.strokeStyle = 'rgba(255,215,64,0.3)'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(colX[i], L.py + 92); ctx.lineTo(colX[i] + colW[i], L.py + 92); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(r.x - 6, L.py + 92); ctx.lineTo(r.x + r.w + 6, L.py + 92); ctx.stroke();
   });
 
   // boutons
@@ -450,8 +491,8 @@ export function drawAdminMenu() {
     ctx.lineWidth = hov ? 2 : 1.2;
     roundRect(r.x, r.y, r.w, r.h, 8); ctx.stroke();
     ctx.fillStyle = active ? '#c8e6c9' : '#fff';
-    ctx.font = 'bold 13px Inter, sans-serif';
-    ctx.fillText(c[1] + (active ? ' ✓' : ''), r.x + r.w / 2, r.y + r.h / 2 + 5);
+    ctx.font = 'bold 12px Inter, sans-serif';
+    ctx.fillText(fitText(c[1] + (active ? ' ✓' : ''), r.w - 12), r.x + r.w / 2, r.y + r.h / 2 + 5);
   }
 
   // bouton fermer

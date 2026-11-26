@@ -31,14 +31,21 @@ export function initInput() {
       return;
     }
     if (G.adminInput) {
-      if (k === 'enter') {
-        const ok = checkAdminPass(G.adminInput.text); G.adminInput = null;
-        if (ok) {
-          G.adminUnlockT = G.time; // animation du cadenas qui s'ouvre
-          sfxConfirm();
-          if (G.state === 'menu') G.menuView = 'admin';
-          else G.adminMenu = true; // en jeu : mot de passe → menu de triche direct
-        } else { G.adminPwErr = true; G.adminPwErrT = G.time; sfxClick(); }
+      if (k === 'enter' && !G.adminChecking) {
+        // vérification côté serveur (async) — Échap annule pendant l'attente
+        const inp = G.adminInput, pw = inp.text;
+        G.adminChecking = true;
+        checkAdminPass(pw).then(ok => {
+          G.adminChecking = false;
+          if (G.adminInput !== inp) return; // annulé entre-temps
+          if (ok) {
+            G.adminInput = null;
+            G.adminUnlockT = G.time; // animation du cadenas qui s'ouvre
+            sfxConfirm();
+            if (G.state === 'menu') G.menuView = 'admin';
+            else G.adminMenu = true; // en jeu : mot de passe → menu de triche direct
+          } else { G.adminPwErr = true; G.adminPwErrT = G.time; sfxClick(); }
+        });
       } else if (k === 'escape') { G.adminInput = null; sfxClick(); }
       else if (k === 'backspace') G.adminInput.text = G.adminInput.text.slice(0, -1);
       else if (e.key.length === 1 && G.adminInput.text.length < 24 && !e.ctrlKey && !e.metaKey) G.adminInput.text += e.key;

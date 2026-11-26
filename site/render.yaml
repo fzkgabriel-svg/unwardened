@@ -16,6 +16,9 @@ services:
         sync: false
       - key: ADMIN_PASS
         sync: false
+      # --- mot de passe du panneau admin DANS LE JEU (vérifié par /api/admin/verify) ---
+      - key: GAME_ADMIN_PASS
+        sync: false
       # --- e-mails (vérification / reset mdp) : SMTP obligatoire en prod ---
       # ex : smtps://USER:PASS@smtp.gmail.com:465  (Gmail : mot de passe d'application)
       - key: SMTP_URL
