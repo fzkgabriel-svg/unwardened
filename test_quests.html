@@ -35,8 +35,13 @@ try {
   // ---------- claim ----------
   G.stats.qday = { date: new Date().toLocaleDateString('en-CA'), c: {}, mx: {}, claimed: [] };
   const qq = Q.dailyQuests()[0];
-  if (qq.c) G.stats.qday.c[qq.metric] = qq.target * 2;
-  else G.stats.qday.mx[qq.metric] = qq.target;
+  const fillQ = (store, q) => {
+    for (const [m, cflag, t] of [[q.metric, q.c, q.target], [q.metric2, q.c2, q.target2]]) {
+      if (!m) continue;
+      if (cflag) store.c[m] = t * 2; else store.mx[m] = t;
+    }
+  };
+  fillQ(G.stats.qday, qq);
   const s0 = Q.questState(qq);
   ok('quête marquée done', s0.done === true);
   const emeraldBefore = G.inv.mats.emeraude;
@@ -49,6 +54,22 @@ try {
   if (notToday) ok('quête hors du jour refusée', Q.claimQuest(notToday.id).ok === false);
   else ok('quête hors du jour refusée', true);
   ok('questsClaimable/Left renvoient des boolés/nombres', typeof Q.questsClaimable() === 'boolean' && typeof Q.questsLeftToday() === 'number');
+
+  // ---------- quêtes composées + nouveaux compteurs ----------
+  const comp = Q.QPOOL.find(q => q.metric2);
+  if (comp) {
+    G.stats.qday = { date: new Date().toLocaleDateString('en-CA'), c: {}, mx: {}, wl: [], claimed: [] };
+    const st = (m, cflag, t) => { if (cflag) G.stats.qday.c[m] = t - 1; else G.stats.qday.mx[m] = t - 1; };
+    st(comp.metric, comp.c, comp.target); st(comp.metric2, comp.c2, comp.target2);
+    ok('composée : presque → pas done', Q.questState(comp).done === false);
+    if (comp.c) G.stats.qday.c[comp.metric] = comp.target * 2; else G.stats.qday.mx[comp.metric] = comp.target;
+    ok('composée : 1re seule → pas done', Q.questState(comp).done === false);
+    if (comp.c2) G.stats.qday.c[comp.metric2] = comp.target2 * 2; else G.stats.qday.mx[comp.metric2] = comp.target2;
+    ok('composée : les deux → done', Q.questState(comp).done === true);
+  } else ok('composée : les deux → done', true);
+  G.stats.qday = { date: new Date().toLocaleDateString('en-CA'), c: {}, mx: {}, wl: [], claimed: [] };
+  Q.qWinWorld(0); Q.qWinWorld(0); Q.qWinWorld(3);
+  ok('mondes distincts comptés une fois', G.stats.qday.c.worlds === 2 && G.stats.qday.wl.length === 2);
 
   // ---------- rendu + clics ----------
   G.state = 'menu'; G.menuView = 'quests'; G.time = 1; G.mouse = { x: 600, y: 300 };
@@ -65,7 +86,7 @@ try {
   const wq = Q.weeklyQuests()[0];
   Q.qAdd('kills', 0); // force l'init de qweek
   const wkKey = G.stats.qweek.week;
-  G.stats.qweek = { week: wkKey, c: { kills: 9e9, dmg: 9e9, bosses: 9e9, emerald: 9e9, mats: 9e9, mods: 9e9, victories: 9e9, potions: 9e9, time: 9e9 }, mx: { wave: 99, level: 99 }, claimed: [] };
+  G.stats.qweek = { week: wkKey, wl: [], c: { kills: 9e9, dmg: 9e9, bosses: 9e9, emerald: 9e9, mats: 9e9, mods: 9e9, victories: 9e9, potions: 9e9, time: 9e9, worlds: 9, ult: 9e9, craft: 9e9, dist: 9e9, flawless: 9 }, mx: { wave: 99, level: 99 }, claimed: [] };
   const modsBefore = (G.inv.modules && G.inv.modules.owned || []).length;
   const wr = Q.claimWeekly(wq.id);
   ok('claim hebdo ok', wr.ok === true);

@@ -65,7 +65,10 @@ function drawQuestCard(x, y, w, h, q, st, claimBtn, rewardLabel, rewardCol, clai
   const bx = x + 14, bw = w - 160, by = y + 60;
   ctx.fillStyle = 'rgba(255,255,255,0.08)';
   roundRect(bx, by, bw, 9, 5); ctx.fill();
-  const pct = Math.min(1, st.cur / q.target);
+  // quêtes composées : la barre suit la condition la moins avancée
+  const p1 = Math.min(1, st.cur / q.target);
+  const p2 = q.metric2 ? Math.min(1, (st.cur2 || 0) / q.target2) : 1;
+  const pct = Math.min(p1, p2);
   if (pct > 0) {
     ctx.fillStyle = st.done ? '#69f0ae' : '#d4b062';
     roundRect(bx, by, Math.max(9, bw * pct), 9, 5); ctx.fill();
@@ -76,10 +79,11 @@ function drawQuestCard(x, y, w, h, q, st, claimBtn, rewardLabel, rewardCol, clai
     if (s >= 3600) { const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); return m ? `${h}h${String(m).padStart(2, '0')}` : `${h}h`; }
     return `${Math.floor(s / 60)}min`;
   };
+  const fmtVal = (m, v, t) => m === 'dmg' ? `${Math.floor(v).toLocaleString('fr-FR')}/${t.toLocaleString('fr-FR')}`
+    : m === 'time' ? `${fmtT(v)}/${fmtT(t)}`
+    : `${Math.floor(v)}/${t}`;
   ctx.font = `600 10px ${UI}`; ctx.fillStyle = C_MUTED;
-  const lbl = q.metric === 'dmg' ? `${Math.floor(st.cur).toLocaleString('fr-FR')}/${q.target.toLocaleString('fr-FR')}`
-    : q.metric === 'time' ? `${fmtT(st.cur)}/${fmtT(q.target)}`
-    : `${Math.floor(st.cur)}/${q.target}`;
+  const lbl = fmtVal(q.metric, st.cur, q.target) + (q.metric2 ? `  +  ${fmtVal(q.metric2, st.cur2 || 0, q.target2)}` : '');
   ctx.fillText(lbl, x + 14, y + 80);
 
   // récompense

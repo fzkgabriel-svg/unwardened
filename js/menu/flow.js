@@ -69,6 +69,7 @@ export function startGame() {
   regenerateDecor(); // nouveau décor à chaque partie
   // reset compteurs de la partie
   G.dmgDealt = 0; G.dmgTaken = 0; G.potionsUsed = 0; G.bossesKilled = 0; G.runTime = 0;
+  G.runDeaths = 0; // quêtes : victoires « sans faille »
   G.runMats = {}; G.runWear = {}; G.runWmode = {}; // résumé de fin de partie
   // nouvelle partie : monde de départ de la campagne choisie (monde sélectionné sur la carte), carte régénérée
   const wsel = (G.campaignWorlds && G.campaignWorlds[G.campaign]) || 0;

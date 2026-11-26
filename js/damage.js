@@ -48,6 +48,7 @@ export function damagePlayer(dmg, slow = 1.0, killer = null) {
   }
   if (p.hp <= 0) {
     p.hp = 0; p.alive = false; G.gameOver = true;
+    G.runDeaths = (G.runDeaths || 0) + 1; // quêtes : victoires « sans faille »
     G.bomber = null; // la cinématique de l'ultime s'arrête avec le héros
     G.iceStorm = null; G.iceSpikes = []; G.iceFrost = []; G.snowCover = null;
     // snapshot des infos de mort pour l'écran game over

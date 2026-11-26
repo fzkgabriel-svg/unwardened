@@ -5,6 +5,7 @@ import { ACHIEVEMENTS, unlocked, achievementCount, checkAchievements, achInfo, i
 import { ITEMS, MATS, ITEM_RARITY, canCraft, craft, toggleEquip, useConsumable, equipBonuses, getDur, canRepair, repairItem, repairCost, loadInv, addMaterial, modeInfo, addWmodeXp, modeMult, MODE_MAX_LVL, setInvNoSave, setLoadoutSlot, loadoutOf, damagedItems, repairAll, repairAllCost, DUR_MAX, durState, durMaxOf } from '../inventory.js';
 import { spawnEnemy, spawnFinalBoss } from '../enemies.js';
 import { gainXp } from '../player.js';
+import { qAdd } from '../quests.js';
 import { curWorld, syncCamera, regenerateWorld, reloadWorlds, campaignStart } from '../world.js';
 import { sfxCraft, sfxRepair, sfxEquip, sfxConfirm, sfxClick, sfxDeny } from '../audio.js';
 import { MAX_SLOTS, activeSlot, allSlots, slotMeta, slotSummary, createChar, selectChar, deselectChar, resetChar, fmtPlaytime, fmtDate, checkAdminPass, adminOK as _adminOK, adminList, adminWipeAll, adminLock } from '../chars.js';
@@ -553,6 +554,7 @@ export function forgeClickAt(x, y) {
       const id = Z.selId;
       if (canCraft(G.inv, id)) {
         craft(G.inv, id);
+        qAdd('craft', 1); // quête : objets forgés
         G.forgeAnim = { start: G.time, id };
         sfxCraft();
         return 'craft';

@@ -20,7 +20,7 @@ import { initInput } from './input.js';
 import { updateModules, modSpeedMult, grantPass2 } from './modules.js';
 import { maybeAutoSync } from './net.js';
 import { DIFFS, waveModFor, recordDiffWin, runScore } from './difficulty.js';
-import { qAdd, qMax } from './quests.js';
+import { qAdd, qMax, qWinWorld } from './quests.js';
 
 // polices de l'interface (canvas) : chargement explicite au démarrage
 if (document.fonts) ['600 16px Inter', '600 38px Cinzel'].forEach(f => document.fonts.load(f));
@@ -106,8 +106,10 @@ function update(dt) {
   if (dx || dy) {
     const len = Math.hypot(dx, dy);
     p.lastDx = dx / len; p.lastDy = dy / len; // direction pour la Ruée dimensionnelle
+    const ox = p.x, oy = p.y;
     p.x = Math.max(p.r, Math.min(worldW() - p.r, p.x + dx / len * pSpeed));
     p.y = Math.max(p.r, Math.min(worldH() - p.r, p.y + dy / len * pSpeed));
+    if (!G.tutorial) qAdd('dist', Math.hypot(p.x - ox, p.y - oy) / 50); // quête : distance en mètres (50 px = 1 m)
   }
   // Royaume des Tempêtes : les courants d'air poussent le joueur
   {
@@ -185,6 +187,7 @@ function update(dt) {
   if (G.ultQueued) {
     if (p.ultCharge >= 100 && p.ultActive <= 0 && !G.bomber) {
       G.ultQueued = false;
+      qAdd('ult', 1); // quête : utilisation de l'ultime
       doUlt();
     } else if (p.ultCharge < 100) {
       G.ultQueued = false; // pas encore chargée : on oublie la pression, pas de déclenchement auto
@@ -731,6 +734,8 @@ function update(dt) {
     sfxVictory(); // sting triomphal sombre : gong + accords ascendants
     recordRun(); // la victoire compte comme une partie réussie dans les stats
     qAdd('victories', 1); // quête du jour
+    qWinWorld(G.campaign); // quête : royaumes distincts terminés
+    if (!G.runDeaths) qAdd('flawless', 1); // quête : victoire sans aucune mort
     // difficulté de campagne : enregistre la victoire par niveau (Normal/Difficile/Expert),
     // débloque la difficulté suivante et mémorise les records — campaignDone reste
     // la condition de déblocage du niveau suivant (le Normal l'implique toujours)
