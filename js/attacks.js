@@ -115,8 +115,8 @@ export function doThrust() {
 // courte distance en tournoyant, touche les ennemis sur sa trajectoire puis
 // revient vers le joueur. Les dégâts chutent fortement avec la distance
 // joueur<->cible ; les impacts enchaînés montent un combo (rythme + puissance).
-const KNIFE_RANGE = 300;              // portée max à l'aller (~5 corps)
-const KNIFE_OUT = 16, KNIFE_BACK = 22; // px/frame
+const KNIFE_RANGE = 240;              // portée max à l'aller (~4 corps)
+const KNIFE_OUT = 13, KNIFE_BACK = 18; // px/frame — projectiles plus lents
 
 export function doJudgment() {
   const p = G.player, angle = playerAngle();
@@ -129,7 +129,7 @@ export function doJudgment() {
     a: angle, spin: 0, t: 0, phase: 'out', traveled: 0,
     range: KNIFE_RANGE * (empowered ? 1.15 : 1),
     r: empowered ? 8 : 7,
-    dmg: p.attackDamage * (empowered ? 1.5 : 1.0) * waveBonus(),
+    dmg: p.attackDamage * (empowered ? 1.2 : 0.8) * waveBonus(), // nerf : dégâts réduits
     hits: new Set(), maxHits: 3, sentence: false, delay: 0,
     spectral: false, big: false, waveDone: false
   });
