@@ -217,6 +217,8 @@ export function damageEnemy(e, dmg, angle) {
   // coup critique : instinct du chasseur (+12 %) sur une base de 5 %
   const isCrit = Math.random() < 0.05 + modCritBonus();
   if (isCrit) real *= 1.75;
+  // boss finaux : carapace légendaire — 25 % de dégâts d'armes en moins
+  if (e.type && e.type.startsWith('finalBoss')) real *= 0.75;
   e.hp -= real;
   // absorption : une partie des dégâts infligés soigne le héros
   const ls = modLifesteal();
@@ -337,7 +339,7 @@ export function spawnFinalBoss() {
   const storm = G.campaign === 5;
   const type = hell ? 'finalBossEnfer' : frozen ? 'finalBossGlace'
     : sewer ? 'finalBossEgout' : space ? 'finalBossSpace' : storm ? 'finalBossTempete' : 'finalBoss';
-  const hp = (storm ? 21000 : hell ? 11500 : space ? 17000 : sewer ? 14000 : frozen ? 7500 : 4000)
+  const hp = ((storm ? 21000 : hell ? 11500 : space ? 17000 : sewer ? 14000 : frozen ? 7500 : 4000) * 1.5)
     + p.level * (storm ? 1000 : space ? 800 : sewer ? 650 : hell ? 550 : frozen ? 450 : 300);
   const e = {
     ...enemyTypes[type], type, hp, maxHp: hp,
