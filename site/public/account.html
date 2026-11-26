@@ -24,6 +24,31 @@
 .stat-hero .lbl { font-size: 11px; letter-spacing: 3px; color: var(--ink-dim); text-transform: uppercase; }
 .stat-hero .rank { display: inline-block; margin-top: 10px; padding: 6px 18px; border-radius: 20px;
   border: 1px solid var(--gold); color: var(--gold-hi); font: 700 13px Inter, sans-serif; letter-spacing: 1px; }
+/* ---------- carte de joueur (bannière) ---------- */
+.pcard { position: relative; border-radius: 16px; padding: 22px 26px; margin: 0 0 22px;
+  display: flex; gap: 20px; align-items: center; overflow: hidden; }
+.pcard .pbg { position: absolute; inset: 0; z-index: 0; }
+.pcard > * { position: relative; z-index: 1; }
+.pava { width: 84px; height: 84px; border-radius: 50%; flex: none; display: flex;
+  align-items: center; justify-content: center; font-size: 40px; color: #fff;
+  border: 3px solid; }
+.pava.ph { background: #14141c; }
+.pinfo { flex: 1; min-width: 0; }
+.pname { font-family: var(--serif); font-size: 24px; color: #fff; letter-spacing: 1px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ptitle { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; margin: 2px 0 10px; }
+.pxpbar { height: 10px; border-radius: 5px; background: rgba(0,0,0,.55);
+  border: 1px solid rgba(255,213,79,.35); overflow: hidden; }
+.pxpbar i { display: block; height: 100%; border-radius: 5px;
+  background: linear-gradient(90deg,#ffd54f,#ff8a65); }
+.pxp { font-size: 10px; color: var(--ink-dim); margin-top: 5px; letter-spacing: 1px; }
+.pstats { flex: none; text-align: right; font-size: 11px; color: var(--ink-dim); line-height: 1.7; }
+.pstats b { color: var(--gold); font-family: var(--serif); font-size: 15px; }
+.porn { position: absolute; top: 10px; right: 14px; font-size: 26px; z-index: 1; }
+.pcard.transcendant { animation: pcardGlow 2.4s ease-in-out infinite; }
+@keyframes pcardGlow { 0%,100% { box-shadow: 0 0 24px rgba(255,234,0,.25); }
+  50% { box-shadow: 0 0 44px rgba(255,234,0,.5); } }
+@media (max-width: 560px) { .pcard { flex-direction: column; text-align: center; } .pstats { text-align: center; } }
 </style>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><path d='M32 4 54 18v28L32 60 10 46V18Z' fill='none' stroke='%23d4b062' stroke-width='4'/></svg>">
 </head>
@@ -66,6 +91,7 @@
 <div class="hidden" id="dashview">
   <section style="padding-top:30px"><div class="sec-head"><h2>ESPACE KAELORIEN</h2>
     <div class="orn">✦ ✦ ✦</div></div>
+  <div id="dCard"></div>
   <div class="dash">
     <div>
       <div class="card" style="text-align:center">
@@ -158,6 +184,7 @@
 
 <script type="module">
 import { LOGO_SVG, mountChrome, startParticles, api, esc, fmtDate, setMe, me, toast } from '/js/site.js';
+import { cosmeticById, BG_CSS, FRAME_CSS, xpNeedFor } from '/js/carddata.js';
 document.getElementById('logo').innerHTML = LOGO_SVG;
 startParticles();
 
@@ -249,28 +276,73 @@ async function loadDash(u) {
       `<div class="dl-row"><span class="k">${esc(n.title)}</span><span>${fmtDate(n.created_at)}</span></div>`).join('')
       || '<div class="empty">Aucune actualité.</div>';
   } catch (e) {}
-  // statistiques de jeu (progression synchronisée) — 3 onglets
+  // statistiques de jeu (progression synchronisée) — 3 onglets + bannière carte
   try {
     const d = await api('/api/player/' + encodeURIComponent(u.pseudo));
-    const p = d.player;
-    const h = Math.floor((p.playtime || 0) / 3600), m = Math.floor(((p.playtime || 0) % 3600) / 60);
-    window._pstats = {
-      score: (p.score || 0).toLocaleString('fr-FR'),
-      rank: p.rank ? '#' + p.rank : '—',
-      level: p.level || 1,
-      worlds: `${p.worlds_done || 0}/6`,
-      bosses: p.bosses || 0,
-      achv: p.achievements || 0,
-      playtime: p.playtime >= 3600 ? `${h}h ${String(m).padStart(2, '0')}` : `${m} min`,
-      since: p.member_since ? fmtDate(p.member_since) : '—',
-      sync: p.updated_at ? fmtDate(p.updated_at) : '—',
-    };
-    $('dProfile').href = '/joueur/' + encodeURIComponent(p.pseudo);
-    $('dProfile').style.display = 'block';
-    renderStats(window._stab || 'overview');
+    applyPlayer(d.player);
   } catch (e) {
+    $('dCard').innerHTML = '';
     $('dStats').innerHTML = '<div class="empty">Aucune progression synchronisée.<br>Jouez en ligne et synchronisez depuis le jeu.</div>';
   }
+}
+
+// bannière = carte de joueur synchronisée (cosmétiques équipés dans le jeu)
+function renderCard(p) {
+  const el = $('dCard'); if (!el) return;
+  if (p.glevel == null) { el.innerHTML = ''; return; }
+  const eq = p.card || {};
+  const port = cosmeticById(eq.portrait), fram = cosmeticById(eq.frame),
+        bg = BG_CSS[eq.background] || BG_CSS.b_terre,
+        ttl = cosmeticById(eq.title), orn = cosmeticById(eq.ornament);
+  const fc = FRAME_CSS[eq.frame] || FRAME_CSS.f_bois;
+  const lvl = Math.min(1000, Math.max(1, p.glevel || 1));
+  const need = xpNeedFor(lvl), xp = Math.max(0, p.gxp || 0);
+  const pct = need ? Math.min(100, Math.round(xp / need * 100)) : 100;
+  const transc = lvl >= 1000 || (ttl && ttl.id === 't_transcendant');
+  const fmtN = n => (n || 0).toLocaleString('fr-FR');
+  el.innerHTML = `
+    <div class="pcard${transc ? ' transcendant' : ''}" style="border:3px solid ${fc[0]};background:linear-gradient(135deg,${bg[0]},${bg[1]})">
+      ${orn && orn.id !== 'o_rien' ? `<div class="porn">${orn.icon}</div>` : ''}
+      <div class="pava${port ? '' : ' ph'}" style="border-color:${port ? port.col : fc[0]};background:${port ? port.col + '33' : '#14141c'}">${port ? port.icon : esc(p.pseudo[0].toUpperCase())}</div>
+      <div class="pinfo">
+        <div class="pname">${esc(p.pseudo)}</div>
+        <div class="ptitle" style="color:${ttl ? ttl.col : '#8f8a7e'}">${ttl ? ttl.icon + ' ' + esc(ttl.nom) : '— Aventurier —'}</div>
+        <div class="pxpbar"><i style="width:${pct}%"></i></div>
+        <div class="pxp">NIVEAU ${lvl}/1000 · ${lvl >= 1000 ? 'TRANSCENDANT' : fmtN(xp) + ' / ' + fmtN(need) + ' XP'}</div>
+      </div>
+      <div class="pstats">
+        <b>${p.rewards || 0}</b> récompenses<br>
+        <b>${lvl}</b> niveau global<br>
+        <b>${fmtN(p.score)}</b> score
+      </div>
+    </div>`;
+}
+
+// applique les données /api/player au dashboard (carte + onglets de stats)
+function applyPlayer(p) {
+  renderCard(p);
+  const h = Math.floor((p.playtime || 0) / 3600), m = Math.floor(((p.playtime || 0) % 3600) / 60);
+  window._pstats = {
+    score: (p.score || 0).toLocaleString('fr-FR'),
+    rank: p.rank ? '#' + p.rank : '—',
+    level: p.level || 1,
+    worlds: `${p.worlds_done || 0}/6`,
+    bosses: p.bosses || 0,
+    achv: p.achievements || 0,
+    playtime: p.playtime >= 3600 ? `${h}h ${String(m).padStart(2, '0')}` : `${m} min`,
+    since: p.member_since ? fmtDate(p.member_since) : '—',
+    sync: p.updated_at ? fmtDate(p.updated_at) : '—',
+  };
+  $('dProfile').href = '/joueur/' + encodeURIComponent(p.pseudo);
+  $('dProfile').style.display = 'block';
+  renderStats(window._stab || 'overview');
+}
+
+// re-télécharge la progression quand le jeu vient de synchroniser (auto)
+async function refreshPlayer() {
+  const u = await me();
+  if (!u || $('dashview').classList.contains('hidden')) return;
+  try { applyPlayer((await api('/api/player/' + encodeURIComponent(u.pseudo))).player); } catch (e) {}
 }
 
 // rend l'onglet de stats demandé (overview / progress / activity)
@@ -355,6 +427,9 @@ if (qs.get('reset')) {
   $('rToken').value = qs.get('reset'); show('resetview');
 } else if (u) {
   show('dashview'); loadDash(u);
+  // la progression se met à jour toute seule quand le jeu synchronise
+  clearInterval(window._dashInt);
+  window._dashInt = setInterval(refreshPlayer, 60000);
 } else {
   show('authview');
   authMode('login');

@@ -69,6 +69,7 @@ export async function login(pseudo, pass) {
       if (sv.status === 200) { net.cloudVersion = sv.data.version; net.cloudUpdatedAt = sv.data.updated_at; }
       else net.cloudVersion = 0;
       net.msg = 'Connecté en tant que ' + net.pseudo;
+      syncCloud(); // synchronisation automatique dès la connexion
       return true;
     }
     net.status = 'error'; net.msg = data.error || 'Connexion refusée';
@@ -126,14 +127,14 @@ function applyPayload(p) {
 
 // ---------- synchronisation ----------
 let syncing = false, dirty = false;
-export async function syncCloud(force = false) {
+export async function syncCloud(force = false, keepalive = false) {
   if (!net.token || syncing) { if (net.token) dirty = true; return; }
   if (net.status !== 'connected') return;
   syncing = true; net.msg = 'Synchronisation…';
   try {
     const payload = buildPayload();
     const { status, data } = await api('/api/game/save', {
-      method: 'PUT', body: JSON.stringify({ baseVersion: net.cloudVersion, payload }) });
+      method: 'PUT', keepalive, body: JSON.stringify({ baseVersion: net.cloudVersion, payload }) });
     if (status === 200) {
       net.cloudVersion = data.version; net.lastSync = Date.now();
       net.msg = 'Sauvegarde synchronisée';
@@ -197,6 +198,18 @@ export async function fetchPlayer(pseudo) {
 }
 
 loadAccount();
+// dernière synchronisation automatique quand on quitte le jeu (best-effort)
+if (typeof window !== 'undefined') {
+  let lastFlush = 0;
+  const flushSync = () => {
+    const n = Date.now();
+    if (n - lastFlush < 8000) return; // pagehide + beforeunload tirent presque ensemble
+    lastFlush = n;
+    if (net.token && net.status === 'connected') syncCloud(false, true);
+  };
+  window.addEventListener('pagehide', flushSync);
+  window.addEventListener('beforeunload', flushSync);
+}
 // vérifie la session au démarrage (silencieux)
 if (net.token) api('/api/game/save').then(({ status }) => {
   if (status === 401) logoutAccount();
