@@ -79,7 +79,7 @@ export const TITLES = [
 
 // ---------- ornements (déco de la carte) ----------
 export const ORNAMENTS = [
-  { id: 'o_rien',      nom: 'Aucun',            icon: '·',  col: '#555',    lv: 0,   rar: 'Commun',    desc: 'L\'élégance du minimalisme.' },
+  { id: 'o_rien',      nom: 'Aucun',            icon: '·',  col: '#555555', lv: 0,   rar: 'Commun',    desc: 'L\'élégance du minimalisme.' },
   { id: 'o_laniere',   nom: 'Lanière',          icon: '🎀', col: '#8d6e63', lv: 50,  rar: 'Commun',    desc: 'Un ruban discret mais fier.' },
   { id: 'o_etoile',    nom: 'Étoile filante',   icon: '⭐', col: '#ffd54f', lv: 150, rar: 'Rare',      desc: 'Elle porte les vœux des voyageurs.' },
   { id: 'o_rune',      nom: 'Pierre runique',   icon: '🔮', col: '#9575cd', lv: 300, rar: 'Épique',    desc: 'Elle pulse de pouvoir ancien.' },

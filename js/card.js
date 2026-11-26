@@ -15,6 +15,10 @@ const BG_STYLES = {
   b_tempete:   { g1: '#0e2a3a', g2: '#061420', acc: '#4fc3f7', deco: '🌪' },
   b_nuit:      { g1: '#1c1040', g2: '#0a0620', acc: '#7c4dff', deco: '🌌' },
   b_aurore:    { g1: '#0f3a2a', g2: '#051a12', acc: '#69f0ae', deco: '🌈' },
+  b_cathedrale:{ g1: '#2a2416', g2: '#12100a', acc: '#ffd54f', deco: '⛪' },
+  b_comete:    { g1: '#2a1a2e', g2: '#120a18', acc: '#ffab91', deco: '☄️' },
+  b_abysses:   { g1: '#04202e', g2: '#010a10', acc: '#00e5ff', deco: '🕳' },
+  b_labyrinthe:{ g1: '#1e1440', g2: '#0c0820', acc: '#9575cd', deco: '🌀' },
 };
 const FRAME_STYLES = {
   f_bois:    { c1: '#6d4c41', c2: '#4e342e', w: 6 },
@@ -25,6 +29,10 @@ const FRAME_STYLES = {
   f_enfer:   { c1: '#ff8a65', c2: '#bf360c', w: 5 },
   f_void:    { c1: '#b388ff', c2: '#4a148c', w: 6 },
   f_eternel: { c1: '#fff9c4', c2: '#ffea00', w: 7 },
+  f_tempete: { c1: '#4fc3f7', c2: '#01579b', w: 5 },
+  f_star:    { c1: '#ffe082', c2: '#ff8f00', w: 5 },
+  f_obscur:  { c1: '#455a64', c2: '#102027', w: 6 },
+  f_genese:  { c1: '#fff59d', c2: '#ff6f00', w: 7 },
 };
 export function cardBgStyle(id) { return BG_STYLES[id] || BG_STYLES.b_terre; }
 export function cardFrameStyle(id) { return FRAME_STYLES[id] || FRAME_STYLES.f_bois; }
@@ -62,6 +70,14 @@ export function drawPlayerCard(x, y, w, h, opts = {}) {
     ctx.fillText(['✦', '·', '✧'][i % 3], px, py);
   }
   ctx.globalAlpha = 1;
+  // reflet lumineux qui balaie la carte en diagonale
+  const shx = x - 80 + ((t * 90) % (w + 220));
+  ctx.save();
+  ctx.translate(shx, y + h / 2); ctx.rotate(-0.35);
+  const sg = ctx.createLinearGradient(-50, 0, 50, 0);
+  sg.addColorStop(0, 'rgba(255,255,255,0)'); sg.addColorStop(0.5, 'rgba(255,255,255,0.08)'); sg.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = sg; ctx.fillRect(-50, -h, 100, h * 2);
+  ctx.restore();
   // décor d'ambiance discret en coin
   ctx.font = '54px serif'; ctx.globalAlpha = 0.10;
   ctx.fillText(bg.deco, x + w - 46, y + h - 34);
