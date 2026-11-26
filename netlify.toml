@@ -1,0 +1,6 @@
+# Déploiement Netlify : le jeu est bundlé/minifié dans dist/ avant publication.
+# Le code source (js/*.js) n'est plus servi publiquement — seul le bundle
+# compacté de dist/js/main.js est accessible aux joueurs.
+[build]
+  command = "node tools/build-dist.mjs"
+  publish = "dist"

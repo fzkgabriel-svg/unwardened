@@ -24,6 +24,14 @@ Jeu HTML5 Canvas / JavaScript ES modules. Servi en HTTP (ES modules incompatible
 - `js/hud.js` : orchestrateur HUD ; sous-modules `js/hud/` (frame, profile, skills, boss, map, equip, toasts) — HUD médiéval fantastique. Minimap : bâtiments = brouillard de guerre, lacs, obstacles.
 - `js/main.js` : game loop, collisions, update.
 
+## Déploiement Netlify (code non lisible)
+- `netlify.toml` : `command = node tools/build-dist.mjs`, `publish = dist`.
+- `tools/build-dist.mjs` : bundle `js/main.js` → `dist/js/main.js` via **esbuild** (`--bundle --minify --format=esm`, version épinglée `esbuild@0.25.0` via `npx`) + copie `index.html`, `css/`, `fonts/`, `_headers`.
+- `dist/` est gitignoré (artefact de build). Le dev local (`python -m http.server`) continue de servir les modules sources `js/` — inchangé.
+- **Ne pas** mettre de `?v=` dans les imports JS (bug double-module, cf. v5.3.4) et ne pas ajouter de `//# sourceMappingURL`.
+- Le repo GitHub doit être **privé** pour que le code source ne soit pas public — la minification ne protège que ce que Netlify sert.
+- Admin jeu : `POST /api/admin/verify` (GAME_ADMIN_PASS env ou `site/data/admin_pass.txt`), rate-limit 6/10 min.
+
 ## Site officiel (site/)
 - Backend Node.js pur (node:http + node:sqlite, zéro dépendance) : `node site/server.js 8080` (Node ≥22.5 requis, binaire : `%LOCALAPPDATA%\Programs\nodejs\node.exe`).
 - Frontend statique dans `site/public/` (index, game, news, community, account, admin).

@@ -15,3 +15,6 @@ site/data/downloads/*
 !site/data/downloads/*.zip
 site/node_modules/
 site/.env
+
+# Build Netlify (bundle minifié généré par tools/build-dist.mjs)
+dist/

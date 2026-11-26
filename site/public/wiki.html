@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wiki — Les Terres Oubliées | Kaeloryn Studio</title>
+<meta name="description" content="Wiki complet des Terres Oubliées : mondes, boss, armes, forge, quêtes, cosmétiques et compte en ligne.">
+<link rel="stylesheet" href="/css/site.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><path d='M32 4 54 18v28L32 60 10 46V18Z' fill='none' stroke='%23d4b062' stroke-width='4'/></svg>">
+</head>
+<body>
+<canvas id="fx"></canvas>
+<header class="site"><nav class="top">
+  <a class="brand" href="/"><span id="logo"></span>
+    <span class="t">KAELORYN<small>STUDIO</small></span></a>
+  <div class="links" id="navlinks"></div>
+  <div id="navauth" style="display:flex;gap:8px"></div>
+</nav></header>
+
+<main>
+<section class="wiki-hero">
+  <div class="kicker">Documentation Officielle</div>
+  <h1>WIKI DES <span class="tess">TERRES OUBLIÉES</span></h1>
+  <p class="lead">Tout ce qu'un Kaelorien doit savoir : les six royaumes, leurs tyrans,
+    la forge, les quêtes et la collection de cosmétiques.</p>
+</section>
+
+<div class="wrap wiki-layout">
+  <aside class="wiki-toc" id="toc"></aside>
+  <div class="wiki-body">
+
+    <section class="wiki-sec" id="prise-en-main">
+      <h2>⚔️ Prise en main</h2>
+      <p class="wiki-intro">Un RPG d'action survival en vue du dessus : survivez aux vagues,
+        explorez des mondes procéduraux et affrontez le tyran de chaque royaume.</p>
+      <div class="wiki-grid">
+        <div class="wiki-card"><h4>Déplacement</h4><p><b>Z Q S D</b> ou <b>flèches</b> du clavier.</p></div>
+        <div class="wiki-card"><h4>Attaque</h4><p><b>Clic gauche</b> (maintenu pour les tirs en rafale).</p></div>
+        <div class="wiki-card"><h4>Armes</h4><p><b>1</b> ou <b>&amp;</b> = arme 1 · <b>3</b> ou <b>'</b> = arme 2<br>
+          <b>"</b> = bascule arc/lance · <b>7</b> ou <b>è</b> = Jugement du Gardien</p></div>
+        <div class="wiki-card"><h4>Compétences</h4><p><b>F</b> = ultime · <b>W</b> = potion · <b>Échap</b> = pause</p></div>
+      </div>
+      <div class="wiki-tip">💡 Après chaque changement d'arme, une courte <b>verrou de 1,25 s</b>
+        s'applique — changez d'arme entre deux vagues, pas en plein combat.</div>
+    </section>
+
+    <section class="wiki-sec" id="royaumes">
+      <h2>🌍 Les six royaumes</h2>
+      <p class="wiki-intro">Chaque monde est un royaume oublié, régénéré procéduralement à chaque partie.
+        Vaincre le boss final débloque le royaume suivant — et avec lui, un bestiaire plus vicieux.</p>
+      <div class="wiki-grid">
+        <div class="wiki-card world" style="--wc:#3f7a3a"><h4>Terres Oubliées</h4><p>Forêt médiévale et chevalerie.
+          Boss final : <b class="gold">Seigneur Oublié</b></p></div>
+        <div class="wiki-card world" style="--wc:#7ab8e0"><h4>Terre Gelée</h4><p>Royaume de glace et de silence.
+          Boss final : <b class="gold">Souverain de Glace</b></p></div>
+        <div class="wiki-card world" style="--wc:#e06040"><h4>Les Enfers</h4><p>Terres volcaniques brûlantes.
+          Boss final : <b class="gold">Baron de l'Enfer</b></p></div>
+        <div class="wiki-card world" style="--wc:#6a8a5a"><h4>Les Égouts</h4><p>Cité engloutie, acide et rats.
+          Boss final : <b class="gold">Tyran des Profondeurs</b></p></div>
+        <div class="wiki-card world" style="--wc:#9a7ae0"><h4>L'Espace</h4><p>Planète alien aux paysages cosmiques.
+          Boss final : <b class="gold">Abomination Cosmique</b></p></div>
+        <div class="wiki-card world" style="--wc:#6ab8d8"><h4>Royaume des Tempêtes</h4><p>Royaumes suspendus,
+          ouragans et typhons. Boss final : <b class="gold">Souverain des Ouragans</b></p></div>
+      </div>
+      <div class="wiki-tip">⚠️ Les boss finaux montent en puissance à chaque règne — leurs PV sont
+        dynamiques et leurs attaques (glace, feu, acide, foudre, vide) changent selon le monde.</div>
+    </section>
+
+    <section class="wiki-sec" id="armes">
+      <h2>🗡️ Armes et combat</h2>
+      <div class="wiki-table-wrap"><table class="wiki-table">
+        <thead><tr><th>Arme</th><th>Style</th><th>Spécialité</th></tr></thead>
+        <tbody>
+          <tr><td><b>Épée</b></td><td>Entrelacs rapide</td><td>Vitesse et polyvalence — la référence du nouveau Kaelorien.</td></tr>
+          <tr><td><b>Lance</b></td><td>Percée puissante</td><td>Coups lourds, stance tank (déplacement ralenti).</td></tr>
+          <tr><td><b>Arc</b></td><td>Tirs à distance</td><td>S/mobile, dégâts soutenus, peu de risque.</td></tr>
+          <tr><td><b>Jugement du Gardien</b></td><td>Arme ancestrale</td><td>Sentence : marques les ennemis et les exécute.</td></tr>
+        </tbody>
+      </table></div>
+      <p class="wiki-note">Chaque arme gagne des <b>niveaux</b> jusqu'à 100 — dégâts, cadence et
+        aptitudes d'ultime montent avec l'expérience de l'arme elle-même.</p>
+    </section>
+
+    <section class="wiki-sec" id="forge">
+      <h2>🔨 Forge et équipement</h2>
+      <p class="wiki-intro">La forge (menu <b>Forge</b>) transforme les matériaux récoltés en
+        équipements légendaires — 3 onglets : <b>FORGER</b>, <b>INVENTAIRE</b>, <b>PERSONNAGE</b>.</p>
+      <div class="wiki-grid">
+        <div class="wiki-card"><h4>Matériaux</h4><p>Cuir, fer, or, essence, cristal, émeraude… récoltés sur les ennemis et dans les coffres.</p></div>
+        <div class="wiki-card"><h4>Équipement</h4><p>Emplacements : arme, armure, casque, gants, bottes, charme. Chaque pièce a une <b>durabilité</b>.</p></div>
+        <div class="wiki-card"><h4>Durabilité</h4><p>Réparez au marteau de la forge. Une pièce cassée ne protège plus — surveillez le menu INVENTAIRE.</p></div>
+        <div class="wiki-card"><h4>Consommables</h4><p>Potions et buffs forgés : soin, vitesse, dégâts. Somez-les avec <b>W</b> en combat.</p></div>
+      </div>
+    </section>
+
+    <section class="wiki-sec" id="modules">
+      <h2>✨ Modules</h2>
+      <p class="wiki-intro">Les modules sont des améliorations équipables en combat :
+        <b>passifs</b> (bonus permanents) et <b>actifs</b> (compétences à temps de recharge).</p>
+      <div class="wiki-grid">
+        <div class="wiki-card"><h4>Exemples de bonus</h4><p>Impulsion (vitesse), critique, vol de vie, réduction de dégâts…</p></div>
+        <div class="wiki-card"><h4>Actifs</h4><p>Bouclier, rafale, invocation… déclenchés en jeu avec leur propre cooldown.</p></div>
+        <div class="wiki-card"><h4>Obtention</h4><p>Quêtes hebdomadaires, coffres, récompenses de niveau et boutique.</p></div>
+        <div class="wiki-card"><h4>Stratégie</h4><p>Un build cohérent (ex. vol de vie + critique sur arc) change une run entière.</p></div>
+      </div>
+    </section>
+
+    <section class="wiki-sec" id="quetes">
+      <h2>📜 Quêtes</h2>
+      <p class="wiki-intro">Deux rythmes : les <b>quêtes quotidiennes</b> (objectifs du jour :
+        tuer X ennemis, survivre Y vagues…) et les <b>quêtes hebdomadaires</b> plus ambitieuses.</p>
+      <div class="wiki-grid">
+        <div class="wiki-card"><h4>Récompenses</h4><p>XP, émeraudes, matériaux rares et <b>modules</b> — les hebdo tombent les meilleurs butins.</p></div>
+        <div class="wiki-card"><h4>Progression</h4><p>Chaque quête affiche sa progression en direct dans le menu QUÊTES.</p></div>
+        <div class="wiki-card"><h4>Rythme</h4><p>Les quotidiennes se renouvellent chaque jour : une session courte suffit à tout réclamer.</p></div>
+        <div class="wiki-card"><h4>Combo</h4><p>Enchaîner quêtes + campagne + forge = la boucle de progression idéale.</p></div>
+      </div>
+    </section>
+
+    <section class="wiki-sec" id="cosmetiques">
+      <h2>🏆 Niveaux et cosmétiques</h2>
+      <p class="wiki-intro">Deux progressions parallèles : le <b>niveau du personnage</b> (XP gagnée en run)
+        et le <b>niveau global</b> (1 → 1000), qui débloque la collection de cosmétiques.</p>
+      <div class="wiki-table-wrap"><table class="wiki-table">
+        <thead><tr><th>Palier</th><th>Récompense</th></tr></thead>
+        <tbody>
+          <tr><td>Niveau 25</td><td>Premier cosmétique — le début d'une collection de <b>59 items</b>.</td></tr>
+          <tr><td>Tous les 25 niveaux</td><td>Nouveau déblocage : portrait, cadre, fond, titre ou ornement.</td></tr>
+          <tr><td>Niveau 1000</td><td>Grade <b>Transcendant</b> — l'aboutissement de la collection.</td></tr>
+        </tbody>
+      </table></div>
+      <p class="wiki-note">Équipez vos cosmétiques dans la <b>carte de joueur</b> (menu principal) —
+        elle s'affiche aussi sur votre page publique <code>/joueur/&lt;pseudo&gt;</code>.</p>
+    </section>
+
+    <section class="wiki-sec" id="succes">
+      <h2>🏅 Succès</h2>
+      <p class="wiki-intro"><b>96 succès</b> traquent vos exploits : mondes terminés, boss vaincus,
+        butins rares, quêtes complétées… Regroupés par catégories et raretés.</p>
+      <div class="wiki-grid">
+        <div class="wiki-card"><h4>Registre complet</h4><p>Filtres par rareté, tri, recherche — chaque succès montre sa progression.</p></div>
+        <div class="wiki-card"><h4>Récompenses</h4><p>Chaque succès débloqué rapporte des bonus — réclamez-les en lot depuis le registre.</p></div>
+        <div class="wiki-card"><h4>Secrets</h4><p>Certaines conditions sont vicieuses : évitez la mort pendant 10 vagues, fusionnez 3 modules…</p></div>
+      </div>
+    </section>
+
+    <section class="wiki-sec" id="compte">
+      <h2>🌐 Compte en ligne</h2>
+      <p class="wiki-intro">Reliez votre aventure au site Kaeloryn Studio : votre progression
+        se synchronise automatiquement dans le cloud.</p>
+      <div class="wiki-grid">
+        <div class="wiki-card"><h4>Synchronisation</h4><p>Auto toutes les 45 s en jeu, à la connexion, et à la fermeture de l'onglet. Plus de progression perdue.</p></div>
+        <div class="wiki-card"><h4>Tableau de bord</h4><p>Sur <a href="/account.html">Mon Compte</a> : bannière de votre carte de joueur, stats et récompenses — rafraîchi en direct.</p></div>
+        <div class="wiki-card"><h4>Classement</h4><p>Le <a href="/classement.html">classement public</a> classe les Kaeloriens par score et niveau global.</p></div>
+        <div class="wiki-card"><h4>Profil public</h4><p>Chaque joueur a sa page <code>/joueur/&lt;pseudo&gt;</code> avec sa carte et ses statistiques.</p></div>
+      </div>
+      <div class="center mt"><a class="btn" href="/account.html">CRÉER MON COMPTE</a>
+        <a class="btn ghost" href="https://unwardened.netlify.app" target="_blank" rel="noopener">▶ JOUER</a></div>
+    </section>
+
+  </div>
+</div>
+</main>
+
+<footer class="site"><div class="wrap">
+  <div class="fl">KAELORYN STUDIO</div>
+  <p>Forge Your Own Legend — © <span id="yr"></span> Kaeloryn Studio. Tous droits réservés.</p>
+  <p class="mt"><a href="/game.html">Le Jeu</a><a href="/wiki.html">Wiki</a><a href="/news.html">Actualités</a>
+  <a href="/classement.html">Classement</a><a href="/community.html">Communauté</a><a href="/account.html">Mon Compte</a></p>
+</div></footer>
+
+<script type="module">
+import { LOGO_SVG, mountChrome, startParticles } from '/js/site.js';
+document.getElementById('logo').innerHTML = LOGO_SVG;
+mountChrome('/wiki.html'); startParticles();
+
+// Table des matières générée depuis les sections
+const secs = [...document.querySelectorAll('.wiki-sec')];
+const toc = document.getElementById('toc');
+toc.innerHTML = '<div class="toc-title">Sommaire</div>' + secs.map(s =>
+  `<a href="#${s.id}">${s.querySelector('h2').textContent.trim()}</a>`).join('');
+// Surligne la section visible
+const links = [...toc.querySelectorAll('a')];
+const spy = new IntersectionObserver(es => es.forEach(e => {
+  if (e.isIntersecting) links.forEach(a =>
+    a.classList.toggle('on', a.getAttribute('href') === '#' + e.target.id));
+}), { rootMargin: '-20% 0px -70% 0px' });
+secs.forEach(s => spy.observe(s));
+</script>
+</body></html>
