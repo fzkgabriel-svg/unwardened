@@ -80,7 +80,7 @@ try {
 
   // ---------- quêtes hebdomadaires ----------
   const w1 = Q.weeklyQuests(), w2 = Q.weeklyQuests();
-  ok('3 quêtes hebdo', w1.length === 3);
+  ok('2 quêtes hebdo', w1.length === Q.QUEST_WEEK_COUNT && w1.length === 2);
   ok('tirage hebdo déterministe', w1.map(q => q.id).join() === w2.map(q => q.id).join());
   ok('toutes dans WQPOOL', w1.every(q => Q.WQPOOL.includes(q)));
   const wq = Q.weeklyQuests()[0];

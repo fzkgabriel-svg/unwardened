@@ -67,25 +67,25 @@ export function qMax(key, v) {
 // metric/c : clé + compteur (c=true → cumul, false → max) · target : objectif
 // metric2/c2/target2 (optionnel) : seconde condition — les deux doivent être remplies
 export const QPOOL = [
-  { id: 'slayer',   icon: '⚔', label: 'Faucheuse',        desc: 'Tue 300 monstres',                    metric: 'kills',    c: true,  target: 300,   rew: 30 },
-  { id: 'dmg',      icon: '💥', label: 'Ravage',           desc: 'Inflige 80 000 dégâts',               metric: 'dmg',      c: true,  target: 80000, rew: 45 },
-  { id: 'boss',     icon: '👑', label: 'Chasseur de chefs',desc: 'Tue 8 boss ou mini-boss',            metric: 'bosses',   c: true,  target: 8,     rew: 60 },
-  { id: 'wave10',   icon: '🌊', label: 'Survivant',        desc: 'Atteins la vague 16',                metric: 'wave',     c: false, target: 16,    rew: 40 },
-  { id: 'wave20',   icon: '🌊', label: 'Inébranlable',     desc: 'Atteins la vague 30',                metric: 'wave',     c: false, target: 30,    rew: 90 },
-  { id: 'emerald',  icon: '💚', label: 'Cueilleur',        desc: 'Gagne 15 émeraudes',                  metric: 'emerald',  c: true,  target: 15,    rew: 50 },
-  { id: 'mats',     icon: '⛏', label: 'Prospecteur',      desc: 'Gagne 60 matériaux',                 metric: 'mats',     c: true,  target: 60,    rew: 40 },
-  { id: 'mods',     icon: '⚙', label: 'Expert technique', desc: 'Utilise un module 12 fois',          metric: 'mods',     c: true,  target: 12,    rew: 45 },
-  { id: 'victory',  icon: '🏆', label: 'Conquérant',       desc: 'Termine une campagne',               metric: 'victories',c: true,  target: 1,     rew: 100 },
-  { id: 'time',     icon: '⏳', label: 'Endurance',        desc: 'Survis 10 minutes en jeu',           metric: 'time',     c: true,  target: 600,   rew: 35 },
-  { id: 'potions',  icon: '🧪', label: 'Apothicaire',      desc: 'Bois 6 fioles',                      metric: 'potions',  c: true,  target: 6,     rew: 25 },
-  { id: 'level',    icon: '⭐', label: 'Ascension',        desc: 'Atteins le niveau 15',               metric: 'level',    c: false, target: 15,    rew: 60 },
+  { id: 'slayer',   icon: '⚔', label: 'Faucheuse',        desc: 'Tue 300 monstres',                    metric: 'kills',    c: true,  target: 300,   rew: 20 },
+  { id: 'dmg',      icon: '💥', label: 'Ravage',           desc: 'Inflige 80 000 dégâts',               metric: 'dmg',      c: true,  target: 80000, rew: 30 },
+  { id: 'boss',     icon: '👑', label: 'Chasseur de chefs',desc: 'Tue 8 boss ou mini-boss',            metric: 'bosses',   c: true,  target: 8,     rew: 40 },
+  { id: 'wave10',   icon: '🌊', label: 'Survivant',        desc: 'Atteins la vague 16',                metric: 'wave',     c: false, target: 16,    rew: 30 },
+  { id: 'wave20',   icon: '🌊', label: 'Inébranlable',     desc: 'Atteins la vague 30',                metric: 'wave',     c: false, target: 30,    rew: 65 },
+  { id: 'emerald',  icon: '💚', label: 'Cueilleur',        desc: 'Gagne 15 émeraudes',                  metric: 'emerald',  c: true,  target: 15,    rew: 35 },
+  { id: 'mats',     icon: '⛏', label: 'Prospecteur',      desc: 'Gagne 60 matériaux',                 metric: 'mats',     c: true,  target: 60,    rew: 30 },
+  { id: 'mods',     icon: '⚙', label: 'Expert technique', desc: 'Utilise un module 12 fois',          metric: 'mods',     c: true,  target: 12,    rew: 30 },
+  { id: 'victory',  icon: '🏆', label: 'Conquérant',       desc: 'Termine une campagne',               metric: 'victories',c: true,  target: 1,     rew: 70 },
+  { id: 'time',     icon: '⏳', label: 'Endurance',        desc: 'Survis 10 minutes en jeu',           metric: 'time',     c: true,  target: 600,   rew: 25 },
+  { id: 'potions',  icon: '🧪', label: 'Apothicaire',      desc: 'Bois 6 fioles',                      metric: 'potions',  c: true,  target: 6,     rew: 18 },
+  { id: 'level',    icon: '⭐', label: 'Ascension',        desc: 'Atteins le niveau 15',               metric: 'level',    c: false, target: 15,    rew: 40 },
   // --- quêtes composées / à mécanique ---
-  { id: 'ult',      icon: '☄', label: 'Destructeur',       desc: 'Déchaîne ton ultime 10 fois',        metric: 'ult',      c: true,  target: 10,    rew: 55 },
-  { id: 'craft',    icon: '🔨', label: 'Artisan',          desc: 'Forge 4 objets à la forge',         metric: 'craft',    c: true,  target: 4,     rew: 50 },
-  { id: 'dist',     icon: '👣', label: 'Marcheur',         desc: 'Parcours 1 200 mètres',              metric: 'dist',     c: true,  target: 1200,  rew: 45 },
-  { id: 'combo1',   icon: '⚡', label: 'Double pression',  desc: 'Vague 18 + 150 monstres',            metric: 'wave',     c: false, target: 18, metric2: 'kills', c2: true, target2: 150, rew: 75 },
-  { id: 'combo2',   icon: '🔥', label: 'Roi du jour',      desc: '800 émeraudes… non : 80 000 dégâts + vague 20', metric: 'dmg', c: true, target: 80000, metric2: 'wave', c2: false, target2: 20, rew: 85 },
-  { id: 'flawless', icon: '🛡', label: 'Sans faille',      desc: 'Termine une campagne sans mourir',   metric: 'flawless', c: true,  target: 1,     rew: 120 },
+  { id: 'ult',      icon: '☄', label: 'Destructeur',       desc: 'Déchaîne ton ultime 10 fois',        metric: 'ult',      c: true,  target: 10,    rew: 38 },
+  { id: 'craft',    icon: '🔨', label: 'Artisan',          desc: 'Forge 4 objets à la forge',         metric: 'craft',    c: true,  target: 4,     rew: 35 },
+  { id: 'dist',     icon: '👣', label: 'Marcheur',         desc: 'Parcours 1 200 mètres',              metric: 'dist',     c: true,  target: 1200,  rew: 30 },
+  { id: 'combo1',   icon: '⚡', label: 'Double pression',  desc: 'Vague 18 + 150 monstres',            metric: 'wave',     c: false, target: 18, metric2: 'kills', c2: true, target2: 150, rew: 50 },
+  { id: 'combo2',   icon: '🔥', label: 'Roi du jour',      desc: '800 émeraudes… non : 80 000 dégâts + vague 20', metric: 'dmg', c: true, target: 80000, metric2: 'wave', c2: false, target2: 20, rew: 60 },
+  { id: 'flawless', icon: '🛡', label: 'Sans faille',      desc: 'Termine une campagne sans mourir',   metric: 'flawless', c: true,  target: 1,     rew: 85 },
 ];
 export const QUEST_DAY_COUNT = 3;
 
@@ -109,7 +109,7 @@ export const WQPOOL = [
   { id: 'w_flawless',icon: '🛡', label: 'Immaculé',            desc: '2 campagnes sans aucune mort',  metric: 'flawless', c: true,  target: 2 },
   { id: 'w_combo',   icon: '⚡', label: 'Tempête parfaite',     desc: 'Vague 40 + 1 000 monstres',     metric: 'wave',     c: false, target: 40, metric2: 'kills', c2: true, target2: 1000 },
 ];
-export const QUEST_WEEK_COUNT = 3;
+export const QUEST_WEEK_COUNT = 2;
 
 // les 3 quêtes de la semaine : tirage déterministe identique pour tous les joueurs
 export function weeklyQuests() {
