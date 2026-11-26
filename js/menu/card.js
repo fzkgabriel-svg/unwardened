@@ -171,10 +171,12 @@ export function drawCardView() {
   ctx.textAlign = 'left';
   ctx.font = `600 13px ${UI}`; ctx.fillStyle = C_MUTED;
   ctx.fillText('NIVEAU DU JOUEUR', cr.x, ly);
+  // nombre + suffixe « / max » : le nombre s'arrête avant la place du suffixe
+  // (avant : les deux étaient alignés à droite et se chevauchaient)
   ctx.textAlign = 'right'; ctx.font = `600 20px ${SERIF}`; ctx.fillStyle = C_GOLD;
-  ctx.fillText(`${lvl}`, cr.x + cr.w, ly - 4);
-  ctx.textAlign = 'left'; ctx.font = `600 11px ${UI}`; ctx.fillStyle = C_MUTED;
-  ctx.fillText(`/ ${MAX_LEVEL}`, cr.x + cr.w - 24, ly);
+  ctx.fillText(`${lvl}`, cr.x + cr.w - 36, ly - 4);
+  ctx.font = `600 11px ${UI}`; ctx.fillStyle = C_MUTED;
+  ctx.fillText(`/ ${MAX_LEVEL}`, cr.x + cr.w, ly);
   // barre XP
   const bx = cr.x, bw = cr.w, by = ly + 10;
   ctx.fillStyle = 'rgba(255,255,255,0.07)';
