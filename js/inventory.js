@@ -277,6 +277,8 @@ export function durState(d, max = DUR_MAX) { return d <= 0 ? 'broken' : d < max 
 // Un objet à 0 % RESTE équipé mais ne donne plus aucun bonus (equipBonuses
 // ignore dur <= 0) — il n'est ni perdu ni déséquippé : il faut le réparer.
 const SLOT_WEAR = { armor: 3.0, helm: 2.2, gloves: 1.2, charm: 1.0, boots: 0.8 };
+// les équipements s'usent 40 % moins vite (usure des slots et des armes)
+const WEAR_MUL = 0.6;
 export function wearEquipment(inv) {
   if (!inv || !inv.equip) return { broken: null, wear: {} };
   let broken = null;
@@ -285,7 +287,7 @@ export function wearEquipment(inv) {
     const id = inv.equip[slot];
     if (!id || slot === 'weapon') continue; // l'arme use à l'attaque, pas en encaissant
     const d0 = getDur(inv, id);
-    const d = d0 - SLOT_WEAR[slot] * (0.75 + Math.random() * 0.5);
+    const d = d0 - SLOT_WEAR[slot] * WEAR_MUL * (0.75 + Math.random() * 0.5);
     const lost = d0 - Math.max(0, d);
     if (lost > 0) wear[id] = (wear[id] || 0) + lost;
     if (d <= 0) {
@@ -303,7 +305,7 @@ export function wearWeaponUse(inv, pts) {
   const id = inv && inv.equip ? inv.equip.weapon : null;
   if (!id) return null;
   const d0 = getDur(inv, id);
-  const d = d0 - pts * (0.8 + Math.random() * 0.4);
+  const d = d0 - pts * WEAR_MUL * (0.8 + Math.random() * 0.4);
   if (d <= 0) {
     setDur(inv, id, 0);
     saveInv(inv);

@@ -48,12 +48,11 @@ export function drawEquipPanel() {
       const dc = st === 'ok' ? HPAL.green : st === 'warn' ? '#d4a84b' : HPAL.red;
       ctx.fillStyle = broken ? HPAL.red : dc;
       if (dur > 0) { roundRect(dbx, dby, dbw * dur / dmax, 2, 1); ctx.fill(); }
-      // % de durabilité miniature à gauche du médaillon — pas sur l'arme
-      if (slot !== 'weapon' && !broken) {
-        crisp(`${Math.round(dur / dmax * 100)}%`, cx - 19, cy + 3, 9,
-          st === 'ok' ? 'rgba(232,220,190,0.8)' : st === 'warn' ? '#ffd740' : '#ff8a80',
-          'right', { weight: 700, spacing: 0.5 });
-      }
+      // % de durabilité toujours affiché à gauche du médaillon (arme incluse,
+      // 0 % rouge quand l'objet est cassé)
+      crisp(`${Math.round(dur / dmax * 100)}%`, cx - 19, cy + 3, 9,
+        broken ? HPAL.red : st === 'ok' ? 'rgba(232,220,190,0.8)' : st === 'warn' ? '#ffd740' : '#ff8a80',
+        'right', { weight: 700, spacing: 0.5 });
     } else {
       // emplacement vide : cercle pointillé discret
       ctx.strokeStyle = 'rgba(216,196,154,0.22)'; ctx.lineWidth = 1;
