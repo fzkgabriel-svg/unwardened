@@ -171,6 +171,7 @@ export function updateKnifeShots(dt) {
           G.knifeShots.splice(i, 1); continue;
         }
         k.phase = 'return'; // le couteau fait demi-tour vers le héros
+        k.hits.clear();     // le retour peut re-toucher les ennemis déjà frappés à l'aller
       }
     } else { // retour : la lame rentre droit au joueur
       const dx = p.x - k.x, dy = p.y - k.y, d = Math.hypot(dx, dy) || 1;
@@ -182,7 +183,8 @@ export function updateKnifeShots(dt) {
       k.x += k.vx * step; k.y += k.vy * step;
       k.a = Math.atan2(k.vy, k.vx);
     }
-    // collisions : une fois par ennemi et par projectile, à l'aller comme au retour
+    // collisions : une fois par ennemi et par phase — l'aller puis le retour
+    // (hits est vidé au demi-tour : un ennemi touché à l'aller est re-frappé au retour)
     let done = false;
     for (const e of G.enemies) {
       if (k.hits.has(e)) continue;
@@ -211,7 +213,7 @@ export function updateKnifeShots(dt) {
     }
     if (done) {
       if (k.sentence) { G.knifeShots.splice(i, 1); }
-      else { k.phase = 'return'; }
+      else { k.phase = 'return'; k.hits.clear(); } // demi-tour anticipé : retour armé à nouveau
     }
   }
 }
