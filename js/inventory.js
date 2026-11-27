@@ -211,9 +211,9 @@ export function addMaterial(inv, type, n = 1) {
 
 export function canCraft(inv, id) {
   const it = ITEMS[id];
-  if (it.conso) return (inv.items[id] || 0) < 99; // les consommables s'empilent
-  if (inv.items[id]) return false;
-  for (const k in it.cost) if ((inv.mats[k] || 0) < it.cost[k]) return false;
+  if (it.conso && (inv.items[id] || 0) >= 99) return false; // les consommables s'empilent (max 99)
+  if (!it.conso && inv.items[id]) return false; // équipement : un seul exemplaire
+  for (const k in it.cost) if ((inv.mats[k] || 0) < it.cost[k]) return false; // conso compris : les matériaux sont exigés
   return true;
 }
 

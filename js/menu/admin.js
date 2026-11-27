@@ -278,8 +278,8 @@ function adminCheatRects() {
   for (const c of cheats) {
     const col = cols.find(cc => cc.cat === c[2]);
     const idx = cheats.filter(o => o[2] === c[2]).indexOf(c);
-    const rowH = 40, top = py + 66;
-    btns[c[0]] = { x: col.x + 6, y: top + idx * (rowH + 8), w: col.w - 12, h: rowH };
+    const rowH = 40, top = py + 104; // sous les titres de colonnes (py+84)
+    btns[c[0]] = { x: col.x + 6, y: top + idx * (rowH + 6), w: col.w - 12, h: rowH };
   }
   return { px, py, pw, ph, btns, close: { x: px + pw - 44, y: py + 10, w: 32, h: 32 } };
 }
@@ -475,7 +475,7 @@ export function drawAdminMenu() {
     if (!first) return;
     const r = L.btns[first[0]];
     ctx.fillStyle = '#ffd740'; ctx.font = 'bold 13px Inter, sans-serif';
-    ctx.fillText(catTitles[cat], r.x + r.w / 2, L.py + 84);
+    ctx.fillText(catTitles[cat], r.x + r.w / 2, L.py + 82);
     ctx.strokeStyle = 'rgba(255,215,64,0.3)'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(r.x - 6, L.py + 92); ctx.lineTo(r.x + r.w + 6, L.py + 92); ctx.stroke();
   });

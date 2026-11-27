@@ -508,14 +508,18 @@ route('POST', '/api/game/logout', needGame((req, res, b, s) => {
 // ou site/data/admin_pass.txt (local, non versionné). Rate-limit strict —
 // un code à 8 chiffres serait sinon brute-forçable.
 const ADMIN_PASS_FILE = join(DATA, 'admin_pass.txt');
-let _adminPassCache; // undefined = pas encore lu
+let _adminPassCache;   // undefined = pas encore lu
+let _adminPassMtime = -1;
 function gameAdminPass() {
-  if (_adminPassCache !== undefined) return _adminPassCache;
-  let p = process.env.GAME_ADMIN_PASS || '';
-  if (!p && existsSync(ADMIN_PASS_FILE)) {
-    try { p = readFileSync(ADMIN_PASS_FILE, 'utf8').trim(); } catch (e) {}
-  }
-  _adminPassCache = p || null;
+  const env = process.env.GAME_ADMIN_PASS || '';
+  if (env) { _adminPassCache = env; _adminPassMtime = -1; return env; }
+  // le fichier est relu dès qu'il change (mtime) — plus besoin de redémarrer
+  try {
+    const mt = statSync(ADMIN_PASS_FILE).mtimeMs;
+    if (_adminPassCache !== undefined && mt === _adminPassMtime) return _adminPassCache;
+    const p = readFileSync(ADMIN_PASS_FILE, 'utf8').trim();
+    _adminPassCache = p || null; _adminPassMtime = mt;
+  } catch (e) { if (_adminPassCache === undefined) _adminPassCache = null; }
   return _adminPassCache;
 }
 route('POST', '/api/admin/verify', async (req, res, b) => {
