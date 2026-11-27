@@ -81,6 +81,8 @@ export function startGame() {
   syncCamera(true);
   G.spawnTimer = 0.5;
   G.wavePause = 0;
+  G.spawnBlockUntil = 0;
+  G.waveQueue = null;
   // applique les bonus de l'équipement (forge)
   G.equip = equipBonuses(G.inv, G.stats.bestLevel || 1);
   // NG+ + défi quotidien : multiplicateurs de la partie

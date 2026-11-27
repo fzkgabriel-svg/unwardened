@@ -102,7 +102,11 @@ function update(dt) {
   if (keys['d'] || keys['arrowright']) dx += 1;
   if (p.slowT > 0) p.slowT = Math.max(0, p.slowT - dt);
   if (p.hitSlowT > 0) p.hitSlowT = Math.max(0, p.hitSlowT - dt);
-  const pSpeed = p.speed * (p.slowT > 0 ? 0.8 : 1) * (p.hitSlowT > 0 ? 0.88 : 1) * (p.sentenceT > 0 ? 0.55 : 1) * (p.attackMode === 3 ? 1.08 : p.attackMode === 5 ? 0.9 : p.attackMode === 7 ? 0.95 : 0.93) * modSpeedMult(); // lance mobile (+8 %) / arc légèrement plus lent / jugement légèrement lesté / concentration Sentence / module Impulsion
+  // Vitesse de base par arme : épée = référence (léger, rapide) ; lance et arc
+  // un peu plus lourds ; jugement entre les deux. Le coup subi n'applique
+  // qu'un très léger et bref ralentissement (×0,92 pendant 0,2 s).
+  const wpnSpd = p.attackMode === 3 || p.attackMode === 5 ? 0.95 : p.attackMode === 7 ? 0.97 : 1.0;
+  const pSpeed = p.speed * (p.slowT > 0 ? 0.8 : 1) * (p.hitSlowT > 0 ? 0.92 : 1) * (p.sentenceT > 0 ? 0.55 : 1) * wpnSpd * modSpeedMult(); // concentration Sentence / module Impulsion
   if (dx || dy) {
     const len = Math.hypot(dx, dy);
     p.lastDx = dx / len; p.lastDy = dy / len; // direction pour la Ruée dimensionnelle
@@ -227,7 +231,8 @@ function update(dt) {
   // Spawn : cadence en temps réel même pendant le ralenti (les monstres arrivent)
   G.spawnTimer -= rawDt;
   const interval = Math.max(0.5, (2.3 - G.wave * 0.12) * ((G.waveMod && G.waveMod.spawn) || 1)); // spawn plus espacé : moins de pression
-  if (G.spawnTimer <= 0 && G.enemies.length < 16 && G.wave < finalWave() && !G.tutorial) {
+  if (G.spawnTimer <= 0 && G.enemies.length < 16 && G.wave < finalWave() && !G.tutorial
+      && G.runTime >= (G.spawnBlockUntil || 0)) { // répit post-transition : pas de spawn pendant le changement + 5 s
     spawnEnemy();
     G.spawnTimer = interval;
   }
@@ -240,6 +245,7 @@ function update(dt) {
     G.waveMod = waveModFor(G.wave, G.difficulty || 0);
     G.waveTarget = Math.round((5 + G.wave * 1.8) * ((G.waveMod && G.waveMod.quota) || 1)); // quota un peu réduit : vagues plus courtes
     G.wavePause = 2.5; // pause entre les vagues
+    G.spawnBlockUntil = G.runTime + G.wavePause + 5; // répit : transition (2,5 s) + 5 s sans apparition de monstres
     p.maxHp += 15;
     p.hp = Math.min(p.maxHp, p.hp + 30);
     p.attackDamage += 5;
@@ -256,30 +262,34 @@ function update(dt) {
       G.fireZones.length = 0; G.lightnings.length = 0; G.lasers.length = 0;
       G.hands.length = 0; G.volcanoes.length = 0;
       G.wavePause = 3.0;
+      G.waveQueue = null; // répit : les événements de vague en attente sont abandonnés
       addDamageText(p.x, p.y - 85, 'VAGUE FINALE', '#e040fb');
       spawnFinalBoss();
     } else {
-    // vagues ×3 : 1 à 3 mini-boss apparaissent immédiatement
-    if (G.wave % 3 === 0) {
+    // Répit post-transition : les événements de vague (mini-boss, boss,
+    // meute, boss intermédiaire) sont mis en file et ne surgissent
+    // qu'à la fin du blocage de spawn — aucune apparition pendant
+    // le changement de vague ni pendant les 5 s qui suivent.
+    const waveNow = G.wave, camp = G.campaign, q = [];
+    // vagues ×3 : 1 à 3 mini-boss
+    if (waveNow % 3 === 0) q.push(() => {
       spawnMinibossWave();
       addDamageText(p.x, p.y - 45, 'MINI-BOSSES !', '#ffb300');
-    }
+    });
     // vagues ×5 : un seul boss garanti, type en rotation
-    if (G.wave % 5 === 0) {
-      const camp = G.campaign;
+    if (waveNow % 5 === 0) q.push(() => {
       const cycle = camp === 5 ? bossCycleTempete
         : camp === 4 ? bossCycleEspace
         : camp === 3 ? bossCycleEgout
         : camp === 1 ? ['bossGlace', 'bossCryo', 'bossGlace']
         : camp === 2 ? ['bossEnf', 'demon', 'bossEnf']
         : bossCycle;
-      const btype = cycle[(G.wave / 5 - 1) % cycle.length];
+      const btype = cycle[(waveNow / 5 - 1) % cycle.length];
       spawnBossWave(1, btype);
       addDamageText(p.x, p.y - 65, `BOSS : ${enemyTypes[btype].name.toUpperCase()} !`, '#ff1744');
-    }
+    });
     // Événement aléatoire : une meute surgit par un grand portail (vague 2+)
-    if (G.wave >= 2 && Math.random() < 0.16) {
-      const camp = G.campaign;
+    if (waveNow >= 2 && Math.random() < 0.16) q.push(() => {
       const n = 2 + Math.floor(Math.random() * 3); // 2 à 4
       for (let i = 0; i < n; i++) {
         const a = Math.random() * TAU, d = 30 + Math.random() * 110;
@@ -294,18 +304,24 @@ function update(dt) {
       addDamageText(p.x, p.y - 85,
         camp === 5 ? 'ÉVÉNEMENT : ESSAIM DES TEMPÊTES !' : camp === 4 ? 'ÉVÉNEMENT : ESSAIM ALIEN !' : camp === 3 ? 'ÉVÉNEMENT : ESSAIM D\'ÉGOUT !' : camp === 1 ? 'ÉVÉNEMENT : MEUTE DES NEIGES !' : camp === 2 ? 'ÉVÉNEMENT : ESSAIM INFERNAL !' : 'ÉVÉNEMENT : BRUTES !',
         camp >= 1 ? (camp === 5 ? '#aeea00' : camp === 4 ? '#82b1ff' : camp === 3 ? '#aeea00' : camp === 1 ? '#4fc3f7' : '#ff7043') : '#ff7043');
-    }
+    });
     // Enfers : le Baron surgit dès la vague 20 (boss intermédiaire,
     // sans vider le champ — la vague finale reste à la vague 30).
     // Égouts : le Tyran dès la vague 25 (sur 35) · Espace : l'Abomination dès la vague 30 (sur 40)
-    const midWave = MID_BOSS_WAVE[G.campaign];
-    if (midWave && G.wave === midWave) {
-      const midType = G.campaign === 5 ? 'finalBossTempete' : G.campaign === 4 ? 'finalBossSpace' : G.campaign === 3 ? 'finalBossEgout' : 'finalBossEnfer';
+    const midWave = MID_BOSS_WAVE[camp];
+    if (midWave && waveNow === midWave) q.push(() => {
+      const midType = camp === 5 ? 'finalBossTempete' : camp === 4 ? 'finalBossSpace' : camp === 3 ? 'finalBossEgout' : 'finalBossEnfer';
       if (!G.enemies.some(e => e.type === midType)) spawnFinalBoss();
-    }
+    });
+    G.waveQueue = (G.waveQueue || []).concat(q);
     // fin de la vague 50 : le portail dimensionnel apparaît
     checkWavePortal();
     }
+  }
+  // fin du répit : les événements de vague mis en file surgissent
+  if (G.waveQueue && G.waveQueue.length && G.runTime >= (G.spawnBlockUntil || 0)) {
+    for (const fn of G.waveQueue) fn();
+    G.waveQueue = null;
   }
   // écran vidé : on accélère le prochain spawn
   if (G.enemies.length === 0) G.spawnTimer = Math.min(G.spawnTimer, 0.8);

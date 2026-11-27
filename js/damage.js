@@ -26,7 +26,7 @@ export function damagePlayer(dmg, slow = 1.0, killer = null) {
   sfxHurt();
   p.lastHurt = G.time;
   p.slowT = Math.max(p.slowT, slow);
-  p.hitSlowT = 0.35; // léger ralentissement à chaque coup subi (×0,88 pendant 0,35 s)
+  p.hitSlowT = 0.2; // très léger ralentissement à chaque coup subi (×0,92 pendant 0,2 s)
   addDamageText(p.x, p.y - 18, `-${Math.round(dmg)}`, '#ff1744');
   spawnParticles(p.x, p.y, '#ff1744', 6, 4);
   // usure des équipements : chaque coup use l'armure, l'arme et le talisman
