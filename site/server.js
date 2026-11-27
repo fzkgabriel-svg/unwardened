@@ -723,6 +723,7 @@ function seed() {
     // 2) releases : enregistrer les ZIP de data/downloads ET du dossier
     // versionné downloads/ (persistant sur les hébergements éphémères)
     const seen = new Set(q.allReleases.all().map(r => r.filename));
+    const added = [];
     for (const dir of [join(DATA, 'downloads'), PKG_DL]) {
       if (!existsSync(dir)) continue;
       for (const f of readdirSync(dir)) {
@@ -732,11 +733,19 @@ function seed() {
         const m = /v(\d+\.\d+\.\d+)/.exec(f);
         const version = m ? m[1] : f.replace(/\.zip$/, '');
         const sha = crypto.createHash('sha256').update(readFileSync(p)).digest('hex');
-        q.insRelease.run(version, f, statSync(p).size, sha, '', '', '', 0);
+        const r = q.insRelease.run(version, f, statSync(p).size, sha, '', '', '', 0);
+        added.push({ id: Number(r.lastInsertRowid), version });
         console.log(`[seed] release enregistrée : ${f}`);
       }
     }
-    if (!q.curRelease.get()) {
+    // un nouveau zip apparu au boot = nouvelle version du jeu -> courante
+    if (added.length) {
+      const cmp = (a, b) => a.version.split('.').reduce((acc, n, i) =>
+        acc || (+n - +b.version.split('.')[i]), 0);
+      added.sort(cmp);
+      q.setCurId.run(added[added.length - 1].id);
+      console.log(`[seed] version courante : v${added[added.length - 1].version}`);
+    } else if (!q.curRelease.get()) {
       const rel = q.allReleases.all();
       if (rel.length) q.setCurId.run(rel[rel.length - 1].id);
     }
